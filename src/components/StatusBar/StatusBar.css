@@ -1,0 +1,40 @@
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 24px;
+  padding: 0 12px;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.status-bar-left,
+.status-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dirty-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+}
+
+.status-item {
+  color: var(--text-secondary);
+}
+
+.status-separator {
+  color: var(--border-color);
+}

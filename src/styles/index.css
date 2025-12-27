@@ -25,6 +25,8 @@
   --outline-width: 200px;
   --border-color: #e1e4e8;
   --selection-color: rgba(3, 102, 214, 0.2);
+  --bg-secondary: #f6f8fa;
+  --text-secondary: #6a737d;
 
   /* Typography */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
@@ -46,6 +48,8 @@
     --sidebar-bg: #161b22;
     --border-color: #30363d;
     --selection-color: rgba(88, 166, 255, 0.2);
+    --bg-secondary: #161b22;
+    --text-secondary: #8b949e;
   }
 }
 

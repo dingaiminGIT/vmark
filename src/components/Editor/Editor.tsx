@@ -1,10 +1,17 @@
 import { useCallback } from "react";
-import { Editor as MilkdownEditor, rootCtx, defaultValueCtx } from "@milkdown/kit/core";
+import {
+  Editor as MilkdownEditor,
+  rootCtx,
+  defaultValueCtx,
+} from "@milkdown/kit/core";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
 import { gfm } from "@milkdown/kit/preset/gfm";
 import { history } from "@milkdown/kit/plugin/history";
 import { clipboard } from "@milkdown/kit/plugin/clipboard";
 import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
+import { cursor } from "@milkdown/kit/plugin/cursor";
+import { indent } from "@milkdown/kit/plugin/indent";
+import { trailing } from "@milkdown/kit/plugin/trailing";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { useEditorStore } from "@/stores/editorStore";
 import "./editor.css";
@@ -51,6 +58,9 @@ function MilkdownEditorInner() {
       .use(history)
       .use(clipboard)
       .use(listener)
+      .use(cursor)
+      .use(indent)
+      .use(trailing)
   );
 
   return <Milkdown />;
