@@ -32,7 +32,7 @@ import { useTableCommands } from "@/hooks/useTableCommands";
 import {
   getCursorInfoFromProseMirror,
   restoreCursorInProseMirror,
-} from "@/utils/cursorSync";
+} from "@/utils/cursorSync/prosemirror";
 import { SourceEditor } from "./SourceEditor";
 import "./editor.css";
 

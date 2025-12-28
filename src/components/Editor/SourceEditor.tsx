@@ -12,7 +12,7 @@ import { useEditorStore } from "@/stores/editorStore";
 import {
   getCursorInfoFromCodeMirror,
   restoreCursorInCodeMirror,
-} from "@/utils/cursorSync";
+} from "@/utils/cursorSync/codemirror";
 
 // Compartment for dynamic line wrapping
 const lineWrapCompartment = new Compartment();
