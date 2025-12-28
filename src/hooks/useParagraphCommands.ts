@@ -12,9 +12,25 @@ import {
   liftListItemCommand,
   insertHrCommand,
 } from "@milkdown/kit/preset/commonmark";
+import { editorViewCtx } from "@milkdown/kit/core";
 import type { Editor } from "@milkdown/kit/core";
 
 type GetEditor = () => Editor | undefined;
+
+function getCurrentHeadingLevel(editor: Editor): number | null {
+  let level: number | null = null;
+  editor.action((ctx) => {
+    const view = ctx.get(editorViewCtx);
+    if (!view) return;
+    const { state } = view;
+    const { $from } = state.selection;
+    const parent = $from.parent;
+    if (parent.type.name === "heading") {
+      level = parent.attrs.level as number;
+    }
+  });
+  return level;
+}
 
 export function useParagraphCommands(getEditor: GetEditor) {
   const unlistenRefs = useRef<UnlistenFn[]>([]);
@@ -45,20 +61,38 @@ export function useParagraphCommands(getEditor: GetEditor) {
       });
       unlistenRefs.current.push(unlistenParagraph);
 
-      // Increase heading level
+      // Increase heading level (H3 -> H2 -> H1, or paragraph -> H6)
       const unlistenIncreaseHeading = await listen("menu:increase-heading", () => {
         const editor = getEditor();
         if (editor) {
-          editor.action(callCommand(wrapInHeadingCommand.key, 1));
+          const currentLevel = getCurrentHeadingLevel(editor);
+          if (currentLevel === null) {
+            // Not a heading, convert to H6
+            editor.action(callCommand(wrapInHeadingCommand.key, 6));
+          } else if (currentLevel > 1) {
+            // Decrease level number (increase importance)
+            editor.action(callCommand(wrapInHeadingCommand.key, currentLevel - 1));
+          }
+          // If already H1, do nothing
         }
       });
       unlistenRefs.current.push(unlistenIncreaseHeading);
 
-      // Decrease heading level
+      // Decrease heading level (H1 -> H2 -> H3, or H6 -> paragraph)
       const unlistenDecreaseHeading = await listen("menu:decrease-heading", () => {
         const editor = getEditor();
         if (editor) {
-          editor.action(callCommand(wrapInHeadingCommand.key, 2));
+          const currentLevel = getCurrentHeadingLevel(editor);
+          if (currentLevel === null) {
+            // Not a heading, do nothing
+            return;
+          } else if (currentLevel < 6) {
+            // Increase level number (decrease importance)
+            editor.action(callCommand(wrapInHeadingCommand.key, currentLevel + 1));
+          } else {
+            // H6 -> paragraph
+            editor.action(callCommand(turnIntoTextCommand.key));
+          }
         }
       });
       unlistenRefs.current.push(unlistenDecreaseHeading);
