@@ -70,7 +70,7 @@ function remarkDetailsBlocks() {
       node: unknown;
     }> = [];
 
-    visit(tree, "html", (node: Html, index, parent, ancestors) => {
+    visit(tree, "html", (node: Html, index: number | undefined, parent: { type: string; children: unknown[] } | undefined) => {
       if (index === undefined || !parent) return;
 
       const parsed = parseDetailsHtml(node.value);
@@ -83,12 +83,10 @@ function remarkDetailsBlocks() {
         detailsContent: parsed.content || " ",
       };
 
-      const parentNode = parent as { type: string; children: unknown[] };
-
-      if (parentNode.type === "root") {
+      if (parent.type === "root") {
         // Direct child of root - replace in place
-        parentNode.children[index] = detailsNode;
-      } else if (parentNode.type === "paragraph") {
+        parent.children[index] = detailsNode;
+      } else if (parent.type === "paragraph") {
         // HTML is inside a paragraph - need to replace the paragraph itself
         // Find the grandparent (should be root)
         const grandparent = tree as { children: unknown[] };

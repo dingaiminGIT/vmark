@@ -108,6 +108,20 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         ],
     )?;
 
+    // Info Boxes submenu (GitHub-style alert blocks)
+    let info_boxes_submenu = Submenu::with_items(
+        app,
+        "Info Boxes",
+        true,
+        &[
+            &MenuItem::with_id(app, "info-note", "Note", true, None::<&str>)?,
+            &MenuItem::with_id(app, "info-tip", "Tip", true, None::<&str>)?,
+            &MenuItem::with_id(app, "info-important", "Important", true, None::<&str>)?,
+            &MenuItem::with_id(app, "info-warning", "Warning", true, None::<&str>)?,
+            &MenuItem::with_id(app, "info-caution", "Caution", true, None::<&str>)?,
+        ],
+    )?;
+
     // Paragraph menu
     let paragraph_menu = Submenu::with_items(
         app,
@@ -168,6 +182,15 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
                 "Horizontal Line",
                 true,
                 Some("Alt+CmdOrCtrl+-"),
+            )?,
+            &PredefinedMenuItem::separator(app)?,
+            &info_boxes_submenu,
+            &MenuItem::with_id(
+                app,
+                "collapsible-block",
+                "Collapsible Block",
+                true,
+                None::<&str>,
             )?,
         ],
     )?;

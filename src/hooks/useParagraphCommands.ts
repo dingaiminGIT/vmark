@@ -14,6 +14,11 @@ import {
 } from "@milkdown/kit/preset/commonmark";
 import { editorViewCtx } from "@milkdown/kit/core";
 import type { Editor } from "@milkdown/kit/core";
+import {
+  insertAlertBlockCommand,
+  type AlertType,
+} from "@/plugins/alertBlock";
+import { insertDetailsBlockCommand } from "@/plugins/detailsBlock";
 
 type GetEditor = () => Editor | undefined;
 
@@ -181,6 +186,39 @@ export function useParagraphCommands(getEditor: GetEditor) {
       });
       if (cancelled) { unlistenHorizontalLine(); return; }
       unlistenRefs.current.push(unlistenHorizontalLine);
+
+      // Info Boxes (Alert Blocks)
+      const alertTypes: AlertType[] = [
+        "NOTE",
+        "TIP",
+        "IMPORTANT",
+        "WARNING",
+        "CAUTION",
+      ];
+      for (const alertType of alertTypes) {
+        if (cancelled) break;
+        const unlisten = await listen(
+          `menu:info-${alertType.toLowerCase()}`,
+          () => {
+            const editor = getEditor();
+            if (editor) {
+              editor.action(callCommand(insertAlertBlockCommand.key, alertType));
+            }
+          }
+        );
+        if (cancelled) { unlisten(); return; }
+        unlistenRefs.current.push(unlisten);
+      }
+
+      // Collapsible Block (Details)
+      const unlistenCollapsible = await listen("menu:collapsible-block", () => {
+        const editor = getEditor();
+        if (editor) {
+          editor.action(callCommand(insertDetailsBlockCommand.key));
+        }
+      });
+      if (cancelled) { unlistenCollapsible(); return; }
+      unlistenRefs.current.push(unlistenCollapsible);
     };
 
     setupListeners();

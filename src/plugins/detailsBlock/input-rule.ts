@@ -19,7 +19,7 @@ export const detailsBlockInputRule = $inputRule((ctx) => {
   const detailsType = detailsBlockSchema.type(ctx);
   const summaryType = detailsSummarySchema.type(ctx);
 
-  return new InputRule(DETAILS_INPUT_PATTERN, (state, _match, start, end) => {
+  return new InputRule(DETAILS_INPUT_PATTERN, (state, _match, start, _end) => {
     // Get paragraph node type for content
     const paragraphType = state.schema.nodes.paragraph;
     if (!paragraphType) {
