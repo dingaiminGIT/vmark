@@ -1,3 +1,30 @@
+.status-bar-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.status-bar-container:hover,
+.status-bar-container.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Invisible hover trigger area at bottom of screen */
+.status-bar-container::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  height: 30px;
+}
+
 .status-bar {
   display: flex;
   justify-content: space-between;
@@ -8,7 +35,6 @@
   border-top: 1px solid var(--border-color);
   font-size: 12px;
   color: var(--text-secondary);
-  flex-shrink: 0;
 }
 
 .status-bar-left,
@@ -35,6 +61,23 @@
   color: var(--text-secondary);
 }
 
-.status-separator {
-  color: var(--border-color);
+.status-mode {
+  display: flex;
+  align-items: center;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.status-mode:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-color);
+}
+
+.status-mode:active {
+  background-color: var(--bg-active, var(--bg-hover));
 }

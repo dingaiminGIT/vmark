@@ -44,7 +44,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
                 "source-mode",
                 "Source Code Mode",
                 true,
-                Some("CmdOrCtrl+Slash"),
+                Some("F7"),
             )?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "focus-mode", "Focus Mode", true, Some("F8"))?,
