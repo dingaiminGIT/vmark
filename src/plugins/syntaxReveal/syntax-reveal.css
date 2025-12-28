@@ -1,8 +1,8 @@
 /**
  * Syntax Reveal Plugin Styles
  *
- * Styles for the inline syntax markers shown when cursor
- * is inside a formatted mark.
+ * Styles for syntax markers shown when cursor is inside formatted content.
+ * Covers both inline marks and block-level nodes.
  */
 
 /* Base syntax marker style */
@@ -25,6 +25,10 @@
   }
 }
 
+/* ===================
+   INLINE MARK MARKERS
+   =================== */
+
 /* Opening markers */
 .syntax-marker-open {
   margin-right: 0;
@@ -45,7 +49,51 @@
   font-size: 0.85em;
 }
 
-/* Dark mode adjustments */
+/* ===================
+   BLOCK NODE MARKERS
+   =================== */
+
+/* Heading markers: # ## ### */
+.syntax-marker-heading {
+  font-weight: normal;
+  margin-right: 0;
+}
+
+/* Code block markers: ``` */
+.syntax-marker-codeblock-open,
+.syntax-marker-codeblock-close {
+  display: block;
+  font-size: 0.85em;
+}
+
+.syntax-marker-codeblock-open {
+  margin-bottom: 0.25em;
+}
+
+.syntax-marker-codeblock-close {
+  margin-top: 0.25em;
+}
+
+/* Blockquote marker: > */
+.syntax-marker-blockquote {
+  margin-right: 0;
+}
+
+/* List markers: - * 1. */
+.syntax-marker-list-bullet,
+.syntax-marker-list-ordered,
+.syntax-marker-list-task {
+  margin-right: 0;
+}
+
+.syntax-marker-list-task {
+  font-size: 0.85em;
+}
+
+/* ===================
+   DARK MODE
+   =================== */
+
 @media (prefers-color-scheme: dark) {
   .syntax-marker {
     color: var(--md-char-color, #6e7681);
