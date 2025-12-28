@@ -127,3 +127,10 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--md-char-color);
 }
+
+/* Window drag region */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+  app-region: drag;
+  cursor: default;
+}
