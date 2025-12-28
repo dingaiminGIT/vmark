@@ -163,62 +163,54 @@ function findContextMatch(
 
 /**
  * Map position from stripped text back to original text
+ * Uses character-by-character comparison to handle formatting markers
  */
 function mapStrippedToOriginal(
   original: string,
   stripped: string,
   strippedPos: number
 ): number {
-  // Simple approach: find the character at stripped position and locate it in original
   if (strippedPos >= stripped.length) {
     return original.length;
   }
 
-  // Count non-formatting characters up to strippedPos
-  let strippedCount = 0;
-  let originalPos = 0;
+  let strippedIdx = 0;
+  let originalIdx = 0;
 
-  // Track formatting markers
-  const formatPatterns = [
-    /^\*\*/, /^__/, // Bold start
-    /^\*(?!\*)/, /^_(?!_)/, // Italic start (not bold)
-    /^~~/, // Strikethrough
-    /^`(?!`)/, // Inline code
-    /^\[([^\]]*)\]\([^)]*\)/, // Links
-  ];
-
-  while (originalPos < original.length && strippedCount < strippedPos) {
-    let matched = false;
-
-    // Check for formatting markers to skip
-    for (const pattern of formatPatterns) {
-      const match = original.slice(originalPos).match(pattern);
-      if (match) {
-        // For links, we need special handling
-        if (pattern.source.includes("\\[")) {
-          // Skip the markdown syntax, count the text content
-          const linkMatch = original.slice(originalPos).match(/^\[([^\]]*)\]\([^)]*\)/);
-          if (linkMatch) {
-            const textContent = linkMatch[1];
-            const remaining = strippedPos - strippedCount;
-            if (remaining <= textContent.length) {
-              return originalPos + 1 + remaining; // +1 for [
-            }
-            strippedCount += textContent.length;
-            originalPos += linkMatch[0].length;
-            matched = true;
-            break;
-          }
-        }
+  while (originalIdx < original.length && strippedIdx < strippedPos) {
+    // Check for link syntax: [text](url)
+    const linkMatch = original.slice(originalIdx).match(/^\[([^\]]*)\]\([^)]*\)/);
+    if (linkMatch) {
+      const textContent = linkMatch[1];
+      const remaining = strippedPos - strippedIdx;
+      if (remaining <= textContent.length) {
+        // Position is within the link text
+        return originalIdx + 1 + remaining; // +1 for opening [
       }
+      strippedIdx += textContent.length;
+      originalIdx += linkMatch[0].length;
+      continue;
     }
 
-    if (!matched) {
-      // Regular character
-      strippedCount++;
-      originalPos++;
+    // Check for formatting markers to skip (2-char markers first)
+    const twoChar = original.slice(originalIdx, originalIdx + 2);
+    if (twoChar === "**" || twoChar === "__" || twoChar === "~~") {
+      originalIdx += 2;
+      continue;
     }
+
+    // Single-char markers (only if not part of double)
+    const oneChar = original[originalIdx];
+    if ((oneChar === "*" || oneChar === "_" || oneChar === "`") &&
+        original[originalIdx + 1] !== oneChar) {
+      originalIdx += 1;
+      continue;
+    }
+
+    // Regular character - advance both
+    strippedIdx++;
+    originalIdx++;
   }
 
-  return originalPos;
+  return originalIdx;
 }

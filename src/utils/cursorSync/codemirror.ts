@@ -82,17 +82,9 @@ export function restoreCursorInCodeMirror(
 
   // For CodeMirror, we need to add back the markdown syntax offset
   const targetLineText = lines[result.line] || "";
-  const { adjustedColumn } = stripMarkdownSyntax(targetLineText, 0);
-  const syntaxOffset = targetLineText.length > 0 ? -adjustedColumn : 0;
-
-  // Calculate the final column, accounting for markdown syntax
-  let finalColumn = result.column;
-  if (syntaxOffset < 0) {
-    // There's markdown syntax at the start, add it back
-    const { text: stripped } = stripMarkdownSyntax(targetLineText, 0);
-    const markerLength = targetLineText.length - stripped.length;
-    finalColumn = Math.min(result.column + markerLength, targetLineText.length);
-  }
+  const { text: strippedText } = stripMarkdownSyntax(targetLineText, 0);
+  const markerLength = targetLineText.length - strippedText.length;
+  const finalColumn = Math.min(result.column + markerLength, targetLineText.length);
 
   // Get the actual position in the document
   const docLine = view.state.doc.line(result.line + 1); // 1-based
