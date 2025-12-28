@@ -9,6 +9,10 @@ import {
   selectSelectionMatches,
 } from "@codemirror/search";
 import { useEditorStore } from "@/stores/editorStore";
+import {
+  getCursorInfoFromCodeMirror,
+  restoreCursorInCodeMirror,
+} from "@/utils/cursorSync";
 
 // Compartment for dynamic line wrapping
 const lineWrapCompartment = new Compartment();
@@ -33,6 +37,11 @@ export function SourceEditor() {
         requestAnimationFrame(() => {
           isInternalChange.current = false;
         });
+      }
+      // Track cursor position for mode sync
+      if (update.selectionSet || update.docChanged) {
+        const cursorInfo = getCursorInfoFromCodeMirror(update.view);
+        useEditorStore.getState().setCursorInfo(cursorInfo);
       }
     });
 
@@ -105,9 +114,14 @@ export function SourceEditor() {
 
     viewRef.current = view;
 
-    // Auto-focus on mount with delay for proper DOM sync
+    // Auto-focus and restore cursor on mount
     setTimeout(() => {
       view.focus();
+      // Restore cursor position from previous mode if available
+      const cursorInfo = useEditorStore.getState().cursorInfo;
+      if (cursorInfo) {
+        restoreCursorInCodeMirror(view, cursorInfo);
+      }
     }, 50);
 
     return () => {

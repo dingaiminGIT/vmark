@@ -5,7 +5,8 @@ import {
   defaultValueCtx,
   editorViewCtx,
 } from "@milkdown/kit/core";
-import { Selection } from "@milkdown/kit/prose/state";
+import { Selection, Plugin, PluginKey } from "@milkdown/kit/prose/state";
+import { $prose } from "@milkdown/kit/utils";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
 import {
   toggleStrongCommand,
@@ -28,8 +29,15 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useParagraphCommands } from "@/hooks/useParagraphCommands";
 import { useFormatCommands } from "@/hooks/useFormatCommands";
 import { useTableCommands } from "@/hooks/useTableCommands";
+import {
+  getCursorInfoFromProseMirror,
+  restoreCursorInProseMirror,
+} from "@/utils/cursorSync";
 import { SourceEditor } from "./SourceEditor";
 import "./editor.css";
+
+// Plugin key for cursor tracking
+const cursorSyncPluginKey = new PluginKey("cursorSync");
 
 
 function MilkdownEditorInner() {
@@ -50,6 +58,30 @@ function MilkdownEditorInner() {
     });
   }, []);
 
+  // ProseMirror plugin to track cursor position for mode sync
+  const cursorSyncPlugin = $prose(() => {
+    let trackingEnabled = false;
+    // Delay tracking to allow cursor restoration to complete first
+    setTimeout(() => {
+      trackingEnabled = true;
+    }, 200);
+
+    return new Plugin({
+      key: cursorSyncPluginKey,
+      view: () => ({
+        update: (view, prevState) => {
+          // Skip tracking until restoration is complete
+          if (!trackingEnabled) return;
+          // Track selection changes
+          if (!view.state.selection.eq(prevState.selection)) {
+            const cursorInfo = getCursorInfoFromProseMirror(view);
+            useEditorStore.getState().setCursorInfo(cursorInfo);
+          }
+        },
+      }),
+    });
+  });
+
   const { get } = useEditor((root) =>
     MilkdownEditor.make()
       .config((ctx) => {
@@ -64,6 +96,7 @@ function MilkdownEditorInner() {
       .use(cursor)
       .use(indent)
       .use(trailing)
+      .use(cursorSyncPlugin)
       .config((ctx) => {
         // Configure listener AFTER the plugin is loaded
         ctx.get(listenerCtx).markdownUpdated(handleMarkdownUpdate);
@@ -86,9 +119,17 @@ function MilkdownEditorInner() {
         editor.action((ctx) => {
           const view = ctx.get(editorViewCtx);
           view.focus();
-          const { state } = view;
-          const selection = Selection.atStart(state.doc);
-          view.dispatch(state.tr.setSelection(selection).scrollIntoView());
+
+          // Restore cursor position from previous mode if available
+          const cursorInfo = useEditorStore.getState().cursorInfo;
+          if (cursorInfo) {
+            restoreCursorInProseMirror(view, cursorInfo);
+          } else {
+            // Default to start of document
+            const { state } = view;
+            const selection = Selection.atStart(state.doc);
+            view.dispatch(state.tr.setSelection(selection).scrollIntoView());
+          }
         });
       }, 50);
       return true;
