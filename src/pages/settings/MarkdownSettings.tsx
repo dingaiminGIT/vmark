@@ -89,6 +89,15 @@ export function MarkdownSettings() {
             onChange={(v) => updateSetting("revealInlineSyntax", v)}
           />
         </SettingRow>
+        <SettingRow
+          label="Enable regex in search"
+          description="Show regex toggle button in Find & Replace bar"
+        >
+          <Toggle
+            checked={markdown.enableRegexSearch}
+            onChange={(v) => updateSetting("enableRegexSearch", v)}
+          />
+        </SettingRow>
       </SettingsGroup>
 
       <SettingsGroup title="Whitespace & Line Breaks" className="">

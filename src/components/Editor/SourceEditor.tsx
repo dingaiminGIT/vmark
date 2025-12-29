@@ -1,15 +1,6 @@
 import { useEffect, useRef } from "react";
-import { EditorState, Compartment, RangeSetBuilder } from "@codemirror/state";
-import {
-  EditorView,
-  keymap,
-  drawSelection,
-  dropCursor,
-  Decoration,
-  ViewPlugin,
-  type DecorationSet,
-  type ViewUpdate,
-} from "@codemirror/view";
+import { EditorState, Compartment } from "@codemirror/state";
+import { EditorView, keymap, drawSelection, dropCursor } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import {
@@ -30,53 +21,12 @@ import {
   getCursorInfoFromCodeMirror,
   restoreCursorInCodeMirror,
 } from "@/utils/cursorSync/codemirror";
+import { sourceEditorTheme, createBrHidingPlugin } from "@/plugins/codemirror";
 
 // Compartment for dynamic line wrapping
 const lineWrapCompartment = new Compartment();
 // Compartment for br tag visibility
 const brVisibilityCompartment = new Compartment();
-
-// Decoration to hide <br /> lines
-const hiddenLineDecoration = Decoration.line({ class: "cm-br-hidden" });
-
-// Plugin to find and decorate <br /> lines
-function createBrHidingPlugin(hide: boolean) {
-  if (!hide) return [];
-
-  return ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet;
-
-      constructor(view: EditorView) {
-        this.decorations = this.buildDecorations(view);
-      }
-
-      update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
-          this.decorations = this.buildDecorations(update.view);
-        }
-      }
-
-      buildDecorations(view: EditorView) {
-        const builder = new RangeSetBuilder<Decoration>();
-        const doc = view.state.doc;
-
-        for (let i = 1; i <= doc.lines; i++) {
-          const line = doc.line(i);
-          // Match lines that are just <br /> (with optional whitespace)
-          if (/^\s*<br\s*\/?>\s*$/.test(line.text)) {
-            builder.add(line.from, line.from, hiddenLineDecoration);
-          }
-        }
-
-        return builder.finish();
-      }
-    },
-    {
-      decorations: (v) => v.decorations,
-    }
-  );
-}
 
 export function SourceEditor() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -138,36 +88,7 @@ export function SourceEditor() {
         // Listen for changes
         updateListener,
         // Theme/styling
-        EditorView.theme({
-          "&": {
-            fontSize: "18px",
-            height: "100%",
-          },
-          ".cm-content": {
-            fontFamily: "var(--font-sans)",
-            lineHeight: "1.8",
-            caretColor: "var(--text-color)",
-            padding: "0",
-          },
-          ".cm-line": {
-            padding: "0",
-          },
-          "&.cm-focused": {
-            outline: "none",
-          },
-          ".cm-selectionBackground, .cm-content ::selection": {
-            backgroundColor: "var(--selection-color, rgba(0, 122, 255, 0.2)) !important",
-          },
-          ".cm-cursor": {
-            borderLeftColor: "var(--text-color)",
-            borderLeftWidth: "2px",
-          },
-          // Secondary cursors for multi-cursor
-          ".cm-cursor-secondary": {
-            borderLeftColor: "var(--primary-color)",
-            borderLeftWidth: "2px",
-          },
-        }),
+        sourceEditorTheme,
         // Allow multiple selections
         EditorState.allowMultipleSelections.of(true),
       ],
@@ -248,13 +169,15 @@ export function SourceEditor() {
       if (
         state.query !== prevState.query ||
         state.caseSensitive !== prevState.caseSensitive ||
-        state.wholeWord !== prevState.wholeWord
+        state.wholeWord !== prevState.wholeWord ||
+        state.useRegex !== prevState.useRegex
       ) {
         if (state.query) {
           const query = new SearchQuery({
             search: state.query,
             caseSensitive: state.caseSensitive,
             wholeWord: state.wholeWord,
+            regexp: state.useRegex,
           });
           view.dispatch({ effects: setSearchQuery.of(query) });
         } else {
@@ -274,12 +197,13 @@ export function SourceEditor() {
       }
 
       // Handle replace
-      if (state.replaceText !== prevState.replaceText && state.isOpen && state.showReplace) {
+      if (state.replaceText !== prevState.replaceText && state.isOpen) {
         const query = new SearchQuery({
           search: state.query,
           replace: state.replaceText,
           caseSensitive: state.caseSensitive,
           wholeWord: state.wholeWord,
+          regexp: state.useRegex,
         });
         view.dispatch({ effects: setSearchQuery.of(query) });
       }

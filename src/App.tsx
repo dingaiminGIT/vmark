@@ -71,7 +71,7 @@ function MainLayout() {
             flexShrink: 0,
           }}
         />
-        <div style={{ flex: 1, minHeight: 0 }}>
+        <div style={{ flex: 1, minHeight: 0, marginTop: "1em", marginBottom: "3em" }}>
           <Editor />
         </div>
         <FindBar />

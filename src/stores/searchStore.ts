@@ -2,23 +2,24 @@ import { create } from "zustand";
 
 interface SearchState {
   isOpen: boolean;
-  showReplace: boolean;
   query: string;
   replaceText: string;
   caseSensitive: boolean;
   wholeWord: boolean;
+  useRegex: boolean;
   matchCount: number;
   currentIndex: number;
 }
 
 interface SearchActions {
-  openFind: () => void;
-  openReplace: () => void;
+  open: () => void;
   close: () => void;
+  toggle: () => void;
   setQuery: (query: string) => void;
   setReplaceText: (text: string) => void;
   toggleCaseSensitive: () => void;
   toggleWholeWord: () => void;
+  toggleRegex: () => void;
   setMatches: (count: number, currentIndex: number) => void;
   findNext: () => void;
   findPrevious: () => void;
@@ -28,11 +29,11 @@ interface SearchActions {
 
 const initialState: SearchState = {
   isOpen: false,
-  showReplace: false,
   query: "",
   replaceText: "",
   caseSensitive: false,
   wholeWord: false,
+  useRegex: false,
   matchCount: 0,
   currentIndex: -1,
 };
@@ -40,11 +41,11 @@ const initialState: SearchState = {
 export const useSearchStore = create<SearchState & SearchActions>((set, get) => ({
   ...initialState,
 
-  openFind: () => set({ isOpen: true, showReplace: false }),
-
-  openReplace: () => set({ isOpen: true, showReplace: true }),
+  open: () => set({ isOpen: true }),
 
   close: () => set({ isOpen: false }),
+
+  toggle: () => set((state) => ({ isOpen: !state.isOpen })),
 
   setQuery: (query) => set({ query, currentIndex: -1 }),
 
@@ -55,6 +56,9 @@ export const useSearchStore = create<SearchState & SearchActions>((set, get) => 
 
   toggleWholeWord: () =>
     set((state) => ({ wholeWord: !state.wholeWord, currentIndex: -1 })),
+
+  toggleRegex: () =>
+    set((state) => ({ useRegex: !state.useRegex, currentIndex: -1 })),
 
   setMatches: (matchCount, currentIndex) => set({ matchCount, currentIndex }),
 
@@ -73,12 +77,12 @@ export const useSearchStore = create<SearchState & SearchActions>((set, get) => 
   },
 
   replaceCurrent: () => {
-    // Actual replacement is handled by editor adapters
-    // This just signals the intent - editors listen to store changes
+    // Dispatch event for editor adapters (both CodeMirror and ProseMirror)
+    window.dispatchEvent(new CustomEvent("search:replace-current"));
   },
 
   replaceAll: () => {
-    // Actual replacement is handled by editor adapters
-    // This just signals the intent - editors listen to store changes
+    // Dispatch event for editor adapters (both CodeMirror and ProseMirror)
+    window.dispatchEvent(new CustomEvent("search:replace-all"));
   },
 }));

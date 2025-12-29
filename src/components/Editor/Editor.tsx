@@ -5,8 +5,7 @@ import {
   defaultValueCtx,
   editorViewCtx,
 } from "@milkdown/kit/core";
-import { Selection, Plugin, PluginKey } from "@milkdown/kit/prose/state";
-import { $prose } from "@milkdown/kit/utils";
+import { Selection } from "@milkdown/kit/prose/state";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
 import {
   toggleStrongCommand,
@@ -30,10 +29,8 @@ import { useParagraphCommands } from "@/hooks/useParagraphCommands";
 import { useFormatCommands } from "@/hooks/useFormatCommands";
 import { useTableCommands } from "@/hooks/useTableCommands";
 import { useCJKFormatCommands } from "@/hooks/useCJKFormatCommands";
-import {
-  getCursorInfoFromProseMirror,
-  restoreCursorInProseMirror,
-} from "@/utils/cursorSync/prosemirror";
+import { restoreCursorInProseMirror } from "@/utils/cursorSync/prosemirror";
+import { overrideKeymapPlugin, cursorSyncPlugin } from "@/plugins/editorPlugins";
 import { syntaxRevealPlugin } from "@/plugins/syntaxReveal";
 import { alertBlockPlugin } from "@/plugins/alertBlock";
 import { detailsBlockPlugin } from "@/plugins/detailsBlock";
@@ -48,9 +45,6 @@ import "@/plugins/detailsBlock/details-block.css";
 import "@/plugins/focusMode/focus-mode.css";
 import "@/plugins/typewriterMode/typewriter-mode.css";
 import "@/plugins/search/search.css";
-
-// Plugin key for cursor tracking
-const cursorSyncPluginKey = new PluginKey("cursorSync");
 
 
 function MilkdownEditorInner() {
@@ -71,36 +65,13 @@ function MilkdownEditorInner() {
     });
   }, []);
 
-  // ProseMirror plugin to track cursor position for mode sync
-  const cursorSyncPlugin = $prose(() => {
-    let trackingEnabled = false;
-    // Delay tracking to allow cursor restoration to complete first
-    setTimeout(() => {
-      trackingEnabled = true;
-    }, 200);
-
-    return new Plugin({
-      key: cursorSyncPluginKey,
-      view: () => ({
-        update: (view, prevState) => {
-          // Skip tracking until restoration is complete
-          if (!trackingEnabled) return;
-          // Track selection changes
-          if (!view.state.selection.eq(prevState.selection)) {
-            const cursorInfo = getCursorInfoFromProseMirror(view);
-            useEditorStore.getState().setCursorInfo(cursorInfo);
-          }
-        },
-      }),
-    });
-  });
-
   const { get } = useEditor((root) =>
     MilkdownEditor.make()
       .config((ctx) => {
         ctx.set(rootCtx, root);
         ctx.set(defaultValueCtx, content);
       })
+      .use(overrideKeymapPlugin)
       .use(commonmark)
       .use(gfm)
       .use(alertBlockPlugin.flat())

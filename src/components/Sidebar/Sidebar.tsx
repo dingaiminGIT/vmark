@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
+import { FolderOpen, TableOfContents, PanelRightOpen } from "lucide-react";
 import { useEditorStore } from "@/stores/editorStore";
+import { useUIStore } from "@/stores/uiStore";
 import "./Sidebar.css";
 
 type ViewMode = "files" | "outline";
@@ -79,20 +79,6 @@ export function Sidebar() {
     setViewMode((prev) => (prev === "files" ? "outline" : "files"));
   };
 
-  const handleOpen = async () => {
-    try {
-      const path = await open({
-        filters: [{ name: "Markdown", extensions: ["md", "markdown", "txt"] }],
-      });
-      if (path) {
-        const content = await readTextFile(path as string);
-        useEditorStore.getState().loadContent(content, path as string);
-      }
-    } catch (error) {
-      console.error("Failed to open file:", error);
-    }
-  };
-
   return (
     <div className="sidebar" style={{ width: "100%", height: "100%" }}>
       {/* Drag region for traffic lights area */}
@@ -104,22 +90,20 @@ export function Sidebar() {
           title={viewMode === "files" ? "Show Outline" : "Show Files"}
         >
           {viewMode === "files" ? (
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M2 3h12v1.5H2V3zm0 4h12v1.5H2V7zm0 4h8v1.5H2V11z" />
-            </svg>
+            <FolderOpen size={16} />
           ) : (
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M1.5 1h5v5h-5V1zm1 1v3h3V2h-3zm6.5-1h5v5h-5V1zm1 1v3h3V2h-3zm-8.5 7h5v5h-5V9zm1 1v3h3v-3h-3zm6.5-1h5v5h-5V9zm1 1v3h3v-3h-3z" />
-            </svg>
+            <TableOfContents size={16} />
           )}
         </button>
         <span className="sidebar-title">
           {viewMode === "files" ? "FILES" : "OUTLINE"}
         </span>
-        <button className="sidebar-btn" onClick={handleOpen} title="Open File">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M11.5 7a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0zm-.82 4.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06-3.04-3.04z" />
-          </svg>
+        <button
+          className="sidebar-btn"
+          onClick={() => useUIStore.getState().toggleSidebar()}
+          title="Close Sidebar"
+        >
+          <PanelRightOpen size={16} />
         </button>
       </div>
 

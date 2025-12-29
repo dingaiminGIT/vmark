@@ -31,13 +31,12 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::paste(app, Some("Paste"))?,
             &PredefinedMenuItem::select_all(app, Some("Select All"))?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "find", "Find", true, Some("CmdOrCtrl+F"))?,
             &MenuItem::with_id(
                 app,
                 "find-replace",
                 "Find and Replace...",
                 true,
-                Some("CmdOrCtrl+Alt+F"),
+                Some("CmdOrCtrl+F"),
             )?,
             &MenuItem::with_id(app, "find-next", "Find Next", true, Some("CmdOrCtrl+G"))?,
             &MenuItem::with_id(

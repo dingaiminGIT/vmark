@@ -83,6 +83,7 @@ export interface MarkdownSettings {
   preserveLineBreaks: boolean; // Don't collapse blank lines
   showBrTags: boolean; // Display <br> tags visibly
   revealInlineSyntax: boolean; // Show markdown markers when cursor in formatted text
+  enableRegexSearch: boolean; // Enable regex in Find & Replace
 }
 
 interface SettingsState {
@@ -147,6 +148,7 @@ const initialState: SettingsState = {
     preserveLineBreaks: false,
     showBrTags: false,
     revealInlineSyntax: false,
+    enableRegexSearch: true,
   },
 };
 

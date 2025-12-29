@@ -1,4 +1,9 @@
 .find-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 101; /* Above StatusBar (z-index: 100) */
   background: var(--bg-secondary, #f8f8f8);
   border-top: 1px solid var(--border-color, #e0e0e0);
   padding: 6px 12px;
@@ -31,15 +36,15 @@
   align-items: center;
   flex: 1;
   max-width: 300px;
-  background: var(--bg-primary, #ffffff);
-  border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: 4px;
-  padding: 0 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 0;
+  padding: 0 4px;
 }
 
 .find-bar-input-group:focus-within {
-  border-color: var(--accent-primary, #007aff);
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+  border-bottom-color: var(--border-color, #e0e0e0);
 }
 
 .find-bar-icon {
@@ -53,11 +58,18 @@
   flex: 1;
   border: none;
   background: transparent;
-  padding: 6px 8px;
+  padding: 4px 6px;
   font-size: 13px;
   color: var(--text-primary, #333);
   outline: none;
+  box-shadow: none;
   min-width: 0;
+}
+
+.find-bar-input:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
 }
 
 .find-bar-input::placeholder {
@@ -159,11 +171,6 @@
 .find-bar-close svg {
   width: 14px;
   height: 14px;
-}
-
-/* Replace row */
-.find-bar-replace-row {
-  padding-left: 22px;
 }
 
 .find-bar-replace-actions {

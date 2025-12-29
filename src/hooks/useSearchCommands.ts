@@ -15,15 +15,9 @@ export function useSearchCommands() {
 
       if (cancelled) return;
 
-      // Find menu events
-      const unlistenFind = await listen("menu:find", () => {
-        useSearchStore.getState().openFind();
-      });
-      if (cancelled) { unlistenFind(); return; }
-      unlistenRefs.current.push(unlistenFind);
-
+      // Find and Replace (Cmd+F) - toggle
       const unlistenFindReplace = await listen("menu:find-replace", () => {
-        useSearchStore.getState().openReplace();
+        useSearchStore.getState().toggle();
       });
       if (cancelled) { unlistenFindReplace(); return; }
       unlistenRefs.current.push(unlistenFindReplace);
@@ -31,7 +25,7 @@ export function useSearchCommands() {
       const unlistenFindNext = await listen("menu:find-next", () => {
         const { isOpen } = useSearchStore.getState();
         if (!isOpen) {
-          useSearchStore.getState().openFind();
+          useSearchStore.getState().open();
         } else {
           useSearchStore.getState().findNext();
         }
@@ -42,7 +36,7 @@ export function useSearchCommands() {
       const unlistenFindPrev = await listen("menu:find-prev", () => {
         const { isOpen } = useSearchStore.getState();
         if (!isOpen) {
-          useSearchStore.getState().openFind();
+          useSearchStore.getState().open();
         } else {
           useSearchStore.getState().findPrevious();
         }

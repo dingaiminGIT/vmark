@@ -28,19 +28,31 @@ function findMatchesInDoc(
   doc: ProseMirrorNode,
   query: string,
   caseSensitive: boolean,
-  wholeWord: boolean
+  wholeWord: boolean,
+  useRegex: boolean
 ): Match[] {
   if (!query) return [];
 
   const matches: Match[] = [];
   const flags = caseSensitive ? "g" : "gi";
 
-  let pattern = escapeRegExp(query);
-  if (wholeWord) {
-    pattern = `\\b${pattern}\\b`;
+  let pattern: string;
+  if (useRegex) {
+    pattern = query;
+  } else {
+    pattern = escapeRegExp(query);
+    if (wholeWord) {
+      pattern = `\\b${pattern}\\b`;
+    }
   }
 
-  const regex = new RegExp(pattern, flags);
+  let regex: RegExp;
+  try {
+    regex = new RegExp(pattern, flags);
+  } catch {
+    // Invalid regex pattern
+    return [];
+  }
 
   // Walk through document to find text positions
   let textOffset = 0;
@@ -77,6 +89,7 @@ export const searchPlugin = $prose(() => {
   let lastQuery = "";
   let lastCaseSensitive = false;
   let lastWholeWord = false;
+  let lastUseRegex = false;
   let matches: Match[] = [];
 
   return new Plugin({
@@ -92,19 +105,22 @@ export const searchPlugin = $prose(() => {
         const queryChanged =
           state.query !== lastQuery ||
           state.caseSensitive !== lastCaseSensitive ||
-          state.wholeWord !== lastWholeWord;
+          state.wholeWord !== lastWholeWord ||
+          state.useRegex !== lastUseRegex;
 
         if (queryChanged || tr.docChanged) {
           lastQuery = state.query;
           lastCaseSensitive = state.caseSensitive;
           lastWholeWord = state.wholeWord;
+          lastUseRegex = state.useRegex;
 
           // Find matches in document
           matches = findMatchesInDoc(
             tr.doc,
             state.query,
             state.caseSensitive,
-            state.wholeWord
+            state.wholeWord,
+            state.useRegex
           );
 
           // Update store with match count
@@ -166,15 +182,88 @@ export const searchPlugin = $prose(() => {
         }
       };
 
-      // Subscribe to store changes
-      const unsubscribe = useSearchStore.subscribe(() => {
-        editorView.dispatch(editorView.state.tr);
-        requestAnimationFrame(scrollToMatch);
+      // Replace current match
+      const handleReplaceCurrent = () => {
+        const state = useSearchStore.getState();
+        if (!state.isOpen || state.currentIndex < 0) return;
+
+        const pluginState = searchPluginKey.getState(editorView.state);
+        if (!pluginState || !pluginState.matches[state.currentIndex]) return;
+
+        const match = pluginState.matches[state.currentIndex];
+        const tr = editorView.state.tr.replaceWith(
+          match.from,
+          match.to,
+          state.replaceText ? editorView.state.schema.text(state.replaceText) : []
+        );
+        editorView.dispatch(tr);
+
+        // Move to next match after replacement
+        requestAnimationFrame(() => {
+          useSearchStore.getState().findNext();
+        });
+      };
+
+      // Replace all matches
+      const handleReplaceAll = () => {
+        const state = useSearchStore.getState();
+        if (!state.isOpen || !state.query) return;
+
+        const pluginState = searchPluginKey.getState(editorView.state);
+        if (!pluginState || pluginState.matches.length === 0) return;
+
+        // Replace from end to start to preserve positions
+        const sortedMatches = [...pluginState.matches].sort((a, b) => b.from - a.from);
+        let tr = editorView.state.tr;
+
+        for (const match of sortedMatches) {
+          tr = tr.replaceWith(
+            match.from,
+            match.to,
+            state.replaceText ? editorView.state.schema.text(state.replaceText) : []
+          );
+        }
+
+        editorView.dispatch(tr);
+      };
+
+      // Subscribe to store changes - track relevant state to avoid unnecessary updates
+      let prevState = {
+        query: useSearchStore.getState().query,
+        caseSensitive: useSearchStore.getState().caseSensitive,
+        wholeWord: useSearchStore.getState().wholeWord,
+        useRegex: useSearchStore.getState().useRegex,
+        currentIndex: useSearchStore.getState().currentIndex,
+        isOpen: useSearchStore.getState().isOpen,
+      };
+
+      const unsubscribe = useSearchStore.subscribe((state) => {
+        const currentState = {
+          query: state.query,
+          caseSensitive: state.caseSensitive,
+          wholeWord: state.wholeWord,
+          useRegex: state.useRegex,
+          currentIndex: state.currentIndex,
+          isOpen: state.isOpen,
+        };
+
+        // Only dispatch if relevant state changed
+        if (JSON.stringify(currentState) !== JSON.stringify(prevState)) {
+          prevState = currentState;
+          editorView.dispatch(editorView.state.tr);
+          requestAnimationFrame(scrollToMatch);
+        }
       });
+
+      // Listen for replace events
+      window.addEventListener("search:replace-current", handleReplaceCurrent);
+      window.addEventListener("search:replace-all", handleReplaceAll);
 
       return {
         destroy() {
           unsubscribe();
+          window.removeEventListener("search:replace-current", handleReplaceCurrent);
+          window.removeEventListener("search:replace-all", handleReplaceAll);
         },
       };
     },
