@@ -7,6 +7,8 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useMenuEvents } from "@/hooks/useMenuEvents";
 import { useFileOperations } from "@/hooks/useFileOperations";
+import { useTheme } from "@/hooks/useTheme";
+import { useSettingsSync } from "@/hooks/useSettingsSync";
 
 function MainLayout() {
   const focusModeEnabled = useEditorStore((state) => state.focusModeEnabled);
@@ -15,9 +17,11 @@ function MainLayout() {
   );
   const sidebarVisible = useUIStore((state) => state.sidebarVisible);
 
-  // Initialize menu event listeners
+  // Initialize hooks
   useMenuEvents();
   useFileOperations();
+  useSettingsSync(); // Sync settings across windows
+  useTheme();
 
   const classNames = [
     "app-layout",

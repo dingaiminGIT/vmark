@@ -67,8 +67,10 @@ export function useMenuEvents() {
           title: "Settings",
           width: 700,
           height: 500,
+          minWidth: 500,
+          minHeight: 400,
           center: true,
-          resizable: false,
+          resizable: true,
           hiddenTitle: true,
           titleBarStyle: "overlay",
         });

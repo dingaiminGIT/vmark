@@ -2,10 +2,10 @@
 
 /* Theme CSS Variables - GitHub Style */
 :root {
-  /* Core colors */
-  --bg-color: #ffffff;
-  --text-color: #333333;
-  --primary-color: #4183c4;
+  /* Core colors - Paper theme default */
+  --bg-color: #eeeded;
+  --text-color: #1a1a1a;
+  --primary-color: #0066cc;
 
   /* Focus mode */
   --blur-text-color: #c8c8c8;
@@ -16,19 +16,28 @@
   --meta-content-color: #777777;
 
   /* Code blocks */
-  --code-bg-color: #f8f8f8;
-  --code-text-color: #333333;
-  --code-border-color: #e7eaed;
+  --code-bg-color: #e5e4e4;
+  --code-text-color: #1a1a1a;
+  --code-border-color: #d5d4d4;
 
   /* UI chrome */
-  --sidebar-bg: #fafafa;
+  --sidebar-bg: #e5e4e4;
   --sidebar-width: 240px;
   --outline-width: 200px;
-  --border-color: #eeeeee;
-  --table-border-color: #dfe2e5;
-  --selection-color: rgba(65, 131, 196, 0.2);
-  --bg-secondary: #f8f8f8;
-  --text-secondary: #777777;
+  --border-color: #d5d4d4;
+  --table-border-color: #d5d4d4;
+  --selection-color: rgba(0, 102, 204, 0.2);
+  --bg-secondary: #e5e4e4;
+  --text-secondary: #666666;
+
+  /* Settings UI - additional aliases */
+  --bg-primary: var(--bg-color);
+  --bg-tertiary: #f0f0f0;
+  --text-primary: var(--text-color);
+  --text-tertiary: #999999;
+  --accent-primary: #0066cc;
+  --accent-bg: rgba(0, 102, 204, 0.1);
+  --accent-text: #0066cc;
 
   /* Typography */
   --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "SF Pro SC",
@@ -63,6 +72,11 @@
     --selection-color: rgba(88, 166, 255, 0.2);
     --bg-secondary: #161b22;
     --text-secondary: #8b949e;
+    --bg-tertiary: #21262d;
+    --text-tertiary: #6e7681;
+    --accent-primary: #58a6ff;
+    --accent-bg: rgba(88, 166, 255, 0.15);
+    --accent-text: #58a6ff;
     --strong-color: #79c0ff;
     --emphasis-color: #ffa198;
     --source-mode-bg: rgba(255, 255, 255, 0.02);
@@ -87,7 +101,7 @@ body,
 body {
   font-family: var(--font-sans);
   font-size: 18px;
-  line-height: 1.8;
+  line-height: 1.6;
   color: var(--text-color);
   background-color: var(--bg-color);
   -webkit-font-smoothing: antialiased;

@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { Settings, Type, FolderOpen, Zap } from "lucide-react";
+import { Palette, Settings, FolderOpen, Zap } from "lucide-react";
+import {
+  useSettingsStore,
+  themes,
+  type ThemeId,
+} from "@/stores/settingsStore";
+import { useTheme } from "@/hooks/useTheme";
 
-type Section = "general" | "editor" | "files" | "advanced";
+type Section = "appearance" | "general" | "files" | "advanced";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -105,53 +111,145 @@ function GeneralSettings() {
   );
 }
 
-function EditorSettings() {
-  const [fontSize, setFontSize] = useState("16");
-  const [fontFamily, setFontFamily] = useState("system");
-  const [lineHeight, setLineHeight] = useState("1.6");
+const themeLabels: Record<ThemeId, string> = {
+  white: "White",
+  paper: "Paper",
+  mint: "Mint",
+  sepia: "Sepia",
+};
+
+function AppearanceSettings() {
+  const appearance = useSettingsStore((state) => state.appearance);
+  const updateSetting = useSettingsStore(
+    (state) => state.updateAppearanceSetting
+  );
+
+  const selectClass = `px-2 py-1 rounded border border-gray-200 dark:border-gray-700
+                       bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]`;
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-        Editor
-      </h2>
+      {/* Theme selector */}
+      <div className="mb-6">
+        <div className="text-sm font-medium text-[var(--text-primary)] mb-3">
+          Theme
+        </div>
+        <div className="flex items-center gap-4">
+          {(Object.keys(themes) as ThemeId[]).map((id) => (
+            <button
+              key={id}
+              onClick={() => updateSetting("theme", id)}
+              className="flex flex-col items-center gap-1.5"
+            >
+              <div
+                className={`w-6 h-6 rounded-full transition-all ${
+                  appearance.theme === id
+                    ? "ring-1 ring-offset-2 ring-gray-400 dark:ring-gray-500"
+                    : "hover:scale-110"
+                }`}
+                style={{
+                  backgroundColor: themes[id].background,
+                  border: `1px solid ${themes[id].border}`,
+                }}
+              />
+              <span className={`text-xs ${
+                appearance.theme === id
+                  ? "text-[var(--text-primary)]"
+                  : "text-[var(--text-tertiary)]"
+              }`}>
+                {themeLabels[id]}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Typography */}
+      <div className="text-sm font-medium text-[var(--text-primary)] mb-3">
+        Typography
+      </div>
       <div className="space-y-1">
-        <SettingRow label="Font size">
+        <SettingRow label="Latin Font">
           <select
-            value={fontSize}
-            onChange={(e) => setFontSize(e.target.value)}
-            className="px-2 py-1 rounded border border-gray-200 dark:border-gray-700
-                       bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]"
+            value={appearance.latinFont}
+            onChange={(e) => updateSetting("latinFont", e.target.value)}
+            className={selectClass}
+          >
+            <option value="system">System Default</option>
+            <option value="athelas">Athelas</option>
+            <option value="palatino">Palatino</option>
+            <option value="georgia">Georgia</option>
+            <option value="charter">Charter</option>
+            <option value="literata">Literata</option>
+          </select>
+        </SettingRow>
+        <SettingRow label="CJK Font">
+          <select
+            value={appearance.cjkFont}
+            onChange={(e) => updateSetting("cjkFont", e.target.value)}
+            className={selectClass}
+          >
+            <option value="system">System Default</option>
+            <option value="pingfang">PingFang SC</option>
+            <option value="songti">Songti SC</option>
+            <option value="kaiti">Kaiti SC</option>
+            <option value="notoserif">Noto Serif CJK</option>
+            <option value="sourcehans">Source Han Sans</option>
+          </select>
+        </SettingRow>
+        <SettingRow label="Mono Font">
+          <select
+            value={appearance.monoFont}
+            onChange={(e) => updateSetting("monoFont", e.target.value)}
+            className={selectClass}
+          >
+            <option value="system">System Default</option>
+            <option value="firacode">Fira Code</option>
+            <option value="jetbrains">JetBrains Mono</option>
+            <option value="sourcecodepro">Source Code Pro</option>
+            <option value="consolas">Consolas</option>
+            <option value="inconsolata">Inconsolata</option>
+          </select>
+        </SettingRow>
+        <SettingRow label="Font Size">
+          <select
+            value={appearance.fontSize}
+            onChange={(e) => updateSetting("fontSize", Number(e.target.value))}
+            className={selectClass}
           >
             <option value="14">14px</option>
             <option value="16">16px</option>
             <option value="18">18px</option>
             <option value="20">20px</option>
+            <option value="22">22px</option>
           </select>
         </SettingRow>
-        <SettingRow label="Font family">
+        <SettingRow label="Line Height">
           <select
-            value={fontFamily}
-            onChange={(e) => setFontFamily(e.target.value)}
-            className="px-2 py-1 rounded border border-gray-200 dark:border-gray-700
-                       bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]"
+            value={appearance.lineHeight}
+            onChange={(e) =>
+              updateSetting("lineHeight", Number(e.target.value))
+            }
+            className={selectClass}
           >
-            <option value="system">System Default</option>
-            <option value="serif">Serif</option>
-            <option value="mono">Monospace</option>
+            <option value="1.4">1.4 (Compact)</option>
+            <option value="1.6">1.6 (Normal)</option>
+            <option value="1.8">1.8 (Relaxed)</option>
+            <option value="2.0">2.0 (Spacious)</option>
           </select>
         </SettingRow>
-        <SettingRow label="Line height">
+        <SettingRow label="Paragraph Spacing">
           <select
-            value={lineHeight}
-            onChange={(e) => setLineHeight(e.target.value)}
-            className="px-2 py-1 rounded border border-gray-200 dark:border-gray-700
-                       bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]"
+            value={appearance.paragraphSpacing}
+            onChange={(e) =>
+              updateSetting("paragraphSpacing", Number(e.target.value))
+            }
+            className={selectClass}
           >
-            <option value="1.4">Compact</option>
-            <option value="1.6">Normal</option>
-            <option value="1.8">Relaxed</option>
-            <option value="2.0">Spacious</option>
+            <option value="0.5">0.5em (Tight)</option>
+            <option value="1">1em (Normal)</option>
+            <option value="1.5">1.5em (Relaxed)</option>
+            <option value="2">2em (Spacious)</option>
           </select>
         </SettingRow>
       </div>
@@ -217,11 +315,14 @@ function AdvancedSettings() {
 }
 
 export function SettingsPage() {
-  const [section, setSection] = useState<Section>("general");
+  const [section, setSection] = useState<Section>("appearance");
+
+  // Apply theme to this window
+  useTheme();
 
   const navItems = [
+    { id: "appearance" as const, icon: <Palette className="w-4 h-4" />, label: "Appearance" },
     { id: "general" as const, icon: <Settings className="w-4 h-4" />, label: "General" },
-    { id: "editor" as const, icon: <Type className="w-4 h-4" />, label: "Editor" },
     { id: "files" as const, icon: <FolderOpen className="w-4 h-4" />, label: "Files" },
     { id: "advanced" as const, icon: <Zap className="w-4 h-4" />, label: "Advanced" },
   ];
@@ -257,8 +358,8 @@ export function SettingsPage() {
         <div data-tauri-drag-region className="h-12 shrink-0" />
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
+          {section === "appearance" && <AppearanceSettings />}
           {section === "general" && <GeneralSettings />}
-          {section === "editor" && <EditorSettings />}
           {section === "files" && <FilesSettings />}
           {section === "advanced" && <AdvancedSettings />}
         </div>

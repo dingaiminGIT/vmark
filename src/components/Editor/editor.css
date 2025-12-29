@@ -18,8 +18,8 @@
 .milkdown {
   width: 100%;
   font-family: var(--font-sans);
-  font-size: 18px;
-  line-height: 1.8;
+  font-size: var(--editor-font-size, 18px);
+  line-height: var(--editor-line-height, 1.6);
   color: var(--text-color);
 }
 
@@ -48,7 +48,7 @@
 
 .milkdown .ProseMirror p,
 .milkdown .ProseMirror li {
-  line-height: 1.8;
+  line-height: var(--editor-line-height, 1.6);
 }
 
 /* Headings */
@@ -110,7 +110,11 @@
 
 /* Paragraphs */
 .milkdown p {
-  margin: 0.8em 0;
+  margin: 0 0 var(--editor-paragraph-spacing, 1em) 0;
+}
+
+.milkdown p:last-child {
+  margin-bottom: 0;
 }
 
 /* Links */
@@ -236,13 +240,15 @@
   border: 1px solid var(--table-border-color);
   border-bottom: 0;
   margin: 0;
-  padding: 6px 13px;
+  padding: 4px 10px;
+  line-height: 1.4;
 }
 
 .milkdown td {
   border: 1px solid var(--table-border-color);
   margin: 0;
-  padding: 6px 13px;
+  padding: 4px 10px;
+  line-height: 1.4;
 }
 
 .milkdown th:first-child,
@@ -310,7 +316,8 @@
 
 .source-editor .cm-scroller {
   font-family: var(--font-sans) !important;
-  line-height: 1.8 !important;
+  font-size: var(--editor-font-size, 18px) !important;
+  line-height: var(--editor-line-height, 1.6) !important;
   overflow-x: auto !important;
 }
 
