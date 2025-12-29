@@ -5,7 +5,12 @@ import { replaceAll } from "@milkdown/kit/utils";
 import type { Editor } from "@milkdown/kit/core";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useEditorStore } from "@/stores/editorStore";
-import { formatMarkdown, formatSelection } from "@/lib/cjkFormatter";
+import {
+  formatMarkdown,
+  formatSelection,
+  removeTrailingSpaces,
+  collapseNewlines,
+} from "@/lib/cjkFormatter";
 
 type GetEditor = () => Editor | undefined;
 
@@ -85,6 +90,48 @@ export function useCJKFormatCommands(getEditor: GetEditor) {
         return;
       }
       unlistenRefs.current.push(unlistenFormatFile);
+
+      // Remove Trailing Spaces
+      const unlistenTrailingSpaces = await listen(
+        "menu:remove-trailing-spaces",
+        () => {
+          const editor = getEditor();
+          if (!editor) return;
+
+          const content = useEditorStore.getState().content;
+          const formatted = removeTrailingSpaces(content);
+
+          if (formatted !== content) {
+            editor.action(replaceAll(formatted));
+          }
+        }
+      );
+      if (cancelled) {
+        unlistenTrailingSpaces();
+        return;
+      }
+      unlistenRefs.current.push(unlistenTrailingSpaces);
+
+      // Collapse Blank Lines
+      const unlistenCollapseLines = await listen(
+        "menu:collapse-blank-lines",
+        () => {
+          const editor = getEditor();
+          if (!editor) return;
+
+          const content = useEditorStore.getState().content;
+          const formatted = collapseNewlines(content);
+
+          if (formatted !== content) {
+            editor.action(replaceAll(formatted));
+          }
+        }
+      );
+      if (cancelled) {
+        unlistenCollapseLines();
+        return;
+      }
+      unlistenRefs.current.push(unlistenCollapseLines);
     };
 
     setupListeners();

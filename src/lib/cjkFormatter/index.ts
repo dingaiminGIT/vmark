@@ -6,5 +6,5 @@
  */
 
 export { formatMarkdown, formatSelection, formatFile } from "./formatter";
-export { containsCJK } from "./rules";
+export { containsCJK, removeTrailingSpaces, collapseNewlines } from "./rules";
 export type { CJKFormattingSettings } from "@/stores/settingsStore";

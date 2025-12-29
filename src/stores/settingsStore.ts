@@ -79,9 +79,15 @@ export interface CJKFormattingSettings {
   trailingSpaceRemoval: boolean;
 }
 
+export interface MarkdownSettings {
+  preserveLineBreaks: boolean; // Don't collapse blank lines
+  showBrTags: boolean; // Display <br> tags visibly
+}
+
 interface SettingsState {
   appearance: AppearanceSettings;
   cjkFormatting: CJKFormattingSettings;
+  markdown: MarkdownSettings;
 }
 
 interface SettingsActions {
@@ -92,6 +98,10 @@ interface SettingsActions {
   updateCJKFormattingSetting: <K extends keyof CJKFormattingSettings>(
     key: K,
     value: CJKFormattingSettings[K]
+  ) => void;
+  updateMarkdownSetting: <K extends keyof MarkdownSettings>(
+    key: K,
+    value: MarkdownSettings[K]
   ) => void;
   resetSettings: () => void;
 }
@@ -132,6 +142,10 @@ const initialState: SettingsState = {
     consecutivePunctuationLimit: 0, // 0=off
     trailingSpaceRemoval: true,
   },
+  markdown: {
+    preserveLineBreaks: false,
+    showBrTags: false,
+  },
 };
 
 export const useSettingsStore = create<SettingsState & SettingsActions>()(
@@ -147,6 +161,11 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
       updateCJKFormattingSetting: (key, value) =>
         set((state) => ({
           cjkFormatting: { ...state.cjkFormatting, [key]: value },
+        })),
+
+      updateMarkdownSetting: (key, value) =>
+        set((state) => ({
+          markdown: { ...state.markdown, [key]: value },
         })),
 
       resetSettings: () => set(initialState),

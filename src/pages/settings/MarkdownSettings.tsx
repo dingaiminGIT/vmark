@@ -1,0 +1,104 @@
+import { useSettingsStore } from "@/stores/settingsStore";
+
+interface SettingRowProps {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+}
+
+function SettingRow({ label, description, children }: SettingRowProps) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex-1">
+        <div className="text-sm font-medium text-[var(--text-primary)]">
+          {label}
+        </div>
+        {description && (
+          <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
+            {description}
+          </div>
+        )}
+      </div>
+      <div className="ml-4">{children}</div>
+    </div>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`relative w-7 h-4 rounded-full transition-colors
+                  ${checked ? "bg-[var(--accent-primary)]" : "bg-[var(--bg-tertiary)]"}`}
+    >
+      <span
+        className={`absolute top-[3px] left-[3px] w-2.5 h-2.5 rounded-full bg-white shadow
+                    transition-transform ${checked ? "translate-x-3" : ""}`}
+      />
+    </button>
+  );
+}
+
+function SettingsGroup({
+  title,
+  children,
+  className = "mb-6",
+}: {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <>
+      <div className="text-sm font-medium text-[var(--text-primary)] mb-3">
+        {title}
+      </div>
+      <div className={`space-y-1 ${className}`}>{children}</div>
+    </>
+  );
+}
+
+export function MarkdownSettings() {
+  const markdown = useSettingsStore((state) => state.markdown);
+  const updateSetting = useSettingsStore((state) => state.updateMarkdownSetting);
+
+  return (
+    <div>
+      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+        Markdown
+      </h2>
+      <p className="text-xs text-[var(--text-tertiary)] mb-4">
+        Configure whitespace and line break behavior for markdown editing.
+      </p>
+
+      <SettingsGroup title="Whitespace & Line Breaks" className="">
+        <SettingRow
+          label="Preserve consecutive line breaks"
+          description="Keep multiple blank lines as-is (don't collapse)"
+        >
+          <Toggle
+            checked={markdown.preserveLineBreaks}
+            onChange={(v) => updateSetting("preserveLineBreaks", v)}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Show <br> tags"
+          description="Display HTML line break tags visibly in editor"
+        >
+          <Toggle
+            checked={markdown.showBrTags}
+            onChange={(v) => updateSetting("showBrTags", v)}
+          />
+        </SettingRow>
+      </SettingsGroup>
+    </div>
+  );
+}

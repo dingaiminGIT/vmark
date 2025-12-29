@@ -67,9 +67,20 @@ export function normalizeEllipsis(text: string): string {
 
 /**
  * Collapse excessive newlines (3+) to max 2
+ * Also handles Milkdown's <br /> tags for empty paragraphs
  */
 export function collapseNewlines(text: string): string {
-  return text.replace(/\n{3,}/g, "\n\n");
+  // Remove standalone <br /> lines (empty paragraphs from Milkdown)
+  // Pattern: \n\n<br />\n\n or multiple consecutive ones
+  text = text.replace(/(\n\n)(<br\s*\/?>\n\n)+/g, "\n\n");
+
+  // Also handle <br /> at start after first paragraph
+  text = text.replace(/\n\n<br\s*\/?>\n\n/g, "\n\n");
+
+  // Collapse 3+ consecutive newlines to exactly 2
+  text = text.replace(/\n{3,}/g, "\n\n");
+
+  return text;
 }
 
 // ============================================================

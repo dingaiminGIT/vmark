@@ -351,6 +351,11 @@
   display: none;
 }
 
+/* Hide <br /> lines when showBrTags is off */
+.source-editor .cm-br-hidden {
+  display: none;
+}
+
 /* Print styles */
 @media print {
   .milkdown {

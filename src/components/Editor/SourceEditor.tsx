@@ -1,6 +1,15 @@
 import { useEffect, useRef } from "react";
-import { EditorState, Compartment } from "@codemirror/state";
-import { EditorView, keymap, drawSelection, dropCursor } from "@codemirror/view";
+import { EditorState, Compartment, RangeSetBuilder } from "@codemirror/state";
+import {
+  EditorView,
+  keymap,
+  drawSelection,
+  dropCursor,
+  Decoration,
+  ViewPlugin,
+  type DecorationSet,
+  type ViewUpdate,
+} from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import {
@@ -9,6 +18,7 @@ import {
   selectSelectionMatches,
 } from "@codemirror/search";
 import { useEditorStore } from "@/stores/editorStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import {
   getCursorInfoFromCodeMirror,
   restoreCursorInCodeMirror,
@@ -16,6 +26,50 @@ import {
 
 // Compartment for dynamic line wrapping
 const lineWrapCompartment = new Compartment();
+// Compartment for br tag visibility
+const brVisibilityCompartment = new Compartment();
+
+// Decoration to hide <br /> lines
+const hiddenLineDecoration = Decoration.line({ class: "cm-br-hidden" });
+
+// Plugin to find and decorate <br /> lines
+function createBrHidingPlugin(hide: boolean) {
+  if (!hide) return [];
+
+  return ViewPlugin.fromClass(
+    class {
+      decorations: DecorationSet;
+
+      constructor(view: EditorView) {
+        this.decorations = this.buildDecorations(view);
+      }
+
+      update(update: ViewUpdate) {
+        if (update.docChanged || update.viewportChanged) {
+          this.decorations = this.buildDecorations(update.view);
+        }
+      }
+
+      buildDecorations(view: EditorView) {
+        const builder = new RangeSetBuilder<Decoration>();
+        const doc = view.state.doc;
+
+        for (let i = 1; i <= doc.lines; i++) {
+          const line = doc.line(i);
+          // Match lines that are just <br /> (with optional whitespace)
+          if (/^\s*<br\s*\/?>\s*$/.test(line.text)) {
+            builder.add(line.from, line.from, hiddenLineDecoration);
+          }
+        }
+
+        return builder.finish();
+      }
+    },
+    {
+      decorations: (v) => v.decorations,
+    }
+  );
+}
 
 export function SourceEditor() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -24,6 +78,7 @@ export function SourceEditor() {
 
   const content = useEditorStore((state) => state.content);
   const wordWrap = useEditorStore((state) => state.wordWrap);
+  const showBrTags = useSettingsStore((state) => state.markdown.showBrTags);
 
   // Create CodeMirror instance
   useEffect(() => {
@@ -46,12 +101,15 @@ export function SourceEditor() {
     });
 
     const initialWordWrap = useEditorStore.getState().wordWrap;
+    const initialShowBrTags = useSettingsStore.getState().markdown.showBrTags;
 
     const state = EditorState.create({
       doc: content,
       extensions: [
         // Line wrapping (dynamic via compartment)
         lineWrapCompartment.of(initialWordWrap ? EditorView.lineWrapping : []),
+        // BR visibility (dynamic via compartment) - hide when showBrTags is false
+        brVisibilityCompartment.of(createBrHidingPlugin(!initialShowBrTags)),
         // Multi-cursor support
         drawSelection(),
         dropCursor(),
@@ -159,6 +217,18 @@ export function SourceEditor() {
       ),
     });
   }, [wordWrap]);
+
+  // Update br visibility when showBrTags changes
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    view.dispatch({
+      effects: brVisibilityCompartment.reconfigure(
+        createBrHidingPlugin(!showBrTags)
+      ),
+    });
+  }, [showBrTags]);
 
   return <div ref={containerRef} className="source-editor" />;
 }

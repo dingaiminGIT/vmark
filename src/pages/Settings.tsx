@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Palette, Settings, FolderOpen, Zap, Languages } from "lucide-react";
+import { Palette, Settings, FolderOpen, Zap, Languages, FileText } from "lucide-react";
 import {
   useSettingsStore,
   themes,
@@ -7,8 +7,9 @@ import {
 } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
 import { CJKFormattingSettings } from "./settings/CJKFormattingSettings";
+import { MarkdownSettings } from "./settings/MarkdownSettings";
 
-type Section = "appearance" | "formatting" | "general" | "files" | "advanced";
+type Section = "appearance" | "formatting" | "markdown" | "general" | "files" | "advanced";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -324,6 +325,7 @@ export function SettingsPage() {
   const navItems = [
     { id: "appearance" as const, icon: <Palette className="w-4 h-4" />, label: "Appearance" },
     { id: "formatting" as const, icon: <Languages className="w-4 h-4" />, label: "CJK Formatting" },
+    { id: "markdown" as const, icon: <FileText className="w-4 h-4" />, label: "Markdown" },
     { id: "general" as const, icon: <Settings className="w-4 h-4" />, label: "General" },
     { id: "files" as const, icon: <FolderOpen className="w-4 h-4" />, label: "Files" },
     { id: "advanced" as const, icon: <Zap className="w-4 h-4" />, label: "Advanced" },
@@ -362,6 +364,7 @@ export function SettingsPage() {
         <div className="flex-1 overflow-auto p-6">
           {section === "appearance" && <AppearanceSettings />}
           {section === "formatting" && <CJKFormattingSettings />}
+          {section === "markdown" && <MarkdownSettings />}
           {section === "general" && <GeneralSettings />}
           {section === "files" && <FilesSettings />}
           {section === "advanced" && <AdvancedSettings />}
