@@ -44,6 +44,20 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         ],
     )?;
 
+    // Export submenu
+    let export_submenu = Submenu::with_items(
+        app,
+        "Export",
+        true,
+        &[
+            &MenuItem::with_id(app, "export-html", "HTML...", true, Some("CmdOrCtrl+Shift+E"))?,
+            &MenuItem::with_id(app, "save-pdf", "PDF...", true, None::<&str>)?,
+            &MenuItem::with_id(app, "export-pdf", "Print...", true, Some("CmdOrCtrl+P"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "copy-html", "Copy as HTML", true, Some("Alt+CmdOrCtrl+C"))?,
+        ],
+    )?;
+
     // File menu
     let file_menu = Submenu::with_items(
         app,
@@ -56,6 +70,8 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "save", "Save", true, Some("CmdOrCtrl+S"))?,
             &MenuItem::with_id(app, "save-as", "Save As...", true, Some("CmdOrCtrl+Shift+S"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &export_submenu,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "close", "Close", true, Some("CmdOrCtrl+W"))?,
         ],

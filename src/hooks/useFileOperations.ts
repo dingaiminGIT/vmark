@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open, save, ask } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { getAllWebviewWindows } from "@tauri-apps/api/webviewWindow";
 import { useEditorStore } from "@/stores/editorStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
@@ -102,6 +103,19 @@ export function useFileOperations() {
   }, []);
 
   const handleClose = useCallback(async () => {
+    // Check if a secondary window is focused - close it instead
+    const allWindows = await getAllWebviewWindows();
+    for (const win of allWindows) {
+      if (win.label !== "main") {
+        const isFocused = await win.isFocused();
+        if (isFocused) {
+          await win.close();
+          return;
+        }
+      }
+    }
+
+    // For main window, close the document (not the window)
     const { isDirty } = useEditorStore.getState();
     if (isDirty) {
       const confirmed = await ask("You have unsaved changes. Discard them?", {

@@ -7,6 +7,7 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { clearAllHistory } from "@/utils/historyUtils";
+import { exportToHtml, exportToPdf, savePdf, copyAsHtml } from "@/utils/exportUtils";
 
 export function useMenuEvents() {
   const unlistenRefs = useRef<UnlistenFn[]>([]);
@@ -164,6 +165,44 @@ export function useMenuEvents() {
       });
       if (cancelled) { unlistenOpenRecent(); return; }
       unlistenRefs.current.push(unlistenOpenRecent);
+
+      // Export menu events
+      const unlistenExportHtml = await listen("menu:export-html", async () => {
+        const { content, filePath } = useEditorStore.getState();
+        const defaultName = filePath
+          ? filePath.split("/").pop()?.replace(/\.[^.]+$/, "") || "document"
+          : "document";
+        await exportToHtml(content, defaultName);
+      });
+      if (cancelled) { unlistenExportHtml(); return; }
+      unlistenRefs.current.push(unlistenExportHtml);
+
+      const unlistenSavePdf = await listen("menu:save-pdf", async () => {
+        const { content, filePath } = useEditorStore.getState();
+        const defaultName = filePath
+          ? filePath.split("/").pop()?.replace(/\.[^.]+$/, "") || "document"
+          : "document";
+        await savePdf(content, defaultName);
+      });
+      if (cancelled) { unlistenSavePdf(); return; }
+      unlistenRefs.current.push(unlistenSavePdf);
+
+      const unlistenExportPdf = await listen("menu:export-pdf", async () => {
+        const { content, filePath } = useEditorStore.getState();
+        const title = filePath
+          ? filePath.split("/").pop()?.replace(/\.[^.]+$/, "") || "Document"
+          : "Document";
+        await exportToPdf(content, title);
+      });
+      if (cancelled) { unlistenExportPdf(); return; }
+      unlistenRefs.current.push(unlistenExportPdf);
+
+      const unlistenCopyHtml = await listen("menu:copy-html", async () => {
+        const { content } = useEditorStore.getState();
+        await copyAsHtml(content);
+      });
+      if (cancelled) { unlistenCopyHtml(); return; }
+      unlistenRefs.current.push(unlistenCopyHtml);
     };
 
     setupListeners();

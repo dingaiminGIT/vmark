@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { StatusBar } from "@/components/StatusBar";
 import { FindBar } from "@/components/FindBar";
 import { SettingsPage } from "@/pages/Settings";
+import { PrintPreviewPage } from "@/pages/PrintPreview";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useMenuEvents } from "@/hooks/useMenuEvents";
@@ -90,6 +91,7 @@ function App() {
     <Routes>
       <Route path="/" element={<MainLayout />} />
       <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/print-preview" element={<PrintPreviewPage />} />
     </Routes>
   );
 }
