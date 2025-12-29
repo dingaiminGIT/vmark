@@ -39,6 +39,7 @@ import { alertBlockPlugin } from "@/plugins/alertBlock";
 import { detailsBlockPlugin } from "@/plugins/detailsBlock";
 import { focusModePlugin } from "@/plugins/focusMode";
 import { typewriterModePlugin } from "@/plugins/typewriterMode";
+import { searchPlugin } from "@/plugins/search/searchPlugin";
 import { SourceEditor } from "./SourceEditor";
 import "./editor.css";
 import "@/plugins/syntaxReveal/syntax-reveal.css";
@@ -46,6 +47,7 @@ import "@/plugins/alertBlock/alert-block.css";
 import "@/plugins/detailsBlock/details-block.css";
 import "@/plugins/focusMode/focus-mode.css";
 import "@/plugins/typewriterMode/typewriter-mode.css";
+import "@/plugins/search/search.css";
 
 // Plugin key for cursor tracking
 const cursorSyncPluginKey = new PluginKey("cursorSync");
@@ -113,6 +115,7 @@ function MilkdownEditorInner() {
       .use(syntaxRevealPlugin)
       .use(focusModePlugin)
       .use(typewriterModePlugin)
+      .use(searchPlugin)
       .config((ctx) => {
         // Configure listener AFTER the plugin is loaded
         ctx.get(listenerCtx).markdownUpdated(handleMarkdownUpdate);

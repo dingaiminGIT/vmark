@@ -13,12 +13,19 @@ import {
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import {
-  searchKeymap,
+  search,
   selectNextOccurrence,
   selectSelectionMatches,
+  setSearchQuery,
+  SearchQuery,
+  findNext,
+  findPrevious,
+  replaceNext,
+  replaceAll,
 } from "@codemirror/search";
 import { useEditorStore } from "@/stores/editorStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useSearchStore } from "@/stores/searchStore";
 import {
   getCursorInfoFromCodeMirror,
   restoreCursorInCodeMirror,
@@ -115,7 +122,7 @@ export function SourceEditor() {
         dropCursor(),
         // History (undo/redo)
         history(),
-        // Keymaps
+        // Keymaps (no searchKeymap - we use our unified FindBar)
         keymap.of([
           // Cmd+D: select next occurrence
           { key: "Mod-d", run: selectNextOccurrence, preventDefault: true },
@@ -123,8 +130,9 @@ export function SourceEditor() {
           { key: "Mod-Shift-l", run: selectSelectionMatches, preventDefault: true },
           ...defaultKeymap,
           ...historyKeymap,
-          ...searchKeymap,
         ]),
+        // Search extension (programmatic control only, no panel)
+        search(),
         // Markdown syntax
         markdown(),
         // Listen for changes
@@ -229,6 +237,74 @@ export function SourceEditor() {
       ),
     });
   }, [showBrTags]);
+
+  // Subscribe to searchStore for programmatic search
+  useEffect(() => {
+    const unsubscribe = useSearchStore.subscribe((state, prevState) => {
+      const view = viewRef.current;
+      if (!view) return;
+
+      // Update search query when it changes
+      if (
+        state.query !== prevState.query ||
+        state.caseSensitive !== prevState.caseSensitive ||
+        state.wholeWord !== prevState.wholeWord
+      ) {
+        if (state.query) {
+          const query = new SearchQuery({
+            search: state.query,
+            caseSensitive: state.caseSensitive,
+            wholeWord: state.wholeWord,
+          });
+          view.dispatch({ effects: setSearchQuery.of(query) });
+        } else {
+          // Clear search
+          view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: "" })) });
+        }
+      }
+
+      // Handle find next/previous
+      if (state.currentIndex !== prevState.currentIndex && state.currentIndex >= 0) {
+        const direction = state.currentIndex > prevState.currentIndex ? 1 : -1;
+        if (direction > 0) {
+          findNext(view);
+        } else {
+          findPrevious(view);
+        }
+      }
+
+      // Handle replace
+      if (state.replaceText !== prevState.replaceText && state.isOpen && state.showReplace) {
+        const query = new SearchQuery({
+          search: state.query,
+          replace: state.replaceText,
+          caseSensitive: state.caseSensitive,
+          wholeWord: state.wholeWord,
+        });
+        view.dispatch({ effects: setSearchQuery.of(query) });
+      }
+    });
+
+    // Handle replace actions via custom events
+    const handleReplaceCurrent = () => {
+      const view = viewRef.current;
+      if (view) replaceNext(view);
+    };
+
+    const handleReplaceAll = () => {
+      const view = viewRef.current;
+      if (view) replaceAll(view);
+    };
+
+    window.addEventListener("search:replace-current", handleReplaceCurrent);
+    window.addEventListener("search:replace-all", handleReplaceAll);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("search:replace-current", handleReplaceCurrent);
+      window.removeEventListener("search:replace-all", handleReplaceAll);
+    };
+  }, []);
 
   return <div ref={containerRef} className="source-editor" />;
 }

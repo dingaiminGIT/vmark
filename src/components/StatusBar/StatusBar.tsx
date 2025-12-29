@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import { Code2, Type } from "lucide-react";
+import { Code2, Type, PanelLeft } from "lucide-react";
 import { useEditorStore } from "@/stores/editorStore";
+import { useUIStore } from "@/stores/uiStore";
 import "./StatusBar.css";
 
 function countWords(text: string): number {
@@ -19,6 +20,7 @@ export function StatusBar() {
   const filePath = useEditorStore((state) => state.filePath);
   const isDirty = useEditorStore((state) => state.isDirty);
   const sourceMode = useEditorStore((state) => state.sourceMode);
+  const sidebarVisible = useUIStore((state) => state.sidebarVisible);
 
   const wordCount = useMemo(() => countWords(content), [content]);
   const charCount = useMemo(() => countCharacters(content), [content]);
@@ -28,6 +30,13 @@ export function StatusBar() {
     <div className="status-bar-container">
       <div className="status-bar">
         <div className="status-bar-left">
+          <button
+            className={`status-toggle ${sidebarVisible ? "active" : ""}`}
+            title="Toggle Sidebar"
+            onClick={() => useUIStore.getState().toggleSidebar()}
+          >
+            <PanelLeft size={14} />
+          </button>
           <span className="status-file">
             {isDirty && <span className="status-dirty-indicator" />}
             {fileName}

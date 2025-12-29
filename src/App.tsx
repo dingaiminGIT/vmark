@@ -2,11 +2,13 @@ import { Routes, Route } from "react-router-dom";
 import { Editor } from "@/components/Editor";
 import { Sidebar } from "@/components/Sidebar";
 import { StatusBar } from "@/components/StatusBar";
+import { FindBar } from "@/components/FindBar";
 import { SettingsPage } from "@/pages/Settings";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useMenuEvents } from "@/hooks/useMenuEvents";
 import { useFileOperations } from "@/hooks/useFileOperations";
+import { useSearchCommands } from "@/hooks/useSearchCommands";
 import { useTheme } from "@/hooks/useTheme";
 import { useSettingsSync } from "@/hooks/useSettingsSync";
 
@@ -20,6 +22,7 @@ function MainLayout() {
   // Initialize hooks
   useMenuEvents();
   useFileOperations();
+  useSearchCommands();
   useSettingsSync(); // Sync settings across windows
   useTheme();
 
@@ -71,6 +74,7 @@ function MainLayout() {
         <div style={{ flex: 1, minHeight: 0 }}>
           <Editor />
         </div>
+        <FindBar />
         <StatusBar />
       </div>
     </div>

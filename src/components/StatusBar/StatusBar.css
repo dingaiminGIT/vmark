@@ -61,6 +61,7 @@
   color: var(--text-secondary);
 }
 
+.status-toggle,
 .status-mode {
   display: flex;
   align-items: center;
@@ -73,11 +74,17 @@
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+.status-toggle:hover,
 .status-mode:hover {
   background-color: var(--bg-hover);
   color: var(--text-color);
 }
 
+.status-toggle:active,
 .status-mode:active {
   background-color: var(--bg-active, var(--bg-hover));
+}
+
+.status-toggle.active {
+  color: var(--primary-color);
 }

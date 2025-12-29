@@ -11,7 +11,8 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 30px 10% 100px;
+  padding: 30px 10% calc(100px + var(--find-bar-height, 0px));
+  transition: padding-bottom 0.15s ease-out;
 }
 
 /* Milkdown Editor Styles - GitHub Theme */
