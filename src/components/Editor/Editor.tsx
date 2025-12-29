@@ -179,7 +179,7 @@ function MilkdownEditorInner() {
   // Handle Tauri file drop events for images
   useImageDrop(get);
 
-  // Keep focus in blank documents - refocus when editor loses focus
+  // Keep editor focused - refocus when editor loses focus (-style)
   useEffect(() => {
     const editor = get();
     if (!editor) return;
@@ -194,25 +194,21 @@ function MilkdownEditorInner() {
 
         currentEditor.action((ctx) => {
           const view = ctx.get(editorViewCtx);
-          const { doc } = view.state;
 
-          // Only refocus if document is blank (single empty paragraph)
-          if (doc.childCount !== 1) return;
-          const firstChild = doc.firstChild;
-          if (!firstChild || !firstChild.isTextblock || firstChild.content.size > 0) return;
-
-          // Check if focus went to a dialog or input - don't steal focus back
+          // Check if focus went to a dialog, input, or interactive element - don't steal focus back
           const activeElement = document.activeElement;
           if (activeElement?.tagName === "INPUT" ||
               activeElement?.tagName === "TEXTAREA" ||
-              activeElement?.closest("[role='dialog']")) {
+              activeElement?.tagName === "SELECT" ||
+              activeElement?.tagName === "BUTTON" ||
+              activeElement?.closest("[role='dialog']") ||
+              activeElement?.closest("[role='menu']") ||
+              activeElement?.closest(".find-bar")) {
             return;
           }
 
-          // Refocus editor
+          // Refocus editor and restore selection
           view.focus();
-          const selection = Selection.near(view.state.doc.resolve(1));
-          view.dispatch(view.state.tr.setSelection(selection));
         });
       }, 10);
     };
