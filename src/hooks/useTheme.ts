@@ -62,10 +62,10 @@ export function useTheme() {
       root.style.setProperty("--meta-content-color", themeColors.mdChar ?? "#6a9955");
       root.style.setProperty("--strong-color", themeColors.strong ?? "#569cd6");
       root.style.setProperty("--emphasis-color", themeColors.emphasis ?? "#ce9178");
-      root.style.setProperty("--blur-text-color", "#4a4a4a");
-      root.style.setProperty("--bg-tertiary", "#2d2d2d");
-      root.style.setProperty("--text-tertiary", "#6e6e6e");
-      root.style.setProperty("--accent-bg", "rgba(79, 193, 255, 0.15)");
+      root.style.setProperty("--blur-text-color", "#6b7078");
+      root.style.setProperty("--bg-tertiary", "#32363d");
+      root.style.setProperty("--text-tertiary", "#6b7078");
+      root.style.setProperty("--accent-bg", "rgba(90, 168, 255, 0.12)");
       root.style.setProperty("--source-mode-bg", "rgba(255, 255, 255, 0.02)");
       root.classList.add("dark-theme", "dark");
     } else {
