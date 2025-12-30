@@ -7,6 +7,7 @@
 import type { Ctx } from "@milkdown/kit/ctx";
 import { editorViewCtx } from "@milkdown/kit/core";
 import { TextSelection } from "@milkdown/kit/prose/state";
+import type { Node } from "@milkdown/kit/prose/model";
 import { callCommand } from "@milkdown/kit/utils";
 import {
   wrapInHeadingCommand,
@@ -29,8 +30,8 @@ interface BlockInfo {
   type: string;
   pos: number;
   depth: number;
-  // Node type is complex - use any for simplicity since we only need attrs/content
-  node: any;
+  // Node type is complex - ProseMirror Node
+  node: Node;
 }
 
 /**
@@ -79,7 +80,7 @@ function convertListType(ctx: Ctx, targetType: "bullet_list" | "ordered_list"): 
   if (listInfo.type === targetType && !isTaskList) return true;
 
   // Build new list items, clearing checked attribute
-  const newItems: any[] = [];
+  const newItems: Node[] = [];
   listNode.forEach((item) => {
     const newAttrs = { ...item.attrs, checked: null };
     newItems.push(listItemType.create(newAttrs, item.content, item.marks));
@@ -121,7 +122,7 @@ function convertBlock(ctx: Ctx, command: () => void) {
 /**
  * Get the current list item info if cursor is inside one.
  */
-function getCurrentListItem(ctx: Ctx): { pos: number; node: any } | null {
+function getCurrentListItem(ctx: Ctx): { pos: number; node: Node } | null {
   const view = ctx.get(editorViewCtx);
   const { $from } = view.state.selection;
   for (let d = $from.depth; d > 0; d--) {
@@ -174,7 +175,7 @@ function convertToTaskList(ctx: Ctx) {
   if (!listNode) return;
 
   // Build new list items with checked attribute set
-  const newItems: any[] = [];
+  const newItems: Node[] = [];
   listNode.forEach((item) => {
     // Set checked=false if not already a task item
     const newAttrs = {

@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest --coverage",
-    "lint": "eslint src --ext ts,tsx",
+    "lint": "eslint src",
     "check:all": "pnpm lint && pnpm test && pnpm build"
   },
   "dependencies": {

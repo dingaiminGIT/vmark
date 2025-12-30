@@ -157,6 +157,7 @@ export function FileExplorer({ currentFilePath }: FileExplorerProps) {
           break;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleNewFile/handleNewFolder use getState() pattern
     [contextMenu, openFile, duplicateFile, deleteItem, copyPath, revealInFinder]
   );
 

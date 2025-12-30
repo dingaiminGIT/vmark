@@ -107,7 +107,7 @@ export function findProtectedRegions(text: string): ProtectedRegion[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const isIndented = /^(    |\t)/.test(line) && line.trim().length > 0;
+    const isIndented = /^( {4}|\t)/.test(line) && line.trim().length > 0;
     const isBlankLine = line.trim().length === 0;
 
     if (isIndented && !isInsideRegion(pos, regions)) {
