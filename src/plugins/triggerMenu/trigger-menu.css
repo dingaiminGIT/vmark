@@ -160,7 +160,7 @@
 /* Scrollbar - thin and subtle */
 .trigger-menu-root::-webkit-scrollbar,
 .trigger-menu-submenu::-webkit-scrollbar {
-  width: 6px;
+  width: 1px;
 }
 
 .trigger-menu-root::-webkit-scrollbar-track,

@@ -324,7 +324,7 @@
 
 /* Always show horizontal scrollbar when content overflows */
 .source-editor .cm-scroller::-webkit-scrollbar {
-  height: 8px;
+  height: 4px;
 }
 
 .source-editor .cm-scroller::-webkit-scrollbar-track {

@@ -99,7 +99,7 @@ body {
 
 /* Scrollbar styling - thin scrollbars */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 1px;
   height: 4px;
 }
 
