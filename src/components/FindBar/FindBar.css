@@ -1,8 +1,10 @@
 .find-bar {
+  --find-bar-height: 40px; /* 6px padding + 28px row + 6px padding */
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
+  height: var(--find-bar-height);
   z-index: 101; /* Above StatusBar (z-index: 100) */
   background: var(--bg-secondary, #f8f8f8);
   border-top: 1px solid var(--border-color, #e0e0e0);

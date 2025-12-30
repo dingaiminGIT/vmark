@@ -142,7 +142,7 @@ function MainLayout() {
       >
         {/* Spacer for title bar area */}
         <div style={{ height: 52, flexShrink: 0 }} />
-        <div style={{ flex: 1, minHeight: 0, marginBottom: "3em" }}>
+        <div style={{ flex: 1, minHeight: 0, marginBottom: 40 }}>
           <Editor />
         </div>
         <FindBar />

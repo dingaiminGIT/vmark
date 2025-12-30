@@ -11,7 +11,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 30px 10% calc(100px + var(--find-bar-height, 0px));
+  padding: 28px 10%; /* top/bottom matches find-bar row height */
   transition: padding-bottom 0.15s ease-out;
 }
 
