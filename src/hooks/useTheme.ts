@@ -34,18 +34,56 @@ export function useTheme() {
   useEffect(() => {
     const root = document.documentElement;
     const themeColors = themes[appearance.theme];
+    const isDark = themeColors.isDark ?? false;
 
-    // Apply theme colors
+    // Apply core theme colors
     root.style.setProperty("--bg-color", themeColors.background);
     root.style.setProperty("--text-color", themeColors.foreground);
     root.style.setProperty("--primary-color", themeColors.link);
     root.style.setProperty("--bg-secondary", themeColors.secondary);
     root.style.setProperty("--border-color", themeColors.border);
 
+    // Accent colors (linked to primary)
+    root.style.setProperty("--accent-primary", themeColors.link);
+    root.style.setProperty("--accent-text", themeColors.link);
+
     // UI chrome colors (sidebar, etc.)
     root.style.setProperty("--sidebar-bg", themeColors.secondary);
     root.style.setProperty("--code-bg-color", themeColors.secondary);
+    root.style.setProperty("--code-border-color", themeColors.border);
     root.style.setProperty("--table-border-color", themeColors.border);
+
+    // Dark mode specific variables
+    if (isDark) {
+      root.style.setProperty("--text-secondary", themeColors.textSecondary ?? "#858585");
+      root.style.setProperty("--code-text-color", themeColors.codeText ?? themeColors.foreground);
+      root.style.setProperty("--selection-color", themeColors.selection ?? "rgba(79, 193, 255, 0.2)");
+      root.style.setProperty("--md-char-color", themeColors.mdChar ?? "#6a9955");
+      root.style.setProperty("--meta-content-color", themeColors.mdChar ?? "#6a9955");
+      root.style.setProperty("--strong-color", themeColors.strong ?? "#569cd6");
+      root.style.setProperty("--emphasis-color", themeColors.emphasis ?? "#ce9178");
+      root.style.setProperty("--blur-text-color", "#4a4a4a");
+      root.style.setProperty("--bg-tertiary", "#2d2d2d");
+      root.style.setProperty("--text-tertiary", "#6e6e6e");
+      root.style.setProperty("--accent-bg", "rgba(79, 193, 255, 0.15)");
+      root.style.setProperty("--source-mode-bg", "rgba(255, 255, 255, 0.02)");
+      root.classList.add("dark-theme", "dark");
+    } else {
+      // Light mode defaults
+      root.style.setProperty("--text-secondary", "#666666");
+      root.style.setProperty("--code-text-color", "#1a1a1a");
+      root.style.setProperty("--selection-color", "rgba(0, 102, 204, 0.2)");
+      root.style.setProperty("--md-char-color", "#777777");
+      root.style.setProperty("--meta-content-color", "#777777");
+      root.style.setProperty("--strong-color", "rgb(63, 86, 99)");
+      root.style.setProperty("--emphasis-color", "rgb(91, 4, 17)");
+      root.style.setProperty("--blur-text-color", "#c8c8c8");
+      root.style.setProperty("--bg-tertiary", "#f0f0f0");
+      root.style.setProperty("--text-tertiary", "#999999");
+      root.style.setProperty("--accent-bg", "rgba(0, 102, 204, 0.1)");
+      root.style.setProperty("--source-mode-bg", "rgba(0, 0, 0, 0.02)");
+      root.classList.remove("dark-theme", "dark");
+    }
 
     // Apply typography
     const latinStack =

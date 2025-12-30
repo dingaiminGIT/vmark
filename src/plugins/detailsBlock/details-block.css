@@ -92,10 +92,7 @@
 /* ===================
    DARK MODE
    =================== */
-@media (prefers-color-scheme: dark) {
-  .details-block {
-    --border-color: #30363d;
-    --details-header-bg: #161b22;
-    --details-header-hover-bg: #21262d;
-  }
+.dark-theme .details-block {
+  --details-header-bg: var(--bg-secondary);
+  --details-header-hover-bg: var(--bg-tertiary);
 }

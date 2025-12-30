@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable selector-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Theme CSS Variables - GitHub Style */
 :root {
   /* Core colors - Paper theme default */
@@ -52,35 +55,6 @@
 
   /* Source mode */
   --source-mode-bg: rgba(0, 0, 0, 0.02);
-}
-
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-color: #0d1117;
-    --text-color: #c9d1d9;
-    --primary-color: #58a6ff;
-    --blur-text-color: #484f58;
-    --md-char-color: #8b949e;
-    --meta-content-color: #8b949e;
-    --code-bg-color: #161b22;
-    --code-text-color: #c9d1d9;
-    --code-border-color: #30363d;
-    --sidebar-bg: #161b22;
-    --border-color: #30363d;
-    --table-border-color: #30363d;
-    --selection-color: rgba(88, 166, 255, 0.2);
-    --bg-secondary: #161b22;
-    --text-secondary: #8b949e;
-    --bg-tertiary: #21262d;
-    --text-tertiary: #6e7681;
-    --accent-primary: #58a6ff;
-    --accent-bg: rgba(88, 166, 255, 0.15);
-    --accent-text: #58a6ff;
-    --strong-color: #79c0ff;
-    --emphasis-color: #ffa198;
-    --source-mode-bg: rgba(255, 255, 255, 0.02);
-  }
 }
 
 /* Base styles */

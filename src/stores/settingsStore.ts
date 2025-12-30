@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-export type ThemeId = "white" | "paper" | "mint" | "sepia";
+export type ThemeId = "white" | "paper" | "mint" | "sepia" | "night";
 
 export interface ThemeColors {
   background: string;
@@ -9,6 +9,14 @@ export interface ThemeColors {
   link: string;
   secondary: string;
   border: string;
+  // Dark mode specific (optional for light themes)
+  isDark?: boolean;
+  textSecondary?: string;
+  codeText?: string;
+  selection?: string;
+  mdChar?: string;
+  strong?: string;
+  emphasis?: string;
 }
 
 export const themes: Record<ThemeId, ThemeColors> = {
@@ -39,6 +47,21 @@ export const themes: Record<ThemeId, ThemeColors> = {
     link: "#8b4513",
     secondary: "#f0e5cc",
     border: "#e0d5bc",
+  },
+  night: {
+    background: "#1e1e1e",
+    foreground: "#d4d4d4",
+    link: "#4fc1ff",
+    secondary: "#252526",
+    border: "#3c3c3c",
+    // Dark mode specific
+    isDark: true,
+    textSecondary: "#858585",
+    codeText: "#d4d4d4",
+    selection: "rgba(79, 193, 255, 0.2)",
+    mdChar: "#6a9955",
+    strong: "#569cd6",
+    emphasis: "#ce9178",
   },
 };
 

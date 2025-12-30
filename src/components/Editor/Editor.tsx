@@ -50,7 +50,7 @@ import {
   blockLatexSchema,
 } from "@/plugins/latex";
 import { codePreviewPlugin } from "@/plugins/codePreview";
-import { slashMenu, configureSlashMenu } from "@/plugins/slashMenu";
+import { slashMenu, configureSlashMenu } from "@/plugins/triggerMenu";
 import { SourceEditor } from "./SourceEditor";
 import "./editor.css";
 import "@/plugins/syntaxReveal/syntax-reveal.css";
@@ -60,7 +60,6 @@ import "@/plugins/focusMode/focus-mode.css";
 import "@/plugins/typewriterMode/typewriter-mode.css";
 import "@/plugins/search/search.css";
 import "@/plugins/codePreview/code-preview.css";
-import "@/plugins/slashMenu/slash-menu.css";
 import "katex/dist/katex.min.css";
 
 

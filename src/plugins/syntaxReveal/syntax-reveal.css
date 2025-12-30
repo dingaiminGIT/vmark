@@ -46,12 +46,10 @@
 }
 
 /* Dark mode */
-@media (prefers-color-scheme: dark) {
-  .syntax-marker {
-    color: var(--md-char-color, #6e7681);
-  }
+.dark-theme .syntax-marker {
+  color: var(--md-char-color, #6e7681);
+}
 
-  .syntax-marker-link-open {
-    color: var(--primary-color, #58a6ff);
-  }
+.dark-theme .syntax-marker-link-open {
+  color: var(--primary-color, #58a6ff);
 }

@@ -188,6 +188,7 @@ const themeLabels: Record<ThemeId, string> = {
   paper: "Paper",
   mint: "Mint",
   sepia: "Sepia",
+  night: "Night",
 };
 
 function AppearanceSettings() {

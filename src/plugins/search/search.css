@@ -21,12 +21,10 @@
 }
 
 /* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  .search-match {
-    text-decoration-color: rgba(255, 200, 0, 0.7);
-  }
+.dark-theme .search-match {
+  text-decoration-color: rgba(255, 200, 0, 0.7);
+}
 
-  .search-match-active {
-    text-decoration-color: var(--accent-primary, #58a6ff);
-  }
+.dark-theme .search-match-active {
+  text-decoration-color: var(--primary-color, #58a6ff);
 }
