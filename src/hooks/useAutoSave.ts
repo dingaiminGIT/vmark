@@ -12,6 +12,7 @@ import { useWindowLabel } from "@/contexts/WindowContext";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { createSnapshot } from "@/utils/historyUtils";
+import { autoSaveLog } from "@/utils/debug";
 
 export function useAutoSave() {
   const windowLabel = useWindowLabel();
@@ -41,7 +42,7 @@ export function useAutoSave() {
         await writeTextFile(doc.filePath, doc.content);
         useDocumentStore.getState().markAutoSaved(windowLabel);
         lastSaveRef.current = now;
-        console.log("[AutoSave] Saved:", doc.filePath);
+        autoSaveLog("Saved:", doc.filePath);
 
         // Create history snapshot if enabled
         const { general } = useSettingsStore.getState();

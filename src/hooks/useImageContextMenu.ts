@@ -14,7 +14,8 @@ import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { dirname, join } from "@tauri-apps/api/path";
 import { editorViewCtx } from "@milkdown/kit/core";
 import type { Editor } from "@milkdown/kit/core";
-import { useEditorStore } from "@/stores/editorStore";
+import { useDocumentStore } from "@/stores/documentStore";
+import { getWindowLabel } from "@/utils/windowFocus";
 import { useImageContextMenuStore } from "@/stores/imageContextMenuStore";
 import { copyImageToAssets } from "@/utils/imageUtils";
 
@@ -50,7 +51,9 @@ export function useImageContextMenu(getEditor: GetEditor) {
   const handleAction = useCallback(
     async (action: string) => {
       const { imageSrc, imageNodePos } = useImageContextMenuStore.getState();
-      const { filePath } = useEditorStore.getState();
+      const windowLabel = getWindowLabel();
+      const doc = useDocumentStore.getState().getDocument(windowLabel);
+      const filePath = doc?.filePath;
       const editor = getEditor();
 
       if (!editor) {

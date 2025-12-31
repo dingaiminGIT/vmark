@@ -11,8 +11,9 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { dirname, join } from "@tauri-apps/api/path";
 import type { NodeView } from "@milkdown/kit/prose/view";
 import type { Node } from "@milkdown/kit/prose/model";
-import { useEditorStore } from "@/stores/editorStore";
+import { useDocumentStore } from "@/stores/documentStore";
 import { useImageContextMenuStore } from "@/stores/imageContextMenuStore";
+import { getWindowLabel } from "@/utils/windowFocus";
 import { isRelativePath, validateImagePath } from "./security";
 
 /**
@@ -29,7 +30,9 @@ async function resolveImageSrc(src: string): Promise<string> {
     return ""; // Return empty to prevent loading
   }
 
-  const { filePath } = useEditorStore.getState();
+  const windowLabel = getWindowLabel();
+  const doc = useDocumentStore.getState().getDocument(windowLabel);
+  const filePath = doc?.filePath;
   if (!filePath) {
     return src; // No document path, can't resolve
   }

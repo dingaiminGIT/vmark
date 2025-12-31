@@ -8,6 +8,7 @@ import { useDocumentStore } from "@/stores/documentStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { clearAllHistory } from "@/utils/historyUtils";
+import { historyLog } from "@/utils/debug";
 import { exportToHtml, exportToPdf, savePdf, copyAsHtml } from "@/utils/exportUtils";
 import { isWindowFocused } from "@/utils/windowFocus";
 import { getFileNameWithoutExtension } from "@/utils/pathUtils";
@@ -121,7 +122,7 @@ export function useMenuEvents() {
           );
           if (confirmed) {
             await clearAllHistory();
-            console.log("[History] All history cleared");
+            historyLog("All history cleared");
           }
         } catch (error) {
           console.error("[History] Failed to clear history:", error);

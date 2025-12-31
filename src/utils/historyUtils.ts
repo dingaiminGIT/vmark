@@ -15,6 +15,7 @@ import {
 } from "@tauri-apps/plugin-fs";
 import { appDataDir, join } from "@tauri-apps/api/path";
 import { getFileName } from "./pathUtils";
+import { historyLog } from "./debug";
 
 // Types
 
@@ -203,7 +204,7 @@ export async function createSnapshot(
     // Prune old snapshots
     await pruneSnapshots(documentPath);
 
-    console.log(`[History] Created ${type} snapshot:`, snapshotId);
+    historyLog(`Created ${type} snapshot:`, snapshotId);
   } catch (error) {
     console.error("[History] Failed to create snapshot:", error);
     throw error;
@@ -307,7 +308,7 @@ export async function pruneSnapshots(documentPath: string): Promise<void> {
     await saveHistoryIndex(documentPath, index);
 
     if (toRemove.length > 0) {
-      console.log(`[History] Pruned ${toRemove.length} old snapshots`);
+      historyLog(`Pruned ${toRemove.length} old snapshots`);
     }
   } catch (error) {
     console.error("[History] Failed to prune snapshots:", error);
@@ -326,7 +327,7 @@ export async function markAsDeleted(documentPath: string): Promise<void> {
     index.deletedAt = Date.now();
     await saveHistoryIndex(documentPath, index);
 
-    console.log("[History] Marked as deleted:", documentPath);
+    historyLog("Marked as deleted:", documentPath);
   } catch (error) {
     console.error("[History] Failed to mark as deleted:", error);
   }
@@ -416,7 +417,7 @@ export async function restoreDeletedDocument(
     // Save updated index (note: still at old hash location)
     await writeTextFile(indexPath, JSON.stringify(index, null, 2));
 
-    console.log("[History] Restored document to:", newPath);
+    historyLog("Restored document to:", newPath);
     return snapshotContent;
   } catch (error) {
     console.error("[History] Failed to restore document:", error);
@@ -434,7 +435,7 @@ export async function deleteHistory(pathHash: string): Promise<void> {
 
     if (await exists(historyDir)) {
       await remove(historyDir, { recursive: true });
-      console.log("[History] Deleted history for:", pathHash);
+      historyLog("Deleted history for:", pathHash);
     }
   } catch (error) {
     console.error("[History] Failed to delete history:", error);
@@ -449,7 +450,7 @@ export async function clearAllHistory(): Promise<void> {
     const baseDir = await getHistoryBaseDir();
     if (await exists(baseDir)) {
       await remove(baseDir, { recursive: true });
-      console.log("[History] Cleared all history");
+      historyLog("Cleared all history");
     }
   } catch (error) {
     console.error("[History] Failed to clear all history:", error);

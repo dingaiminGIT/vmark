@@ -4,7 +4,8 @@ import { editorViewCtx } from "@milkdown/kit/core";
 import { replaceAll } from "@milkdown/kit/utils";
 import type { Editor } from "@milkdown/kit/core";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { useEditorStore } from "@/stores/editorStore";
+import { useDocumentStore } from "@/stores/documentStore";
+import { getWindowLabel } from "@/utils/windowFocus";
 import {
   formatMarkdown,
   formatSelection,
@@ -58,7 +59,9 @@ export function useCJKFormatCommands(getEditor: GetEditor) {
             }
           } else {
             // No selection - format entire document
-            const content = useEditorStore.getState().content;
+            const windowLabel = getWindowLabel();
+            const doc = useDocumentStore.getState().getDocument(windowLabel);
+            const content = doc?.content ?? "";
             const formatted = formatMarkdown(content, config);
 
             if (formatted !== content) {
@@ -81,7 +84,9 @@ export function useCJKFormatCommands(getEditor: GetEditor) {
         if (!editor) return;
 
         const config = useSettingsStore.getState().cjkFormatting;
-        const content = useEditorStore.getState().content;
+        const windowLabel = getWindowLabel();
+        const doc = useDocumentStore.getState().getDocument(windowLabel);
+        const content = doc?.content ?? "";
         const formatted = formatMarkdown(content, config);
 
         if (formatted !== content) {
@@ -102,7 +107,9 @@ export function useCJKFormatCommands(getEditor: GetEditor) {
           const editor = getEditor();
           if (!editor) return;
 
-          const content = useEditorStore.getState().content;
+          const windowLabel = getWindowLabel();
+          const doc = useDocumentStore.getState().getDocument(windowLabel);
+          const content = doc?.content ?? "";
           const formatted = removeTrailingSpaces(content);
 
           if (formatted !== content) {
@@ -124,7 +131,9 @@ export function useCJKFormatCommands(getEditor: GetEditor) {
           const editor = getEditor();
           if (!editor) return;
 
-          const content = useEditorStore.getState().content;
+          const windowLabel = getWindowLabel();
+          const doc = useDocumentStore.getState().getDocument(windowLabel);
+          const content = doc?.content ?? "";
           const formatted = collapseNewlines(content);
 
           if (formatted !== content) {

@@ -12,7 +12,8 @@ import { $prose } from "@milkdown/kit/utils";
 import { Plugin, PluginKey } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { message } from "@tauri-apps/plugin-dialog";
-import { useEditorStore } from "@/stores/editorStore";
+import { useDocumentStore } from "@/stores/documentStore";
+import { getWindowLabel } from "@/utils/windowFocus";
 import { saveImageToAssets, insertImageNode } from "@/utils/imageUtils";
 
 export const imageHandlerPluginKey = new PluginKey("imageHandler");
@@ -32,7 +33,9 @@ async function processClipboardImage(
   isProcessingClipboardImage = true;
 
   try {
-    const { filePath } = useEditorStore.getState();
+    const windowLabel = getWindowLabel();
+    const doc = useDocumentStore.getState().getDocument(windowLabel);
+    const filePath = doc?.filePath;
 
     if (!filePath) {
       await message(

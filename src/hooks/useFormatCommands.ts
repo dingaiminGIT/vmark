@@ -1,14 +1,12 @@
 import { useEffect, useRef } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open, message } from "@tauri-apps/plugin-dialog";
-import { callCommand } from "@milkdown/kit/utils";
-import { insertImageCommand } from "@milkdown/kit/preset/commonmark";
 import { editorViewCtx } from "@milkdown/kit/core";
 import type { Editor } from "@milkdown/kit/core";
 import type { Node, Mark } from "@milkdown/kit/prose/model";
-import { useEditorStore } from "@/stores/editorStore";
-import { copyImageToAssets } from "@/utils/imageUtils";
-import { isWindowFocused } from "@/utils/windowFocus";
+import { useDocumentStore } from "@/stores/documentStore";
+import { copyImageToAssets, insertImageNode } from "@/utils/imageUtils";
+import { isWindowFocused, getWindowLabel } from "@/utils/windowFocus";
 
 // Re-entry guard for image insertion (prevents duplicate dialogs)
 const isInsertingImageRef = { current: false };
@@ -46,7 +44,9 @@ export function useFormatCommands(getEditor: GetEditor) {
 
           if (!sourcePath) return;
 
-          const { filePath } = useEditorStore.getState();
+          const windowLabel = getWindowLabel();
+          const doc = useDocumentStore.getState().getDocument(windowLabel);
+          const filePath = doc?.filePath;
           const editor = getEditor();
           if (!editor) return;
 
@@ -63,13 +63,10 @@ export function useFormatCommands(getEditor: GetEditor) {
           const relativePath = await copyImageToAssets(sourcePath as string, filePath);
 
           // Insert with relative path - imageViewPlugin will resolve for rendering
-          editor.action(
-            callCommand(insertImageCommand.key, {
-              src: relativePath,
-              alt: "",
-              title: "",
-            })
-          );
+          editor.action((ctx) => {
+            const view = ctx.get(editorViewCtx);
+            insertImageNode(view, relativePath);
+          });
         } catch (error) {
           console.error("Failed to insert image:", error);
           await message("Failed to insert image.", { kind: "error" });

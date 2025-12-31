@@ -15,7 +15,6 @@ import { readFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { message } from "@tauri-apps/plugin-dialog";
 import type { Editor } from "@milkdown/kit/core";
 import { editorViewCtx } from "@milkdown/kit/core";
-import { useEditorStore } from "@/stores/editorStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { getWindowLabel } from "@/utils/windowFocus";
@@ -123,7 +122,9 @@ export function useImageDrop(getEditor: GetEditor) {
             return;
           }
 
-          const { filePath: documentPath } = useEditorStore.getState();
+          const windowLabel = getWindowLabel();
+          const doc = useDocumentStore.getState().getDocument(windowLabel);
+          const documentPath = doc?.filePath;
           const editor = getEditor();
 
           if (!editor) {

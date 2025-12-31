@@ -42,3 +42,13 @@ export interface TriggerMenuConfig {
   /** Callback for freeform text submission */
   onFreeformSubmit?: (text: string, selection: string, ctx: Ctx) => void | Promise<void>;
 }
+
+/**
+ * Navigation state for nested menus.
+ */
+export interface MenuLevel {
+  items: TriggerMenuItem[];
+  selectedIndex: number;
+  elements: HTMLElement[];
+  container: HTMLElement;
+}
