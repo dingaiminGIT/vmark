@@ -61,6 +61,7 @@ import { useRecentFilesSync } from "@/hooks/useRecentFilesSync";
 import { useWindowClose } from "@/hooks/useWindowClose";
 import { useAppQuit } from "@/hooks/useAppQuit";
 import { useWindowTitle } from "@/hooks/useWindowTitle";
+import { useDisableContextMenu } from "@/hooks/useDisableContextMenu";
 
 // Separate component for window lifecycle hooks to avoid conditional hook calls
 function DocumentWindowHooks() {
@@ -86,6 +87,7 @@ function MainLayout() {
   useTheme();
   useAutoSave(); // Auto-save when dirty
   useRecentFilesSync(); // Sync recent files to native menu
+  useDisableContextMenu(); // Disable browser context menu
 
   const classNames = [
     "app-layout",
