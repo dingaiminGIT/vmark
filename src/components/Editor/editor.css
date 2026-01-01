@@ -311,6 +311,11 @@
   color: var(--meta-content-color);
 }
 
+/* HTML Comments - hidden in WYSIWYG mode */
+.milkdown span[data-type="html"] {
+  display: none;
+}
+
 /* Footnotes */
 .milkdown sup[data-type="footnote_reference"] {
   color: var(--primary-color);
