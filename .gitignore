@@ -116,3 +116,4 @@ temp/
 *.tmp
 *.temp
 *.bak
+.claude/settings.local.json
