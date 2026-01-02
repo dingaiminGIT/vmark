@@ -443,7 +443,7 @@ const slashMenuItems: TriggerMenuItem[] = [
         icon: icons.table,
         keywords: ["grid", "spreadsheet"],
         action: (ctx) => {
-          callCommand(insertTableCommand.key)(ctx);
+          callCommand(insertTableCommand.key, { row: 2, col: 2 })(ctx);
         },
       },
       {

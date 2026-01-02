@@ -46,7 +46,7 @@ export function useTableCommands(getEditor: GetEditor) {
         const editor = getEditor();
         if (editor) {
           ensureFocusAndExecute(editor, () => {
-            editor.action(callCommand(insertTableCommand.key, { row: 3, col: 3 }));
+            editor.action(callCommand(insertTableCommand.key, { row: 2, col: 2 }));
           });
         }
       });
