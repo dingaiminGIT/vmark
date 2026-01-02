@@ -234,6 +234,7 @@ export const cursorSyncPlugin = $prose(() => {
   });
 });
 
+
 /**
  * Plugin key for blank document focus plugin.
  */

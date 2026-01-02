@@ -135,7 +135,7 @@ function MainLayout() {
       style={{
         display: "flex",
         height: "100vh",
-        overflow: "hidden",
+        overflow: "clip",
         position: "relative",
       }}
     >
@@ -169,7 +169,7 @@ function MainLayout() {
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          overflow: "hidden",
+          overflow: "clip",
         }}
       >
         {/* Spacer for title bar area */}
