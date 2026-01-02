@@ -16,7 +16,7 @@ import {
   setAlignCommand,
 } from "@milkdown/kit/preset/gfm";
 import { useTableToolbarStore } from "@/stores/tableToolbarStore";
-import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow } from "./table-utils";
+import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow, alignAllColumns } from "./table-utils";
 
 // Interface for editor-like object with action method
 interface EditorLike {
@@ -100,16 +100,29 @@ export class TableContextMenu {
         dividerAfter: true,
       },
       {
-        label: "Align Left",
+        label: "Align Column Left",
         action: () => this.executeCommand(setAlignCommand, "left"),
       },
       {
-        label: "Align Center",
+        label: "Align Column Center",
         action: () => this.executeCommand(setAlignCommand, "center"),
       },
       {
-        label: "Align Right",
+        label: "Align Column Right",
         action: () => this.executeCommand(setAlignCommand, "right"),
+        dividerAfter: true,
+      },
+      {
+        label: "Align All Left",
+        action: () => this.handleAlignAll("left"),
+      },
+      {
+        label: "Align All Center",
+        action: () => this.handleAlignAll("center"),
+      },
+      {
+        label: "Align All Right",
+        action: () => this.handleAlignAll("right"),
       },
     ];
 
@@ -210,6 +223,11 @@ export class TableContextMenu {
     if (deleteTableAtPos(this.editorView, tablePos)) {
       useTableToolbarStore.getState().closeToolbar();
     }
+  }
+
+  private handleAlignAll(alignment: "left" | "center" | "right") {
+    this.editorView.focus();
+    alignAllColumns(this.editorView, alignment);
   }
 
   private handleClickOutside = (e: MouseEvent) => {

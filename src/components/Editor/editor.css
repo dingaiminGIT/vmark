@@ -231,11 +231,6 @@
   padding: 0;
 }
 
-.milkdown table tr:nth-child(2n),
-.milkdown thead {
-  background-color: var(--bg-secondary);
-}
-
 .milkdown th {
   font-weight: bold;
   border: 1px solid var(--table-border-color);
@@ -243,6 +238,7 @@
   margin: 0;
   padding: 4px 10px;
   line-height: 1.4;
+  background-color: var(--bg-secondary);
 }
 
 .milkdown td {

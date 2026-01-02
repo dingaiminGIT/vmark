@@ -27,7 +27,7 @@ import {
   getViewportBounds,
   type AnchorRect,
 } from "@/utils/popupPosition";
-import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow } from "./table-utils";
+import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow, alignAllColumns } from "./table-utils";
 
 // SVG Icons
 const icons = {
@@ -41,6 +41,10 @@ const icons = {
   alignLeft: `<svg viewBox="0 0 24 24"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>`,
   alignCenter: `<svg viewBox="0 0 24 24"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>`,
   alignRight: `<svg viewBox="0 0 24 24"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>`,
+  // Align all icons (with table outline indicator)
+  alignAllLeft: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="7" y1="8" x2="14" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="14" y2="16"/></svg>`,
+  alignAllCenter: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>`,
+  alignAllRight: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="10" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="16" x2="17" y2="16"/></svg>`,
 };
 
 /**
@@ -98,13 +102,17 @@ export class TableToolbarView {
     row1.appendChild(this.buildButton(icons.deleteCol, "Delete column", this.handleDeleteCol, "danger"));
     row1.appendChild(this.buildButton(icons.deleteTable, "Delete table", this.handleDeleteTable, "danger"));
 
-    // Second row: alignment
+    // Second row: column alignment (Shift+click for whole table)
     const row2 = document.createElement("div");
     row2.className = "table-toolbar-row";
 
-    row2.appendChild(this.buildButton(icons.alignLeft, "Align left", this.handleAlignLeft));
-    row2.appendChild(this.buildButton(icons.alignCenter, "Align center", this.handleAlignCenter));
-    row2.appendChild(this.buildButton(icons.alignRight, "Align right", this.handleAlignRight));
+    row2.appendChild(this.buildAlignButton(icons.alignLeft, "Align column left (Shift: all)", "left"));
+    row2.appendChild(this.buildAlignButton(icons.alignCenter, "Align column center (Shift: all)", "center"));
+    row2.appendChild(this.buildAlignButton(icons.alignRight, "Align column right (Shift: all)", "right"));
+    row2.appendChild(this.buildDivider());
+    row2.appendChild(this.buildButton(icons.alignAllLeft, "Align all left", () => this.handleAlignAll("left")));
+    row2.appendChild(this.buildButton(icons.alignAllCenter, "Align all center", () => this.handleAlignAll("center")));
+    row2.appendChild(this.buildButton(icons.alignAllRight, "Align all right", () => this.handleAlignAll("right")));
 
     container.appendChild(row1);
     container.appendChild(row2);
@@ -115,7 +123,7 @@ export class TableToolbarView {
   private buildButton(
     iconSvg: string,
     title: string,
-    onClick: () => void,
+    onClick: (e: MouseEvent) => void,
     variant?: "danger"
   ): HTMLElement {
     const btn = document.createElement("button");
@@ -130,9 +138,29 @@ export class TableToolbarView {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      onClick();
+      onClick(e);
     });
     return btn;
+  }
+
+  private buildAlignButton(
+    iconSvg: string,
+    title: string,
+    alignment: "left" | "center" | "right"
+  ): HTMLElement {
+    return this.buildButton(iconSvg, title, (e) => {
+      this.editorView.focus();
+      if (e.shiftKey) {
+        // Shift+click: align all columns
+        alignAllColumns(this.editorView, alignment);
+      } else {
+        // Normal click: align current column
+        const editor = this.getEditor();
+        if (editor) {
+          editor.action(callCommand(setAlignCommand.key as never, alignment as never));
+        }
+      }
+    });
   }
 
   private buildDivider(): HTMLElement {
@@ -220,16 +248,9 @@ export class TableToolbarView {
     }
   };
 
-  private handleAlignLeft = () => {
-    this.executeCommand(setAlignCommand, "left");
-  };
-
-  private handleAlignCenter = () => {
-    this.executeCommand(setAlignCommand, "center");
-  };
-
-  private handleAlignRight = () => {
-    this.executeCommand(setAlignCommand, "right");
+  private handleAlignAll = (alignment: "left" | "center" | "right") => {
+    this.editorView.focus();
+    alignAllColumns(this.editorView, alignment);
   };
 
   destroy() {
