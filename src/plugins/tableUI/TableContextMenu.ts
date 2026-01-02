@@ -180,8 +180,9 @@ export class TableContextMenu {
     const editor = this.getEditor();
     if (!editor) return;
 
-    editor.action(callCommand(command.key as never, payload as never));
+    // Focus editor BEFORE command to ensure selection is valid
     this.editorView.focus();
+    editor.action(callCommand(command.key as never, payload as never));
   }
 
   private handleDeleteRow() {

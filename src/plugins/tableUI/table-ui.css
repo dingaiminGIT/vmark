@@ -14,7 +14,7 @@
   border-radius: 8px;
   background: var(--bg-color);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: table-toolbar-fade-in 0.15s ease-out;
+  opacity: 1;
 }
 
 @keyframes table-toolbar-fade-in {
