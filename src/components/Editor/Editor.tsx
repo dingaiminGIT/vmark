@@ -7,24 +7,15 @@ import {
 } from "@milkdown/kit/core";
 import { Selection } from "@milkdown/kit/prose/state";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
-import {
-  toggleStrongCommand,
-  toggleEmphasisCommand,
-  toggleInlineCodeCommand,
-  toggleLinkCommand,
-} from "@milkdown/kit/preset/commonmark";
 import { gfm } from "@milkdown/kit/preset/gfm";
-import { toggleStrikethroughCommand } from "@milkdown/kit/preset/gfm";
 import { history } from "@milkdown/kit/plugin/history";
 import { clipboard } from "@milkdown/kit/plugin/clipboard";
 import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
 import { cursor } from "@milkdown/kit/plugin/cursor";
 import { indent } from "@milkdown/kit/plugin/indent";
 import { trailing, trailingConfig } from "@milkdown/kit/plugin/trailing";
-import { replaceAll, callCommand } from "@milkdown/kit/utils";
+import { replaceAll } from "@milkdown/kit/utils";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { isWindowFocused } from "@/utils/windowFocus";
 import { useEditorStore } from "@/stores/editorStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import {
@@ -43,7 +34,7 @@ import { useImageContextMenu } from "@/hooks/useImageContextMenu";
 import { useOutlineSync } from "@/hooks/useOutlineSync";
 import { ImageContextMenu } from "./ImageContextMenu";
 import { restoreCursorInProseMirror } from "@/utils/cursorSync/prosemirror";
-import { overrideKeymapPlugin, cursorSyncPlugin, blankDocFocusPlugin } from "@/plugins/editorPlugins";
+import { overrideKeymapPlugin, expandedMarkTogglePlugin, cursorSyncPlugin, blankDocFocusPlugin } from "@/plugins/editorPlugins";
 import { syntaxRevealPlugin } from "@/plugins/syntaxReveal";
 import { linkPopupPlugin } from "@/plugins/linkPopup";
 import { imagePopupPlugin } from "@/plugins/imagePopup";
@@ -154,25 +145,6 @@ function focusEditorWithCursor(
   });
 }
 
-// Helper to create menu command listeners with common pattern
-type EditorGetter = () => MilkdownEditor | undefined;
-
-async function createMenuListener(
-  event: string,
-  getEditor: EditorGetter,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  command: any,
-  args?: Record<string, unknown>
-): Promise<UnlistenFn> {
-  return listen(event, async () => {
-    if (!(await isWindowFocused())) return;
-    const editor = getEditor();
-    if (editor) {
-      editor.action(callCommand(command, args));
-    }
-  });
-}
-
 function MilkdownEditorInner() {
   const content = useDocumentContent();
   const cursorInfo = useDocumentCursorInfo();
@@ -182,7 +154,6 @@ function MilkdownEditorInner() {
   const isInternalChange = useRef(false);
   // Use empty string to force sync on mount
   const lastExternalContent = useRef<string>("");
-  const formatUnlistenRefs = useRef<UnlistenFn[]>([]);
   // Keep latest cursorInfo in ref to avoid stale closure in mount effect
   const cursorInfoRef = useRef(cursorInfo);
   cursorInfoRef.current = cursorInfo;
@@ -203,6 +174,7 @@ function MilkdownEditorInner() {
         ctx.set(defaultValueCtx, content);
       })
       .use(overrideKeymapPlugin)
+      .use(expandedMarkTogglePlugin)
       .use(commonmark)
       .use(gfm)
       .use(alertBlockPlugin.flat())
@@ -376,48 +348,8 @@ function MilkdownEditorInner() {
     };
   }, [get]);
 
-  // Handle Format menu events
-  useEffect(() => {
-    let cancelled = false;
-
-    const setupListeners = async () => {
-      // Clean up any existing listeners first
-      formatUnlistenRefs.current.forEach((fn) => fn());
-      formatUnlistenRefs.current = [];
-
-      if (cancelled) return;
-
-      // Define menu commands to register
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const menuCommands: Array<{ event: string; command: any; args?: Record<string, unknown> }> = [
-        { event: "menu:bold", command: toggleStrongCommand.key },
-        { event: "menu:italic", command: toggleEmphasisCommand.key },
-        { event: "menu:strikethrough", command: toggleStrikethroughCommand.key },
-        { event: "menu:code", command: toggleInlineCodeCommand.key },
-        { event: "menu:link", command: toggleLinkCommand.key, args: { href: "" } },
-      ];
-
-      for (const { event, command, args } of menuCommands) {
-        if (cancelled) break;
-        const unlisten = await createMenuListener(event, get, command, args);
-        if (cancelled) {
-          unlisten();
-          break;
-        }
-        formatUnlistenRefs.current.push(unlisten);
-      }
-    };
-
-    setupListeners();
-
-    return () => {
-      cancelled = true;
-      const fns = formatUnlistenRefs.current;
-      formatUnlistenRefs.current = [];
-      fns.forEach((fn) => fn());
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Note: Format menu keyboard shortcuts (Cmd+B, Cmd+I, etc.) are handled
+  // by expandedMarkTogglePlugin in editorPlugins.ts for seamless behavior
 
   return (
     <>

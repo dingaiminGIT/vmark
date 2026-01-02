@@ -18,7 +18,7 @@ const MARK_SYNTAX: Record<string, { open: string; close: string }> = {
 
 const LINK_MARK = "link";
 
-interface MarkRange {
+export interface MarkRange {
   mark: Mark;
   from: number;
   to: number;
@@ -54,7 +54,7 @@ function findMarksAtPosition(pos: number, $pos: ResolvedPos): MarkRange[] {
 /**
  * Find the full range of a mark using single-pass algorithm
  */
-function findMarkRange(
+export function findMarkRange(
   pos: number,
   mark: Mark,
   parentStart: number,
