@@ -15,6 +15,8 @@ const MARK_SYNTAX_LENGTH: Record<string, number> = {
   emphasis: 1, // *
   inlineCode: 1, // `
   strikethrough: 2, // ~~
+  subscript: 1, // ~
+  superscript: 1, // ^
 };
 
 interface MarkRange {

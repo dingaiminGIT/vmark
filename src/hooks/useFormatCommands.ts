@@ -154,6 +154,16 @@ export function useFormatCommands(getEditor: GetEditor) {
       const unlistenLink = await createMarkListener("menu:link", "link");
       if (unlistenLink) unlistenRefs.current.push(unlistenLink);
       if (cancelled) return;
+
+      // Subscript
+      const unlistenSubscript = await createMarkListener("menu:subscript", "subscript");
+      if (unlistenSubscript) unlistenRefs.current.push(unlistenSubscript);
+      if (cancelled) return;
+
+      // Superscript
+      const unlistenSuperscript = await createMarkListener("menu:superscript", "superscript");
+      if (unlistenSuperscript) unlistenRefs.current.push(unlistenSuperscript);
+      if (cancelled) return;
     };
 
     setupListeners();

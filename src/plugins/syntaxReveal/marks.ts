@@ -14,6 +14,8 @@ const MARK_SYNTAX: Record<string, { open: string; close: string }> = {
   emphasis: { open: "*", close: "*" },
   inlineCode: { open: "`", close: "`" },
   strikethrough: { open: "~~", close: "~~" },
+  subscript: { open: "~", close: "~" },
+  superscript: { open: "^", close: "^" },
 };
 
 const LINK_MARK = "link";

@@ -36,6 +36,7 @@
     "katex": "^0.16.27",
     "lucide-react": "^0.562.0",
     "marked": "^17.0.1",
+    "mdast-util-find-and-replace": "^3.0.2",
     "mermaid": "^11.12.2",
     "react": "^19.1.0",
     "react-arborist": "^3.4.3",

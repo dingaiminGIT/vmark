@@ -4,9 +4,14 @@ import {
   rootCtx,
   defaultValueCtx,
   editorViewCtx,
+  remarkStringifyOptionsCtx,
 } from "@milkdown/kit/core";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
-import { gfm } from "@milkdown/kit/preset/gfm";
+import {
+  gfm,
+  remarkGFMPlugin,
+  strikethroughInputRule,
+} from "@milkdown/kit/preset/gfm";
 import { history } from "@milkdown/kit/plugin/history";
 import { clipboard } from "@milkdown/kit/plugin/clipboard";
 import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
@@ -67,6 +72,7 @@ import {
 } from "@/plugins/mermaid";
 import { codePreviewPlugin } from "@/plugins/codePreview";
 import { slashMenu, configureSlashMenu } from "@/plugins/triggerMenu";
+import { subSuperscriptPlugin } from "@/plugins/subSuperscript";
 import { SourceEditor } from "./SourceEditor";
 import "./editor.css";
 import "@/plugins/syntaxReveal/syntax-reveal.css";
@@ -81,6 +87,7 @@ import "@/plugins/codePreview/code-preview.css";
 import "@/plugins/latex/latex.css";
 import "@/plugins/mermaid/mermaid.css";
 import "@/plugins/tableUI/table-ui.css";
+import "@/plugins/subSuperscript/sub-super.css";
 import "katex/dist/katex.min.css";
 
 function MilkdownEditorInner() {
@@ -110,11 +117,31 @@ function MilkdownEditorInner() {
       .config((ctx) => {
         ctx.set(rootCtx, root);
         ctx.set(defaultValueCtx, content);
+        // Disable single-tilde strikethrough to free ~ for subscript
+        ctx.set(remarkGFMPlugin.options.key, { singleTilde: false });
+        // Add serialization handlers for subscript/superscript
+        ctx.update(remarkStringifyOptionsCtx, (options) => ({
+          ...options,
+          handlers: {
+            ...options.handlers,
+            subscript: (node: { children?: Array<{ value?: string }> }) => {
+              const text = node.children?.[0]?.value ?? "";
+              return `~${text}~`;
+            },
+            superscript: (node: { children?: Array<{ value?: string }> }) => {
+              const text = node.children?.[0]?.value ?? "";
+              return `^${text}^`;
+            },
+          },
+        }));
       })
       .use(overrideKeymapPlugin)
       .use(expandedMarkTogglePlugin)
       .use(commonmark)
-      .use(gfm)
+      // Filter out default strikethrough input rule (accepts single ~)
+      .use(gfm.filter((plugin) => plugin !== strikethroughInputRule))
+      // Add subscript/superscript plugin
+      .use(subSuperscriptPlugin.flat())
       .use(tableUIPlugin)
       .use(tableKeymapPlugin)
       .use(alertBlockPlugin.flat())

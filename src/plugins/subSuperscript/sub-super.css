@@ -1,0 +1,23 @@
+/**
+ * Subscript/Superscript Styles
+ */
+
+/* Subscript styling */
+.md-subscript {
+  font-size: 0.65em;
+  vertical-align: -0.3em;
+}
+
+/* Superscript styling */
+.md-superscript {
+  font-size: 0.65em;
+  vertical-align: 0.1em;
+}
+
+/* Syntax reveal markers */
+.syntax-marker-subscript-open,
+.syntax-marker-subscript-close,
+.syntax-marker-superscript-open,
+.syntax-marker-superscript-close {
+  color: var(--md-char-color, #999);
+}
