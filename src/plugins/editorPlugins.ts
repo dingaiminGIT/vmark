@@ -199,14 +199,6 @@ export const expandedMarkTogglePlugin = $prose(() =>
       if (!view) return false;
       return expandedToggleMark(view, "link");
     },
-    "Mod-,": (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "subscript");
-    },
-    "Mod-.": (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "superscript");
-    },
   })
 );
 
