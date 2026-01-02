@@ -27,7 +27,7 @@ import {
   getViewportBounds,
   type AnchorRect,
 } from "@/utils/popupPosition";
-import { deleteTableAtPos, deleteRow, deleteColumn } from "./table-utils";
+import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow } from "./table-utils";
 
 // SVG Icons
 const icons = {
@@ -185,6 +185,11 @@ export class TableToolbarView {
   }
 
   private handleAddRowAbove = () => {
+    // Can't insert above header row in GFM tables - insert below instead
+    if (isInHeaderRow(this.editorView)) {
+      this.executeCommand(addRowAfterCommand);
+      return;
+    }
     this.executeCommand(addRowBeforeCommand);
   };
 

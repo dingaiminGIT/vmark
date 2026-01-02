@@ -16,7 +16,7 @@ import {
   setAlignCommand,
 } from "@milkdown/kit/preset/gfm";
 import { useTableToolbarStore } from "@/stores/tableToolbarStore";
-import { deleteTableAtPos, deleteRow, deleteColumn } from "./table-utils";
+import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow } from "./table-utils";
 
 // Interface for editor-like object with action method
 interface EditorLike {
@@ -68,7 +68,7 @@ export class TableContextMenu {
     const actions: MenuAction[] = [
       {
         label: "Insert Row Above",
-        action: () => this.executeCommand(addRowBeforeCommand),
+        action: () => this.handleAddRowAbove(),
       },
       {
         label: "Insert Row Below",
@@ -186,6 +186,15 @@ export class TableContextMenu {
     // Focus editor BEFORE command to ensure selection is valid
     this.editorView.focus();
     editor.action(callCommand(command.key as never, payload as never));
+  }
+
+  private handleAddRowAbove() {
+    // Can't insert above header row in GFM tables - insert below instead
+    if (isInHeaderRow(this.editorView)) {
+      this.executeCommand(addRowAfterCommand);
+      return;
+    }
+    this.executeCommand(addRowBeforeCommand);
   }
 
   private handleDeleteRow() {

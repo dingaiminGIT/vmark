@@ -171,6 +171,14 @@ export function findParentNodeOfType(
 }
 
 /**
+ * Check if the cursor is in the header row (row 0) of a table.
+ */
+export function isInHeaderRow(view: EditorView): boolean {
+  const tableInfo = getTableInfo(view);
+  return tableInfo !== null && tableInfo.rowIndex === 0;
+}
+
+/**
  * Check if selection is inside a table (state-based version for keymap commands).
  * Unlike isInTable(view), this accepts any object with a selection property.
  */
