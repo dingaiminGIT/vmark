@@ -135,7 +135,14 @@ export function restoreCursorInProseMirror(
 
   if (result.line < lineInfos.length) {
     const lineInfo = lineInfos[result.line];
-    const pos = Math.min(lineInfo.start + result.column, lineInfo.end);
+    let pos = Math.min(lineInfo.start + result.column, lineInfo.end);
+
+    // Handle cursor at line end: position after all inline nodes (e.g., footnotes)
+    // percentInLine >= 0.99 indicates cursor was at/near end of line
+    // lineInfo.end includes inline nodes, but result.column is based on textContent only
+    if (cursorInfo.percentInLine >= 0.99) {
+      pos = lineInfo.end;
+    }
 
     // Clamp to valid range
     const clampedPos = Math.max(0, Math.min(pos, state.doc.content.size));

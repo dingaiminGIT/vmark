@@ -20,7 +20,7 @@ import { clipboard } from "@milkdown/kit/plugin/clipboard";
 import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
 import { cursor } from "@milkdown/kit/plugin/cursor";
 import { indent } from "@milkdown/kit/plugin/indent";
-import { trailing } from "@milkdown/kit/plugin/trailing";
+import { trailing, trailingConfig } from "@milkdown/kit/plugin/trailing";
 import { replaceAll, callCommand } from "@milkdown/kit/utils";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -59,6 +59,7 @@ import {
   remarkMathPlugin,
   mathInlineSchema,
   mathInlineInputRule,
+  mathInlinePlugin,
   mathBlockInputRule,
   mathBlockSchema,
   mathBlockView,
@@ -215,6 +216,18 @@ function MilkdownEditorInner() {
       .use(cursor)
       .use(indent)
       .use(trailing)
+      .config((ctx) => {
+        // Exclude footnote_definition from triggering trailing paragraph insertion
+        // This prevents <br /> appearing after footnotes in Source mode
+        ctx.set(trailingConfig.key, {
+          shouldAppend: (lastNode) => {
+            if (!lastNode) return false;
+            const excludeTypes = ["heading", "paragraph", "footnote_definition"];
+            return !excludeTypes.includes(lastNode.type.name);
+          },
+          getNode: (state) => state.schema.nodes.paragraph!.create(),
+        });
+      })
       .use(cursorSyncPlugin)
       .use(blankDocFocusPlugin)
       .use(syntaxRevealPlugin)
@@ -227,6 +240,7 @@ function MilkdownEditorInner() {
       .use(remarkMathPlugin)
       .use(mathInlineSchema)
       .use(mathInlineInputRule)
+      .use(mathInlinePlugin)
       .use(mathBlockSchema)
       .use(mathBlockView)
       .use(mathBlockInputRule)

@@ -134,6 +134,19 @@ function handleMouseOut(_view: EditorView, event: MouseEvent): boolean {
 }
 
 /**
+ * Handle mousedown on footnote reference to prevent selection.
+ * This runs BEFORE ProseMirror's default selection handling.
+ */
+function handleMouseDown(_view: EditorView, event: MouseEvent): boolean {
+  const refElement = getFootnoteRefFromTarget(event.target);
+  if (refElement) {
+    // Prevent default selection behavior for atomic footnote nodes
+    return true;
+  }
+  return false;
+}
+
+/**
  * Handle click on footnote reference or definition.
  * - Click on reference: scroll to definition
  * - Click on definition: scroll back to reference
@@ -203,6 +216,7 @@ export const footnotePopupPlugin = $prose(() => {
     props: {
       handleClick,
       handleDOMEvents: {
+        mousedown: handleMouseDown,
         mouseover: handleMouseOver,
         mouseout: handleMouseOut,
       },
