@@ -13,13 +13,10 @@ import {
   addRowAfterCommand,
   addColBeforeCommand,
   addColAfterCommand,
-  deleteSelectedCellsCommand,
-  selectRowCommand,
-  selectColCommand,
   setAlignCommand,
 } from "@milkdown/kit/preset/gfm";
 import { useTableToolbarStore } from "@/stores/tableToolbarStore";
-import { deleteTableAtPos, getTableInfo } from "./table-utils";
+import { deleteTableAtPos, deleteRow, deleteColumn } from "./table-utils";
 
 // Interface for editor-like object with action method
 interface EditorLike {
@@ -188,29 +185,13 @@ export class TableContextMenu {
   }
 
   private handleDeleteRow() {
-    // Get current row index, select it, then delete in next frame
-    const tableInfo = getTableInfo(this.editorView);
-    if (!tableInfo) return;
-
-    // Select row first
-    this.executeCommand(selectRowCommand, { index: tableInfo.rowIndex });
-    // Delete after state updates
-    requestAnimationFrame(() => {
-      this.executeCommand(deleteSelectedCellsCommand);
-    });
+    this.editorView.focus();
+    deleteRow(this.editorView);
   }
 
   private handleDeleteCol() {
-    // Get current column index, select it, then delete in next frame
-    const tableInfo = getTableInfo(this.editorView);
-    if (!tableInfo) return;
-
-    // Select column first
-    this.executeCommand(selectColCommand, { index: tableInfo.colIndex });
-    // Delete after state updates
-    requestAnimationFrame(() => {
-      this.executeCommand(deleteSelectedCellsCommand);
-    });
+    this.editorView.focus();
+    deleteColumn(this.editorView);
   }
 
   private handleDeleteTable() {

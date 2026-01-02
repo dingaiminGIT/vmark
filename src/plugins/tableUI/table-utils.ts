@@ -6,6 +6,7 @@
 
 import type { EditorView } from "@milkdown/kit/prose/view";
 import type { Node, ResolvedPos } from "@milkdown/kit/prose/model";
+import { TextSelection } from "@milkdown/kit/prose/state";
 import type { AnchorRect } from "@/utils/popupPosition";
 
 export interface TableInfo {
@@ -253,4 +254,136 @@ export function deleteTableAtPos(
   }
 
   return false;
+}
+
+/**
+ * Delete a row at the specified index.
+ * Prevents deletion if it would result in a 1x1 table.
+ * Returns true if deletion succeeded, false otherwise.
+ */
+export function deleteRow(view: EditorView): boolean {
+  const tableInfo = getTableInfo(view);
+  if (!tableInfo) return false;
+
+  const { tableNode, tablePos, rowIndex, numRows, numCols } = tableInfo;
+
+  // Prevent creating 1x1 table: need at least 2 rows OR 2 cols after deletion
+  if (numRows <= 1) return false; // Can't delete last row
+  if (numRows === 2 && numCols === 1) return false; // Would become 1x1
+
+  const { state, dispatch } = view;
+
+  try {
+    // Build new rows array without the deleted row
+    const newRows: Node[] = [];
+    for (let r = 0; r < tableNode.childCount; r++) {
+      if (r !== rowIndex) {
+        newRows.push(tableNode.child(r));
+      }
+    }
+
+    // Create new table
+    const newTable = tableNode.type.create(tableNode.attrs, newRows);
+
+    // Replace table
+    const tr = state.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
+
+    // Set cursor to same column in previous row (or next if deleting first)
+    const newRowIndex = rowIndex > 0 ? rowIndex - 1 : 0;
+    const cursorPos = getCellPosition(newTable, tablePos, newRowIndex, Math.min(tableInfo.colIndex, numCols - 1));
+    if (cursorPos !== null) {
+      tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos)));
+    }
+
+    dispatch(tr);
+    return true;
+  } catch (error) {
+    console.error("[table-utils] Delete row failed:", error);
+    return false;
+  }
+}
+
+/**
+ * Delete a column at the specified index.
+ * Prevents deletion if it would result in a 1x1 table.
+ * Returns true if deletion succeeded, false otherwise.
+ */
+export function deleteColumn(view: EditorView): boolean {
+  const tableInfo = getTableInfo(view);
+  if (!tableInfo) return false;
+
+  const { tableNode, tablePos, colIndex, numRows, numCols } = tableInfo;
+
+  // Prevent creating 1x1 table: need at least 2 cols OR 2 rows after deletion
+  if (numCols <= 1) return false; // Can't delete last column
+  if (numCols === 2 && numRows === 1) return false; // Would become 1x1
+
+  const { state, dispatch } = view;
+
+  try {
+    // Build new rows with the column removed
+    const newRows: Node[] = [];
+    for (let r = 0; r < tableNode.childCount; r++) {
+      const row = tableNode.child(r);
+      const newCells: Node[] = [];
+      for (let c = 0; c < row.childCount; c++) {
+        if (c !== colIndex) {
+          newCells.push(row.child(c));
+        }
+      }
+      newRows.push(row.type.create(row.attrs, newCells));
+    }
+
+    // Create new table
+    const newTable = tableNode.type.create(tableNode.attrs, newRows);
+
+    // Replace table
+    const tr = state.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
+
+    // Set cursor to same row in previous column (or next if deleting first)
+    const newColIndex = colIndex > 0 ? colIndex - 1 : 0;
+    const cursorPos = getCellPosition(newTable, tablePos, tableInfo.rowIndex, newColIndex);
+    if (cursorPos !== null) {
+      tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos)));
+    }
+
+    dispatch(tr);
+    return true;
+  } catch (error) {
+    console.error("[table-utils] Delete column failed:", error);
+    return false;
+  }
+}
+
+/**
+ * Get the document position inside a cell at the given row/col.
+ */
+function getCellPosition(
+  table: Node,
+  tablePos: number,
+  rowIndex: number,
+  colIndex: number
+): number | null {
+  if (rowIndex < 0 || rowIndex >= table.childCount) return null;
+
+  let pos = tablePos + 1; // Inside table
+
+  // Navigate to row
+  for (let r = 0; r < rowIndex; r++) {
+    pos += table.child(r).nodeSize;
+  }
+
+  const row = table.child(rowIndex);
+  if (colIndex < 0 || colIndex >= row.childCount) return null;
+
+  pos += 1; // Inside row
+
+  // Navigate to cell
+  for (let c = 0; c < colIndex; c++) {
+    pos += row.child(c).nodeSize;
+  }
+
+  pos += 1; // Inside cell (content position)
+
+  return pos;
 }
