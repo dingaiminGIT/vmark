@@ -121,7 +121,7 @@ function MilkdownEditorInner() {
         ctx.set(defaultValueCtx, content);
         // Disable single-tilde strikethrough to free ~ for subscript
         ctx.set(remarkGFMPlugin.options.key, { singleTilde: false });
-        // Add serialization handlers for subscript/superscript
+        // Add serialization handlers for subscript/superscript/highlight
         ctx.update(remarkStringifyOptionsCtx, (options) => ({
           ...options,
           handlers: {
@@ -139,6 +139,13 @@ function MilkdownEditorInner() {
               return `==${text}==`;
             },
           },
+          // Prevent remark-stringify from escaping our custom syntax markers
+          unsafe: [
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...((options as any).unsafe || []),
+            // Don't escape == used for highlight
+            { character: "=", after: "=", inConstruct: "phrasing" },
+          ],
         }));
       })
       .use(overrideKeymapPlugin)
