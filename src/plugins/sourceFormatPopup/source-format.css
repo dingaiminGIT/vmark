@@ -211,6 +211,19 @@
   color: var(--text-secondary);
 }
 
+/* Table mode - two row layout */
+.source-format-table-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.source-format-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 /* Code mode - quick language buttons */
 .source-format-quick-langs {
   display: flex;

@@ -25,6 +25,7 @@ import {
   deleteColumn,
   deleteTable,
   setColumnAlignment,
+  setAllColumnsAlignment,
   getColumnAlignment,
   type TableAlignment,
 } from "./tableDetection";
@@ -72,9 +73,9 @@ const TABLE_BUTTONS: TableButtonDef[] = [
   { id: "colLeft", icon: createIcon(icons.colLeft), label: "Insert column left", action: "colLeft" },
   { id: "colRight", icon: createIcon(icons.colRight), label: "Insert column right", action: "colRight" },
   { id: "sep1", icon: null, label: "", action: "separator" },
-  { id: "deleteRow", icon: createIcon(icons.deleteRow), label: "Delete row", action: "deleteRow", variant: "danger" },
-  { id: "deleteCol", icon: createIcon(icons.deleteCol), label: "Delete column", action: "deleteCol", variant: "danger" },
-  { id: "deleteTable", icon: createIcon(icons.deleteTable), label: "Delete table", action: "deleteTable", variant: "danger" },
+  { id: "deleteRow", icon: createIcon(icons.deleteRow), label: "Delete row", action: "deleteRow" },
+  { id: "deleteCol", icon: createIcon(icons.deleteCol), label: "Delete column", action: "deleteCol" },
+  { id: "deleteTable", icon: createIcon(icons.deleteTable), label: "Delete table", action: "deleteTable" },
 ];
 
 interface AlignButtonDef {
@@ -85,9 +86,15 @@ interface AlignButtonDef {
 }
 
 const ALIGN_BUTTONS: AlignButtonDef[] = [
-  { id: "alignLeft", icon: createIcon(icons.alignLeft), label: "Align left", alignment: "left" },
-  { id: "alignCenter", icon: createIcon(icons.alignCenter), label: "Align center", alignment: "center" },
-  { id: "alignRight", icon: createIcon(icons.alignRight), label: "Align right", alignment: "right" },
+  { id: "alignLeft", icon: createIcon(icons.alignLeft), label: "Align column left", alignment: "left" },
+  { id: "alignCenter", icon: createIcon(icons.alignCenter), label: "Align column center", alignment: "center" },
+  { id: "alignRight", icon: createIcon(icons.alignRight), label: "Align column right", alignment: "right" },
+];
+
+const ALIGN_ALL_BUTTONS: AlignButtonDef[] = [
+  { id: "alignAllLeft", icon: createIcon(icons.alignAllLeft), label: "Align all left", alignment: "left" },
+  { id: "alignAllCenter", icon: createIcon(icons.alignAllCenter), label: "Align all center", alignment: "center" },
+  { id: "alignAllRight", icon: createIcon(icons.alignAllRight), label: "Align all right", alignment: "right" },
 ];
 
 interface HeadingButtonDef {
@@ -263,6 +270,14 @@ export function SourceFormatPopup() {
     [editorView, tableInfo]
   );
 
+  const handleAlignAll = useCallback(
+    (alignment: TableAlignment) => {
+      if (!editorView || !tableInfo) return;
+      setAllColumnsAlignment(editorView, tableInfo, alignment);
+    },
+    [editorView, tableInfo]
+  );
+
   const handleHeadingLevel = useCallback(
     (level: number) => {
       if (!editorView || !headingInfo) return;
@@ -372,38 +387,54 @@ export function SourceFormatPopup() {
           </div>
         </>
       ) : mode === "table" ? (
-        // Table buttons when cursor is in table
-        <>
-          {TABLE_BUTTONS.map(({ id, icon, label, action, variant }) =>
-            action === "separator" ? (
-              <div key={id} className="source-format-separator" />
-            ) : (
+        // Table buttons when cursor is in table (two rows)
+        <div className="source-format-table-grid">
+          <div className="source-format-row">
+            {TABLE_BUTTONS.map(({ id, icon, label, action }) =>
+              action === "separator" ? (
+                <div key={id} className="source-format-separator" />
+              ) : (
+                <button
+                  key={id}
+                  type="button"
+                  className="source-format-btn"
+                  title={label}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleTableAction(action)}
+                >
+                  {icon}
+                </button>
+              )
+            )}
+          </div>
+          <div className="source-format-row">
+            {ALIGN_BUTTONS.map(({ id, icon, label, alignment }) => (
               <button
                 key={id}
                 type="button"
-                className={`source-format-btn ${variant === "danger" ? "danger" : ""}`}
+                className={`source-format-btn ${tableInfo && getColumnAlignment(tableInfo) === alignment ? "active" : ""}`}
                 title={label}
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => handleTableAction(action)}
+                onClick={() => handleAlignment(alignment)}
               >
                 {icon}
               </button>
-            )
-          )}
-          <div className="source-format-separator" />
-          {ALIGN_BUTTONS.map(({ id, icon, label, alignment }) => (
-            <button
-              key={id}
-              type="button"
-              className={`source-format-btn ${tableInfo && getColumnAlignment(tableInfo) === alignment ? "active" : ""}`}
-              title={label}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleAlignment(alignment)}
-            >
-              {icon}
-            </button>
-          ))}
-        </>
+            ))}
+            <div className="source-format-separator" />
+            {ALIGN_ALL_BUTTONS.map(({ id, icon, label, alignment }) => (
+              <button
+                key={id}
+                type="button"
+                className="source-format-btn"
+                title={label}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => handleAlignAll(alignment)}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+        </div>
       ) : mode === "code" ? (
         // Language picker for code fence
         <>
