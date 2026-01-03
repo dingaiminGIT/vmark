@@ -330,3 +330,93 @@ export function deleteTable(view: EditorView, info: SourceTableInfo): void {
 
   view.focus();
 }
+
+export type TableAlignment = "left" | "center" | "right";
+
+/**
+ * Parse alignment from a separator cell.
+ * :--- = left, :---: = center, ---: = right, --- = default (left)
+ */
+function parseAlignment(cell: string): TableAlignment {
+  const trimmed = cell.trim();
+  const hasLeft = trimmed.startsWith(":");
+  const hasRight = trimmed.endsWith(":");
+
+  if (hasLeft && hasRight) return "center";
+  if (hasRight) return "right";
+  return "left";
+}
+
+/**
+ * Format a separator cell with alignment.
+ */
+function formatAlignmentCell(alignment: TableAlignment, width = 5): string {
+  const dashes = "-".repeat(Math.max(3, width - 2));
+  switch (alignment) {
+    case "center":
+      return `:${dashes}:`;
+    case "right":
+      return `${dashes}:`;
+    default:
+      return dashes;
+  }
+}
+
+/**
+ * Get current column alignment.
+ */
+export function getColumnAlignment(info: SourceTableInfo): TableAlignment {
+  const separatorCells = parseRow(info.lines[1]);
+  if (info.colIndex < separatorCells.length) {
+    return parseAlignment(separatorCells[info.colIndex]);
+  }
+  return "left";
+}
+
+/**
+ * Set alignment for current column.
+ */
+export function setColumnAlignment(
+  view: EditorView,
+  info: SourceTableInfo,
+  alignment: TableAlignment
+): void {
+  const doc = view.state.doc;
+  const separatorLineNum = info.startLine + 2; // 1-indexed, row 1 is separator
+  const separatorLine = doc.line(separatorLineNum);
+
+  const cells = parseRow(info.lines[1]);
+  if (info.colIndex < cells.length) {
+    cells[info.colIndex] = formatAlignmentCell(alignment);
+  }
+
+  const newLine = `| ${cells.join(" | ")} |`;
+  view.dispatch({
+    changes: { from: separatorLine.from, to: separatorLine.to, insert: newLine },
+  });
+
+  view.focus();
+}
+
+/**
+ * Set alignment for all columns.
+ */
+export function setAllColumnsAlignment(
+  view: EditorView,
+  info: SourceTableInfo,
+  alignment: TableAlignment
+): void {
+  const doc = view.state.doc;
+  const separatorLineNum = info.startLine + 2;
+  const separatorLine = doc.line(separatorLineNum);
+
+  const cells = parseRow(info.lines[1]);
+  const newCells = cells.map(() => formatAlignmentCell(alignment));
+
+  const newLine = `| ${newCells.join(" | ")} |`;
+  view.dispatch({
+    changes: { from: separatorLine.from, to: separatorLine.to, insert: newLine },
+  });
+
+  view.focus();
+}
