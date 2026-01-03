@@ -11,6 +11,7 @@ import { useSourceFormatStore } from "@/stores/sourceFormatStore";
 import { icons, createIcon } from "@/utils/icons";
 import {
   calculatePopupPosition,
+  getBoundaryRects,
   getViewportBounds,
   type PopupPosition,
 } from "@/utils/popupPosition";
@@ -97,7 +98,7 @@ export function SourceFormatPopup() {
 
   // Calculate position when popup opens or anchor changes
   useEffect(() => {
-    if (!isOpen || !anchorRect || !containerRef.current) {
+    if (!isOpen || !anchorRect || !containerRef.current || !editorView) {
       setPosition(null);
       return;
     }
@@ -107,8 +108,13 @@ export function SourceFormatPopup() {
     const width = popup.offsetWidth || 200;
     const height = popup.offsetHeight || 36;
 
-    // Calculate position
-    const bounds = getViewportBounds();
+    // Get boundaries: horizontal from CodeMirror dom, vertical from editor container
+    const cmDom = editorView.dom as HTMLElement;
+    const containerEl = cmDom.closest(".editor-container") as HTMLElement;
+    const bounds = containerEl
+      ? getBoundaryRects(cmDom, containerEl)
+      : getViewportBounds();
+
     const pos = calculatePopupPosition({
       anchor: anchorRect,
       popup: { width, height },
@@ -124,7 +130,7 @@ export function SourceFormatPopup() {
     requestAnimationFrame(() => {
       justOpenedRef.current = false;
     });
-  }, [isOpen, anchorRect, mode]);
+  }, [isOpen, anchorRect, mode, editorView]);
 
   // Update active formats when editor view changes (only in format mode)
   useEffect(() => {
