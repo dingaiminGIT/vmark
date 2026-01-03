@@ -420,3 +420,89 @@ export function setAllColumnsAlignment(
 
   view.focus();
 }
+
+/**
+ * Get display width of a string (handles CJK characters as width 2).
+ */
+function getDisplayWidth(str: string): number {
+  let width = 0;
+  for (const char of str) {
+    const code = char.codePointAt(0) || 0;
+    // CJK characters have width 2
+    if (
+      (code >= 0x4e00 && code <= 0x9fff) || // CJK Unified Ideographs
+      (code >= 0x3400 && code <= 0x4dbf) || // CJK Extension A
+      (code >= 0xf900 && code <= 0xfaff) || // CJK Compatibility
+      (code >= 0x3000 && code <= 0x303f) || // CJK Punctuation
+      (code >= 0xff00 && code <= 0xffef)    // Fullwidth Forms
+    ) {
+      width += 2;
+    } else {
+      width += 1;
+    }
+  }
+  return width;
+}
+
+/**
+ * Pad a string to target display width.
+ */
+function padToWidth(str: string, targetWidth: number): string {
+  const currentWidth = getDisplayWidth(str);
+  const padding = Math.max(0, targetWidth - currentWidth);
+  return str + " ".repeat(padding);
+}
+
+/**
+ * Format table with space-padded columns for visual alignment.
+ */
+export function formatTable(view: EditorView, info: SourceTableInfo): void {
+  const doc = view.state.doc;
+
+  // Parse all rows into cells
+  const parsedRows = info.lines.map((line) => parseRow(line));
+
+  // Calculate max width for each column (using display width for CJK)
+  const colWidths: number[] = [];
+  for (let col = 0; col < info.colCount; col++) {
+    let maxWidth = 3; // Minimum width for separator (---)
+    for (let row = 0; row < parsedRows.length; row++) {
+      if (row === 1) continue; // Skip separator row for content width
+      const cell = parsedRows[row][col] || "";
+      maxWidth = Math.max(maxWidth, getDisplayWidth(cell));
+    }
+    colWidths.push(maxWidth);
+  }
+
+  // Build formatted lines
+  const formattedLines: string[] = [];
+  for (let row = 0; row < parsedRows.length; row++) {
+    const cells = parsedRows[row];
+    const formattedCells: string[] = [];
+
+    for (let col = 0; col < info.colCount; col++) {
+      const cell = cells[col] || "";
+      if (row === 1) {
+        // Separator row: preserve alignment markers, pad with dashes
+        const alignment = parseAlignment(cell);
+        formattedCells.push(formatAlignmentCell(alignment, colWidths[col]));
+      } else {
+        // Content row: pad with spaces
+        formattedCells.push(padToWidth(cell, colWidths[col]));
+      }
+    }
+
+    formattedLines.push(`| ${formattedCells.join(" | ")} |`);
+  }
+
+  // Replace entire table
+  const startLine = doc.line(info.startLine + 1);
+  const endLine = doc.line(info.endLine + 1);
+  const newContent = formattedLines.join("\n");
+
+  view.dispatch({
+    changes: { from: startLine.from, to: endLine.to, insert: newContent },
+  });
+
+  view.focus();
+}

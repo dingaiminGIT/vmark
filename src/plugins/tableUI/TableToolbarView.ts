@@ -27,7 +27,7 @@ import {
   getViewportBounds,
   type AnchorRect,
 } from "@/utils/popupPosition";
-import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow, alignAllColumns } from "./table-utils";
+import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow, alignAllColumns, formatTable } from "./table-utils";
 
 // SVG Icons (row/col insert icons from source mode, delete icons with line-through style)
 const icons = {
@@ -45,6 +45,8 @@ const icons = {
   alignAllLeft: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="7" y1="8" x2="14" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="14" y2="16"/></svg>`,
   alignAllCenter: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>`,
   alignAllRight: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="10" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="16" x2="17" y2="16"/></svg>`,
+  // Format table (space-padded)
+  formatTable: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>`,
 };
 
 /**
@@ -113,6 +115,8 @@ export class TableToolbarView {
     row2.appendChild(this.buildButton(icons.alignAllLeft, "Align all left", () => this.handleAlignAll("left")));
     row2.appendChild(this.buildButton(icons.alignAllCenter, "Align all center", () => this.handleAlignAll("center")));
     row2.appendChild(this.buildButton(icons.alignAllRight, "Align all right", () => this.handleAlignAll("right")));
+    row2.appendChild(this.buildDivider());
+    row2.appendChild(this.buildButton(icons.formatTable, "Format table (space-padded)", this.handleFormatTable));
 
     container.appendChild(row1);
     container.appendChild(row2);
@@ -248,6 +252,11 @@ export class TableToolbarView {
   private handleAlignAll = (alignment: "left" | "center" | "right") => {
     this.editorView.focus();
     alignAllColumns(this.editorView, alignment);
+  };
+
+  private handleFormatTable = () => {
+    this.editorView.focus();
+    formatTable(this.editorView);
   };
 
   destroy() {

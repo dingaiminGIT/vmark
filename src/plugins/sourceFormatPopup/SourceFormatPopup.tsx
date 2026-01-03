@@ -27,6 +27,7 @@ import {
   setColumnAlignment,
   setAllColumnsAlignment,
   getColumnAlignment,
+  formatTable,
   type TableAlignment,
 } from "./tableDetection";
 import { setHeadingLevel, convertToHeading } from "./headingDetection";
@@ -278,6 +279,11 @@ export function SourceFormatPopup() {
     [editorView, tableInfo]
   );
 
+  const handleFormatTable = useCallback(() => {
+    if (!editorView || !tableInfo) return;
+    formatTable(editorView, tableInfo);
+  }, [editorView, tableInfo]);
+
   const handleHeadingLevel = useCallback(
     (level: number) => {
       if (!editorView || !headingInfo) return;
@@ -433,6 +439,16 @@ export function SourceFormatPopup() {
                 {icon}
               </button>
             ))}
+            <div className="source-format-separator" />
+            <button
+              type="button"
+              className="source-format-btn"
+              title="Format table (space-padded)"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleFormatTable}
+            >
+              {createIcon(icons.formatTable)}
+            </button>
           </div>
         </div>
       ) : mode === "code" ? (
