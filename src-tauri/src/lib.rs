@@ -2,6 +2,7 @@ mod menu;
 mod menu_events;
 mod watcher;
 mod window_manager;
+mod workspace;
 
 use std::sync::Mutex;
 use tauri::Manager;
@@ -33,6 +34,10 @@ pub fn run() {
             window_manager::request_quit,
             watcher::start_watching,
             watcher::stop_watching,
+            workspace::open_folder_dialog,
+            workspace::read_workspace_config,
+            workspace::write_workspace_config,
+            workspace::has_workspace_config,
             get_pending_open_files,
         ])
         .setup(|app| {

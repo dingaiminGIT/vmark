@@ -4,6 +4,26 @@
   height: 100%;
 }
 
+.file-explorer-workspace-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.file-explorer-workspace-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .file-explorer-toolbar {
   display: flex;
   align-items: center;

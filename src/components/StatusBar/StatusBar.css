@@ -29,7 +29,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 24px;
+  height: 28px;
   padding: 0 12px;
   background-color: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
@@ -44,6 +44,11 @@
   gap: 8px;
 }
 
+.status-bar-left {
+  flex: 1;
+  min-width: 0;
+}
+
 .status-file {
   display: flex;
   align-items: center;
@@ -51,14 +56,15 @@
 }
 
 .status-dirty-indicator {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: var(--primary-color);
 }
 
 .status-item {
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .status-toggle,
@@ -76,13 +82,13 @@
 
 .status-toggle:hover,
 .status-mode:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
   color: var(--text-color);
 }
 
 .status-toggle:active,
 .status-mode:active {
-  background-color: var(--bg-active, var(--bg-hover));
+  background-color: var(--bg-active, rgba(0, 0, 0, 0.1));
 }
 
 .status-toggle.active {
@@ -95,7 +101,7 @@
   gap: 4px;
   padding: 2px 6px;
   border-radius: 3px;
-  background-color: var(--bg-hover);
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
   color: var(--text-secondary);
   font-size: 11px;
   animation: autosave-fade 5s ease-out forwards;
@@ -111,4 +117,111 @@
   100% {
     opacity: 0.5;
   }
+}
+
+/* ========================================
+   Pill-style Tabs in Status Bar
+   ======================================== */
+
+.status-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  max-width: 60%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.status-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual tab pill */
+.tab-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.tab-pill:hover {
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  color: var(--text-color);
+}
+
+.tab-pill.active {
+  background-color: var(--bg-primary);
+  color: var(--text-color);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.tab-title {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-dirty-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.tab-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background-color 0.1s ease, color 0.1s ease;
+  flex-shrink: 0;
+}
+
+.tab-pill:hover .tab-close {
+  display: flex;
+}
+
+.tab-close:hover {
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.1));
+  color: var(--text-color);
+}
+
+/* New tab button */
+.status-new-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.status-new-tab:hover {
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.08));
+  color: var(--text-color);
 }

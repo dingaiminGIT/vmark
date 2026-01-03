@@ -212,31 +212,31 @@ describe("documentStore", () => {
     });
   });
 
-  describe("getAllDirtyWindows", () => {
-    it("returns all window labels with dirty documents", () => {
-      const { initDocument, setContent, getAllDirtyWindows } = useDocumentStore.getState();
+  describe("getAllDirtyDocuments", () => {
+    it("returns all tab IDs with dirty documents", () => {
+      const { initDocument, setContent, getAllDirtyDocuments } = useDocumentStore.getState();
 
-      initDocument("window-1", "Content 1");
-      initDocument("window-2", "Content 2");
-      initDocument("window-3", "Content 3");
+      initDocument("tab-1", "Content 1");
+      initDocument("tab-2", "Content 2");
+      initDocument("tab-3", "Content 3");
 
-      setContent("window-1", "Modified 1");
-      setContent("window-3", "Modified 3");
+      setContent("tab-1", "Modified 1");
+      setContent("tab-3", "Modified 3");
 
-      const dirtyWindows = getAllDirtyWindows();
-      expect(dirtyWindows).toHaveLength(2);
-      expect(dirtyWindows).toContain("window-1");
-      expect(dirtyWindows).toContain("window-3");
-      expect(dirtyWindows).not.toContain("window-2");
+      const dirtyTabs = getAllDirtyDocuments();
+      expect(dirtyTabs).toHaveLength(2);
+      expect(dirtyTabs).toContain("tab-1");
+      expect(dirtyTabs).toContain("tab-3");
+      expect(dirtyTabs).not.toContain("tab-2");
     });
 
     it("returns empty array when no documents are dirty", () => {
-      const { initDocument, getAllDirtyWindows } = useDocumentStore.getState();
+      const { initDocument, getAllDirtyDocuments } = useDocumentStore.getState();
 
-      initDocument("window-1");
-      initDocument("window-2");
+      initDocument("tab-1");
+      initDocument("tab-2");
 
-      expect(getAllDirtyWindows()).toHaveLength(0);
+      expect(getAllDirtyDocuments()).toHaveLength(0);
     });
   });
 

@@ -6,7 +6,9 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useWindowLabel } from "../contexts/WindowContext";
 import { useDocumentStore } from "../stores/documentStore";
+import { useTabStore } from "../stores/tabStore";
 import { useRecentFilesStore } from "../stores/recentFilesStore";
+import { getDefaultSaveFolder } from "@/utils/tabUtils";
 
 /**
  * Handle window close with save confirmation dialog.
@@ -25,62 +27,74 @@ export function useWindowClose() {
     isClosingRef.current = true;
 
     try {
-      const doc = useDocumentStore.getState().getDocument(windowLabel);
+      // Get all tabs for this window
+      const tabs = useTabStore.getState().tabs[windowLabel] ?? [];
 
-      // If document is not dirty, just close
-      if (!doc || !doc.isDirty) {
-        // Remove document from store and close window
-        useDocumentStore.getState().removeDocument(windowLabel);
+      // Check if any tabs have unsaved changes
+      const dirtyTabs = tabs.filter((tab) => {
+        const doc = useDocumentStore.getState().getDocument(tab.id);
+        return doc?.isDirty;
+      });
+
+      // If no dirty tabs, just close
+      if (dirtyTabs.length === 0) {
+        tabs.forEach((tab) => useDocumentStore.getState().removeDocument(tab.id));
         await invoke("close_window", { label: windowLabel });
         return;
       }
 
-      // Show Save/Don't Save/Cancel dialog
       const { ask, message } = await import("@tauri-apps/plugin-dialog");
 
-      const shouldSave = await ask(
-        `Do you want to save changes to "${doc.filePath || "Untitled"}"?`,
-        {
-          title: "Unsaved Changes",
-          kind: "warning",
-          okLabel: "Save",
-          cancelLabel: "Don't Save",
-        }
-      );
+      // Process each dirty tab - prompt user for each one
+      for (const dirtyTab of dirtyTabs) {
+        const doc = useDocumentStore.getState().getDocument(dirtyTab.id);
+        if (!doc?.isDirty) continue; // May have been saved in a previous iteration
 
-      if (shouldSave === null) {
-        // User cancelled (closed dialog) - don't close window
-        return;
-      }
-
-      if (shouldSave) {
-        // Save the document
-        let path = doc.filePath;
-        if (!path) {
-          const newPath = await save({
-            filters: [{ name: "Markdown", extensions: ["md"] }],
-          });
-          if (!newPath) {
-            // User cancelled save dialog - don't close window
-            return;
+        const shouldSave = await ask(
+          `Do you want to save changes to "${doc.filePath || dirtyTab.title}"?`,
+          {
+            title: "Unsaved Changes",
+            kind: "warning",
+            okLabel: "Save",
+            cancelLabel: "Don't Save",
           }
-          path = newPath;
-        }
+        );
 
-        try {
-          await writeTextFile(path, doc.content);
-          useRecentFilesStore.getState().addFile(path);
-        } catch (error) {
-          await message(`Failed to save file: ${error}`, {
-            title: "Error",
-            kind: "error",
-          });
+        // User closed dialog (Escape) - cancel window close entirely
+        if (shouldSave === null) {
           return;
         }
+
+        if (shouldSave) {
+          let path = doc.filePath;
+          if (!path) {
+            const newPath = await save({
+              defaultPath: getDefaultSaveFolder(windowLabel),
+              filters: [{ name: "Markdown", extensions: ["md"] }],
+            });
+            if (!newPath) {
+              // User cancelled save dialog - cancel window close
+              return;
+            }
+            path = newPath;
+          }
+
+          try {
+            await writeTextFile(path, doc.content);
+            useRecentFilesStore.getState().addFile(path);
+          } catch (error) {
+            await message(`Failed to save file: ${error}`, {
+              title: "Error",
+              kind: "error",
+            });
+            return;
+          }
+        }
+        // If shouldSave is false, user chose "Don't Save" - continue to next tab
       }
 
-      // Close the window
-      useDocumentStore.getState().removeDocument(windowLabel);
+      // All dirty tabs handled - close the window
+      tabs.forEach((tab) => useDocumentStore.getState().removeDocument(tab.id));
       await invoke("close_window", { label: windowLabel });
     } catch (error) {
       console.error("Failed to close window:", error);

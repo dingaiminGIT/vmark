@@ -25,9 +25,9 @@ export function useAppQuit() {
       isQuittingRef = true;
 
       try {
-        const dirtyWindows = useDocumentStore.getState().getAllDirtyWindows();
+        const dirtyTabs = useDocumentStore.getState().getAllDirtyDocuments();
 
-        if (dirtyWindows.length === 0) {
+        if (dirtyTabs.length === 0) {
           // No unsaved documents - quit immediately
           await invoke("force_quit");
           return;
@@ -35,7 +35,7 @@ export function useAppQuit() {
 
         // Ask user for confirmation
         const confirmed = await ask(
-          `You have ${dirtyWindows.length} unsaved document(s). Quit without saving?`,
+          `You have ${dirtyTabs.length} unsaved document(s). Quit without saving?`,
           {
             title: "Unsaved Changes",
             kind: "warning",

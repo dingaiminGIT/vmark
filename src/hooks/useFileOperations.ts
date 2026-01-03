@@ -4,25 +4,29 @@ import { open, save, ask } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useTabStore } from "@/stores/tabStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { createSnapshot } from "@/utils/historyUtils";
 import { isWindowFocused } from "@/utils/windowFocus";
+import { getDefaultSaveFolder } from "@/utils/tabUtils";
 
 // Re-entry guards for file operations (prevents duplicate dialogs)
 const isOpeningRef = { current: false };
 const isSavingRef = { current: false };
 
 async function saveToPath(
-  windowLabel: string,
+  tabId: string,
   path: string,
   content: string,
   saveType: "manual" | "auto" = "manual"
 ): Promise<boolean> {
   try {
     await writeTextFile(path, content);
-    useDocumentStore.getState().setFilePath(windowLabel, path);
-    useDocumentStore.getState().markSaved(windowLabel);
+    useDocumentStore.getState().setFilePath(tabId, path);
+    useDocumentStore.getState().markSaved(tabId);
+    // Update tab path for title sync
+    useTabStore.getState().updateTabPath(tabId, path);
 
     // Add to recent files
     useRecentFilesStore.getState().addFile(path);
@@ -59,7 +63,10 @@ export function useFileOperations() {
     isOpeningRef.current = true;
 
     try {
-      const doc = useDocumentStore.getState().getDocument(windowLabel);
+      const tabId = useTabStore.getState().activeTabId[windowLabel];
+      if (!tabId) return;
+
+      const doc = useDocumentStore.getState().getDocument(tabId);
       if (doc?.isDirty) {
         const confirmed = await ask("You have unsaved changes. Discard them?", {
           title: "Unsaved Changes",
@@ -72,7 +79,8 @@ export function useFileOperations() {
       });
       if (path) {
         const content = await readTextFile(path);
-        useDocumentStore.getState().loadContent(windowLabel, content, path);
+        useDocumentStore.getState().loadContent(tabId, content, path);
+        useTabStore.getState().updateTabPath(tabId, path);
         useRecentFilesStore.getState().addFile(path);
       }
     } catch (error) {
@@ -90,17 +98,23 @@ export function useFileOperations() {
     isSavingRef.current = true;
 
     try {
-      const doc = useDocumentStore.getState().getDocument(windowLabel);
+      const tabId = useTabStore.getState().activeTabId[windowLabel];
+      if (!tabId) return;
+
+      const doc = useDocumentStore.getState().getDocument(tabId);
       if (!doc) return;
 
       if (doc.filePath) {
-        await saveToPath(windowLabel, doc.filePath, doc.content, "manual");
+        await saveToPath(tabId, doc.filePath, doc.content, "manual");
       } else {
+        // Use folder from another saved file in this window as default
+        const defaultFolder = getDefaultSaveFolder(windowLabel);
         const path = await save({
+          defaultPath: defaultFolder,
           filters: [{ name: "Markdown", extensions: ["md"] }],
         });
         if (path) {
-          await saveToPath(windowLabel, path, doc.content, "manual");
+          await saveToPath(tabId, path, doc.content, "manual");
         }
       }
     } finally {
@@ -116,14 +130,22 @@ export function useFileOperations() {
     isSavingRef.current = true;
 
     try {
-      const doc = useDocumentStore.getState().getDocument(windowLabel);
+      const tabId = useTabStore.getState().activeTabId[windowLabel];
+      if (!tabId) return;
+
+      const doc = useDocumentStore.getState().getDocument(tabId);
       if (!doc) return;
 
+      // Use current file's folder or folder from another saved file
+      const defaultFolder = doc.filePath
+        ? doc.filePath.substring(0, doc.filePath.lastIndexOf("/"))
+        : getDefaultSaveFolder(windowLabel);
       const path = await save({
+        defaultPath: defaultFolder,
         filters: [{ name: "Markdown", extensions: ["md"] }],
       });
       if (path) {
-        await saveToPath(windowLabel, path, doc.content, "manual");
+        await saveToPath(tabId, path, doc.content, "manual");
       }
     } finally {
       isSavingRef.current = false;
@@ -138,8 +160,11 @@ export function useFileOperations() {
       // Only respond if this window is focused
       if (!(await isWindowFocused())) return;
 
+      const tabId = useTabStore.getState().activeTabId[windowLabel];
+      if (!tabId) return;
+
       const { path } = event.payload;
-      const doc = useDocumentStore.getState().getDocument(windowLabel);
+      const doc = useDocumentStore.getState().getDocument(tabId);
 
       if (doc?.isDirty) {
         const confirmed = await ask("You have unsaved changes. Discard them?", {
@@ -151,7 +176,8 @@ export function useFileOperations() {
 
       try {
         const content = await readTextFile(path);
-        useDocumentStore.getState().loadContent(windowLabel, content, path);
+        useDocumentStore.getState().loadContent(tabId, content, path);
+        useTabStore.getState().updateTabPath(tabId, path);
         useRecentFilesStore.getState().addFile(path);
       } catch (error) {
         console.error("Failed to open file:", error);

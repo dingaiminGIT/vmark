@@ -1,23 +1,37 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { emit } from "@tauri-apps/api/event";
-import { useDocumentFilePath, useDocumentIsDirty } from "@/hooks/useDocumentState";
+import { useDocumentFilePath, useDocumentIsDirty, useActiveTabId } from "@/hooks/useDocumentState";
+import { useTabStore } from "@/stores/tabStore";
 import { useTitleBarRename } from "./useTitleBarRename";
-import { getFileName } from "@/utils/pathUtils";
+import { getFileNameWithoutExtension } from "@/utils/pathUtils";
 import "./title-bar.css";
 
-const DEFAULT_FILENAME = "Untitled.md";
+const DEFAULT_DISPLAY_NAME = "Untitled";
 
 export function TitleBar() {
   const filePath = useDocumentFilePath();
   const isDirty = useDocumentIsDirty();
+  const activeTabId = useActiveTabId();
   const { renameFile, isRenaming } = useTitleBarRename();
+
+  // Get active tab's title for unsaved documents
+  const tabTitle = useTabStore((state) => {
+    if (!activeTabId) return null;
+    for (const tabs of Object.values(state.tabs)) {
+      const tab = tabs.find((t) => t.id === activeTabId);
+      if (tab) return tab.title;
+    }
+    return null;
+  });
 
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Get display filename
-  const filename = filePath ? getFileName(filePath) : DEFAULT_FILENAME;
+  // Get display filename: use file path (without extension) if saved, otherwise use tab title
+  const displayName = filePath
+    ? getFileNameWithoutExtension(filePath)
+    : tabTitle ?? DEFAULT_DISPLAY_NAME;
   const isUnsaved = !filePath;
 
   // Start editing on double-click
@@ -29,10 +43,9 @@ export function TitleBar() {
     }
 
     // Set initial value to filename without extension
-    const nameWithoutExt = filename.replace(/\.md$/i, "");
-    setEditValue(nameWithoutExt);
+    setEditValue(displayName);
     setIsEditing(true);
-  }, [filename, isUnsaved]);
+  }, [displayName, isUnsaved]);
 
   // Focus and select input when entering edit mode
   useEffect(() => {
@@ -50,8 +63,8 @@ export function TitleBar() {
       return;
     }
 
-    const currentName = filename.replace(/\.md$/i, "");
-    if (trimmed === currentName) {
+    // No change if same as current name
+    if (trimmed === displayName) {
       setIsEditing(false);
       return;
     }
@@ -61,7 +74,7 @@ export function TitleBar() {
       setIsEditing(false);
     }
     // Keep editing if rename failed
-  }, [editValue, filePath, filename, renameFile]);
+  }, [editValue, filePath, displayName, renameFile]);
 
   // Handle key events
   const handleKeyDown = useCallback(
@@ -103,7 +116,7 @@ export function TitleBar() {
             onDoubleClick={handleDoubleClick}
           >
             {isDirty && <span className="dirty-indicator">•</span>}
-            {filename}
+            {displayName}
           </span>
         )}
       </div>

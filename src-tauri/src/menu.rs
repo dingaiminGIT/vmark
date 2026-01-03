@@ -67,7 +67,22 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         &[
             &MenuItem::with_id(app, "new", "New", true, Some("CmdOrCtrl+N"))?,
             &MenuItem::with_id(app, "open", "Open...", true, Some("CmdOrCtrl+O"))?,
+            &MenuItem::with_id(
+                app,
+                "open-folder",
+                "Open Folder...",
+                true,
+                Some("CmdOrCtrl+Shift+O"),
+            )?,
             &recent_submenu,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(
+                app,
+                "close-workspace",
+                "Close Workspace",
+                true,
+                None::<&str>,
+            )?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "save", "Save", true, Some("CmdOrCtrl+S"))?,
             &MenuItem::with_id(app, "save-as", "Save As...", true, Some("CmdOrCtrl+Shift+S"))?,

@@ -3,6 +3,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { useDocumentStore } from "../stores/documentStore";
+import { useTabStore } from "../stores/tabStore";
 import { useRecentFilesStore } from "../stores/recentFilesStore";
 
 interface WindowContextValue {
@@ -30,8 +31,9 @@ export function WindowProvider({ children }: WindowProviderProps) {
         // CRITICAL: Only init documents for document windows (main, doc-*)
         // Settings, print-preview, etc. don't need document state
         if (label === "main" || label.startsWith("doc-")) {
-          const doc = useDocumentStore.getState().getDocument(label);
-          if (!doc) {
+          // Check if we already have tabs for this window
+          const existingTabs = useTabStore.getState().getTabsByWindow(label);
+          if (existingTabs.length === 0) {
             // Check if we have a file path in the URL query params
             const urlParams = new URLSearchParams(globalThis.location?.search || "");
             let filePath = urlParams.get("file");
@@ -52,20 +54,23 @@ export function WindowProvider({ children }: WindowProviderProps) {
               }
             }
 
+            // Create the initial tab
+            const tabId = useTabStore.getState().createTab(label, filePath);
+
             if (filePath) {
               // Load file content from disk
               try {
                 const content = await readTextFile(filePath);
-                useDocumentStore.getState().initDocument(label, content, filePath);
+                useDocumentStore.getState().initDocument(tabId, content, filePath);
                 useRecentFilesStore.getState().addFile(filePath);
               } catch (error) {
                 console.error("[WindowContext] Failed to load file:", filePath, error);
                 // Initialize with empty content if file can't be read
-                useDocumentStore.getState().initDocument(label, "", null);
+                useDocumentStore.getState().initDocument(tabId, "", null);
               }
             } else {
               // No file path - initialize empty document
-              useDocumentStore.getState().initDocument(label, "", null);
+              useDocumentStore.getState().initDocument(tabId, "", null);
             }
           }
         }

@@ -1,82 +1,118 @@
 import { useCallback } from "react";
 import { useWindowLabel } from "../contexts/WindowContext";
 import { useDocumentStore, type CursorInfo } from "../stores/documentStore";
+import { useTabStore } from "../stores/tabStore";
 
-// Window-scoped selectors
-export function useDocumentContent(): string {
+// Get active tab ID for current window
+export function useActiveTabId(): string | null {
   const windowLabel = useWindowLabel();
-  return useDocumentStore((state) => state.documents[windowLabel]?.content ?? "");
+  return useTabStore((state) => state.activeTabId[windowLabel] ?? null);
+}
+
+// Tab-scoped selectors (uses active tab for current window)
+export function useDocumentContent(): string {
+  const tabId = useActiveTabId();
+  return useDocumentStore((state) => (tabId ? state.documents[tabId]?.content : "") ?? "");
 }
 
 export function useDocumentFilePath(): string | null {
-  const windowLabel = useWindowLabel();
-  return useDocumentStore((state) => state.documents[windowLabel]?.filePath ?? null);
+  const tabId = useActiveTabId();
+  return useDocumentStore((state) => (tabId ? state.documents[tabId]?.filePath : null) ?? null);
 }
 
 export function useDocumentIsDirty(): boolean {
-  const windowLabel = useWindowLabel();
-  return useDocumentStore((state) => state.documents[windowLabel]?.isDirty ?? false);
+  const tabId = useActiveTabId();
+  return useDocumentStore((state) => (tabId ? state.documents[tabId]?.isDirty : false) ?? false);
 }
 
 export function useDocumentId(): number {
-  const windowLabel = useWindowLabel();
-  return useDocumentStore((state) => state.documents[windowLabel]?.documentId ?? 0);
+  const tabId = useActiveTabId();
+  return useDocumentStore((state) => (tabId ? state.documents[tabId]?.documentId : 0) ?? 0);
 }
 
 export function useDocumentCursorInfo(): CursorInfo | null {
-  const windowLabel = useWindowLabel();
-  return useDocumentStore((state) => state.documents[windowLabel]?.cursorInfo ?? null);
+  const tabId = useActiveTabId();
+  return useDocumentStore((state) => (tabId ? state.documents[tabId]?.cursorInfo : null) ?? null);
 }
 
 export function useDocumentLastAutoSave(): number | null {
-  const windowLabel = useWindowLabel();
-  return useDocumentStore((state) => state.documents[windowLabel]?.lastAutoSave ?? null);
+  const tabId = useActiveTabId();
+  return useDocumentStore(
+    (state) => (tabId ? state.documents[tabId]?.lastAutoSave : null) ?? null
+  );
 }
 
-// Window-scoped actions
+// Tab-scoped actions (uses active tab for current window)
 export function useDocumentActions() {
   const windowLabel = useWindowLabel();
 
-  // Get fresh content (useful in async callbacks where hook value may be stale)
-  const getContent = useCallback(
-    () => useDocumentStore.getState().documents[windowLabel]?.content ?? "",
+  // Get active tab ID at call time
+  const getActiveTabId = useCallback(
+    () => useTabStore.getState().activeTabId[windowLabel] ?? null,
     [windowLabel]
   );
 
+  // Get fresh content (useful in async callbacks where hook value may be stale)
+  const getContent = useCallback(() => {
+    const tabId = getActiveTabId();
+    if (!tabId) return "";
+    return useDocumentStore.getState().documents[tabId]?.content ?? "";
+  }, [getActiveTabId]);
+
   const setContent = useCallback(
     (content: string) => {
-      useDocumentStore.getState().setContent(windowLabel, content);
+      const tabId = getActiveTabId();
+      if (tabId) {
+        useDocumentStore.getState().setContent(tabId, content);
+      }
     },
-    [windowLabel]
+    [getActiveTabId]
   );
 
   const loadContent = useCallback(
     (content: string, filePath?: string | null) => {
-      useDocumentStore.getState().loadContent(windowLabel, content, filePath);
+      const tabId = getActiveTabId();
+      if (tabId) {
+        useDocumentStore.getState().loadContent(tabId, content, filePath);
+      }
     },
-    [windowLabel]
+    [getActiveTabId]
   );
 
   const setFilePath = useCallback(
     (path: string | null) => {
-      useDocumentStore.getState().setFilePath(windowLabel, path);
+      const tabId = getActiveTabId();
+      if (tabId) {
+        useDocumentStore.getState().setFilePath(tabId, path);
+        // Also update tab path for title sync
+        useTabStore.getState().updateTabPath(tabId, path ?? "");
+      }
     },
-    [windowLabel]
+    [getActiveTabId]
   );
 
   const markSaved = useCallback(() => {
-    useDocumentStore.getState().markSaved(windowLabel);
-  }, [windowLabel]);
+    const tabId = getActiveTabId();
+    if (tabId) {
+      useDocumentStore.getState().markSaved(tabId);
+    }
+  }, [getActiveTabId]);
 
   const markAutoSaved = useCallback(() => {
-    useDocumentStore.getState().markAutoSaved(windowLabel);
-  }, [windowLabel]);
+    const tabId = getActiveTabId();
+    if (tabId) {
+      useDocumentStore.getState().markAutoSaved(tabId);
+    }
+  }, [getActiveTabId]);
 
   const setCursorInfo = useCallback(
     (info: CursorInfo | null) => {
-      useDocumentStore.getState().setCursorInfo(windowLabel, info);
+      const tabId = getActiveTabId();
+      if (tabId) {
+        useDocumentStore.getState().setCursorInfo(tabId, info);
+      }
     },
-    [windowLabel]
+    [getActiveTabId]
   );
 
   return {
@@ -88,4 +124,9 @@ export function useDocumentActions() {
     markAutoSaved,
     setCursorInfo,
   };
+}
+
+// Direct tab access for components that need specific tab
+export function useTabDocument(tabId: string | null) {
+  return useDocumentStore((state) => (tabId ? state.documents[tabId] : null) ?? null);
 }

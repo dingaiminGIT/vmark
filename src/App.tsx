@@ -52,6 +52,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useMenuEvents } from "@/hooks/useMenuEvents";
+import { useWorkspaceMenuEvents } from "@/hooks/useWorkspaceMenuEvents";
 import { useFileOperations } from "@/hooks/useFileOperations";
 import { useSearchCommands } from "@/hooks/useSearchCommands";
 import { useAutoSave } from "@/hooks/useAutoSave";
@@ -63,6 +64,7 @@ import { useAppQuit } from "@/hooks/useAppQuit";
 import { useWindowTitle } from "@/hooks/useWindowTitle";
 import { useDisableContextMenu } from "@/hooks/useDisableContextMenu";
 import { useViewShortcuts } from "@/hooks/useViewShortcuts";
+import { useTabShortcuts } from "@/hooks/useTabShortcuts";
 
 // Separate component for window lifecycle hooks to avoid conditional hook calls
 function DocumentWindowHooks() {
@@ -114,6 +116,7 @@ function MainLayout() {
 
   // Initialize hooks
   useMenuEvents();
+  useWorkspaceMenuEvents();
   useFileOperations();
   useSearchCommands();
   useSettingsSync(); // Sync settings across windows
@@ -122,6 +125,7 @@ function MainLayout() {
   useRecentFilesSync(); // Sync recent files to native menu
   useDisableContextMenu(); // Disable browser context menu
   useViewShortcuts(); // F7, F8, F9 shortcuts
+  useTabShortcuts(); // Cmd+T, Cmd+W tab shortcuts
 
   const classNames = [
     "app-layout",

@@ -14,6 +14,7 @@ interface UIState {
   outlineVisible: boolean;
   sidebarViewMode: SidebarViewMode;
   activeHeadingLine: number | null; // Current heading line for outline highlight
+  statusBarPinned: boolean; // When true, status bar stays visible
 }
 
 interface UIActions {
@@ -25,6 +26,8 @@ interface UIActions {
   showSidebarWithView: (mode: SidebarViewMode) => void;
   setActiveHeadingLine: (line: number | null) => void;
   setSidebarWidth: (width: number) => void;
+  toggleStatusBar: () => void;
+  setStatusBarPinned: (pinned: boolean) => void;
 }
 
 export const useUIStore = create<UIState & UIActions>((set) => ({
@@ -34,6 +37,7 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   outlineVisible: false,
   sidebarViewMode: "outline",
   activeHeadingLine: null,
+  statusBarPinned: false,
 
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
@@ -45,4 +49,6 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   setSidebarWidth: (width) => set({
     sidebarWidth: Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width)),
   }),
+  toggleStatusBar: () => set((state) => ({ statusBarPinned: !state.statusBarPinned })),
+  setStatusBarPinned: (pinned) => set({ statusBarPinned: pinned }),
 }));

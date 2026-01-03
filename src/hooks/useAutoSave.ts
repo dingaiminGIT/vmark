@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useTabStore } from "@/stores/tabStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { createSnapshot } from "@/utils/historyUtils";
 import { autoSaveLog } from "@/utils/debug";
@@ -26,7 +27,10 @@ export function useAutoSave() {
     const intervalMs = autoSaveInterval * 1000;
 
     const checkAndSave = async () => {
-      const doc = useDocumentStore.getState().getDocument(windowLabel);
+      const tabId = useTabStore.getState().activeTabId[windowLabel];
+      if (!tabId) return;
+
+      const doc = useDocumentStore.getState().getDocument(tabId);
 
       // Skip if no document, not dirty, or no file path (untitled)
       if (!doc || !doc.isDirty || !doc.filePath) return;
@@ -40,7 +44,7 @@ export function useAutoSave() {
 
       try {
         await writeTextFile(doc.filePath, doc.content);
-        useDocumentStore.getState().markAutoSaved(windowLabel);
+        useDocumentStore.getState().markAutoSaved(tabId);
         lastSaveRef.current = now;
         autoSaveLog("Saved:", doc.filePath);
 

@@ -20,7 +20,7 @@ export interface CursorInfo {
   contextAfter: string;
 }
 
-// Per-window document state
+// Per-tab document state
 export interface DocumentState {
   content: string;
   savedContent: string;
@@ -32,22 +32,22 @@ export interface DocumentState {
 }
 
 interface DocumentStore {
-  // Documents keyed by window label
+  // Documents keyed by tab ID (changed from window label)
   documents: Record<string, DocumentState>;
 
-  // Actions
-  initDocument: (windowLabel: string, content?: string, filePath?: string | null) => void;
-  setContent: (windowLabel: string, content: string) => void;
-  loadContent: (windowLabel: string, content: string, filePath?: string | null) => void;
-  setFilePath: (windowLabel: string, path: string | null) => void;
-  markSaved: (windowLabel: string) => void;
-  markAutoSaved: (windowLabel: string) => void;
-  setCursorInfo: (windowLabel: string, info: CursorInfo | null) => void;
-  removeDocument: (windowLabel: string) => void;
+  // Actions - now take tabId instead of windowLabel
+  initDocument: (tabId: string, content?: string, filePath?: string | null) => void;
+  setContent: (tabId: string, content: string) => void;
+  loadContent: (tabId: string, content: string, filePath?: string | null) => void;
+  setFilePath: (tabId: string, path: string | null) => void;
+  markSaved: (tabId: string) => void;
+  markAutoSaved: (tabId: string) => void;
+  setCursorInfo: (tabId: string, info: CursorInfo | null) => void;
+  removeDocument: (tabId: string) => void;
 
   // Selectors
-  getDocument: (windowLabel: string) => DocumentState | undefined;
-  getAllDirtyWindows: () => string[];
+  getDocument: (tabId: string) => DocumentState | undefined;
+  getAllDirtyDocuments: () => string[]; // Returns tabIds
 }
 
 const createInitialDocument = (content = "", filePath: string | null = null): DocumentState => ({
@@ -63,22 +63,22 @@ const createInitialDocument = (content = "", filePath: string | null = null): Do
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   documents: {},
 
-  initDocument: (windowLabel, content = "", filePath = null) =>
+  initDocument: (tabId, content = "", filePath = null) =>
     set((state) => ({
       documents: {
         ...state.documents,
-        [windowLabel]: createInitialDocument(content, filePath),
+        [tabId]: createInitialDocument(content, filePath),
       },
     })),
 
-  setContent: (windowLabel, content) =>
+  setContent: (tabId, content) =>
     set((state) => {
-      const doc = state.documents[windowLabel];
+      const doc = state.documents[tabId];
       if (!doc) return state;
       return {
         documents: {
           ...state.documents,
-          [windowLabel]: {
+          [tabId]: {
             ...doc,
             content,
             isDirty: doc.savedContent !== content,
@@ -87,14 +87,14 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       };
     }),
 
-  loadContent: (windowLabel, content, filePath) =>
+  loadContent: (tabId, content, filePath) =>
     set((state) => {
-      const doc = state.documents[windowLabel];
+      const doc = state.documents[tabId];
       if (!doc) return state;
       return {
         documents: {
           ...state.documents,
-          [windowLabel]: {
+          [tabId]: {
             ...doc,
             content,
             savedContent: content,
@@ -106,26 +106,26 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       };
     }),
 
-  setFilePath: (windowLabel, path) =>
+  setFilePath: (tabId, path) =>
     set((state) => {
-      const doc = state.documents[windowLabel];
+      const doc = state.documents[tabId];
       if (!doc) return state;
       return {
         documents: {
           ...state.documents,
-          [windowLabel]: { ...doc, filePath: path },
+          [tabId]: { ...doc, filePath: path },
         },
       };
     }),
 
-  markSaved: (windowLabel) =>
+  markSaved: (tabId) =>
     set((state) => {
-      const doc = state.documents[windowLabel];
+      const doc = state.documents[tabId];
       if (!doc) return state;
       return {
         documents: {
           ...state.documents,
-          [windowLabel]: {
+          [tabId]: {
             ...doc,
             savedContent: doc.content,
             isDirty: false,
@@ -134,14 +134,14 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       };
     }),
 
-  markAutoSaved: (windowLabel) =>
+  markAutoSaved: (tabId) =>
     set((state) => {
-      const doc = state.documents[windowLabel];
+      const doc = state.documents[tabId];
       if (!doc) return state;
       return {
         documents: {
           ...state.documents,
-          [windowLabel]: {
+          [tabId]: {
             ...doc,
             savedContent: doc.content,
             isDirty: false,
@@ -151,30 +151,30 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       };
     }),
 
-  setCursorInfo: (windowLabel, info) =>
+  setCursorInfo: (tabId, info) =>
     set((state) => {
-      const doc = state.documents[windowLabel];
+      const doc = state.documents[tabId];
       if (!doc) return state;
       return {
         documents: {
           ...state.documents,
-          [windowLabel]: { ...doc, cursorInfo: info },
+          [tabId]: { ...doc, cursorInfo: info },
         },
       };
     }),
 
-  removeDocument: (windowLabel) =>
+  removeDocument: (tabId) =>
     set((state) => {
-      const { [windowLabel]: _, ...rest } = state.documents;
+      const { [tabId]: _, ...rest } = state.documents;
       return { documents: rest };
     }),
 
-  getDocument: (windowLabel) => get().documents[windowLabel],
+  getDocument: (tabId) => get().documents[tabId],
 
-  getAllDirtyWindows: () => {
+  getAllDirtyDocuments: () => {
     const { documents } = get();
     return Object.entries(documents)
       .filter(([_, doc]) => doc.isDirty)
-      .map(([label]) => label);
+      .map(([tabId]) => tabId);
   },
 }));

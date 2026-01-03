@@ -1,92 +1,109 @@
-import { useMemo, useState, useEffect } from "react";
-import { Code2, Type, PanelLeftOpen, PanelRightOpen, Save } from "lucide-react";
+import { useMemo, useState, useEffect, useCallback, useRef, type MouseEvent } from "react";
+import { Code2, Type, PanelLeftOpen, PanelRightOpen, Save, Plus } from "lucide-react";
 import { countWords as alfaazCount } from "alfaaz";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useWindowLabel, useIsDocumentWindow } from "@/contexts/WindowContext";
+import { useTabStore, type Tab as TabType } from "@/stores/tabStore";
+import { useDocumentStore } from "@/stores/documentStore";
+import { closeTabWithDirtyCheck } from "@/utils/tabUtils";
 import {
   useDocumentContent,
-  useDocumentFilePath,
   useDocumentIsDirty,
   useDocumentLastAutoSave,
 } from "@/hooks/useDocumentState";
 import { formatRelativeTime, formatExactTime } from "@/utils/dateUtils";
-import { getFileName } from "@/utils/pathUtils";
+import { Tab } from "@/components/Tabs/Tab";
+import { TabContextMenu, type ContextMenuPosition } from "@/components/Tabs/TabContextMenu";
 import "./StatusBar.css";
 
 /**
  * Strip markdown formatting to get plain text for word counting.
- * Removes: headers, bold/italic, links, images, code blocks, blockquotes, lists
  */
 function stripMarkdown(text: string): string {
   return (
     text
-      // Remove code blocks (``` ... ```)
       .replace(/```[\s\S]*?```/g, "")
-      // Remove inline code (` ... `)
       .replace(/`[^`]+`/g, "")
-      // Remove images ![alt](url)
       .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-      // Convert links [text](url) to just text
       .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-      // Remove headers (# ## ### etc.)
       .replace(/^#{1,6}\s+/gm, "")
-      // Remove bold/italic markers
       .replace(/(\*\*|__)(.*?)\1/g, "$2")
       .replace(/(\*|_)(.*?)\1/g, "$2")
-      // Remove blockquotes
       .replace(/^>\s+/gm, "")
-      // Remove horizontal rules
       .replace(/^[-*_]{3,}\s*$/gm, "")
-      // Remove list markers
       .replace(/^[\s]*[-*+]\s+/gm, "")
       .replace(/^[\s]*\d+\.\s+/gm, "")
-      // Clean up extra whitespace
       .replace(/\n{3,}/g, "\n\n")
       .trim()
   );
 }
 
-/**
- * Count words using alfaaz (supports CJK - counts each CJK char as a word)
- */
 function countWords(text: string): number {
   const plainText = stripMarkdown(text);
   return alfaazCount(plainText);
 }
 
-/**
- * Count characters (excluding markdown formatting)
- */
 function countCharacters(text: string): number {
   const plainText = stripMarkdown(text);
-  // Exclude whitespace for character count
   return plainText.replace(/\s/g, "").length;
 }
 
 export function StatusBar() {
+  const isDocumentWindow = useIsDocumentWindow();
+  const windowLabel = useWindowLabel();
   const content = useDocumentContent();
-  const filePath = useDocumentFilePath();
   const isDirty = useDocumentIsDirty();
   const lastAutoSave = useDocumentLastAutoSave();
   const sourceMode = useEditorStore((state) => state.sourceMode);
   const sidebarVisible = useUIStore((state) => state.sidebarVisible);
+  const statusBarPinned = useUIStore((state) => state.statusBarPinned);
+
+  // Tab state - only for document windows
+  const tabs = useTabStore((state) =>
+    isDocumentWindow ? state.tabs[windowLabel] ?? [] : []
+  );
+  const activeTabId = useTabStore((state) =>
+    isDocumentWindow ? state.activeTabId[windowLabel] : null
+  );
+
+  // Track previous tab count to detect transitions
+  const hasMultipleTabs = tabs.length > 1;
+  const prevHadMultipleTabs = useRef(hasMultipleTabs);
+
+  // Auto-pin status bar only when transitioning from 1 tab to 2+ tabs
+  useEffect(() => {
+    const wasMultiple = prevHadMultipleTabs.current;
+    prevHadMultipleTabs.current = hasMultipleTabs;
+
+    // Only auto-pin on transition from single to multiple tabs
+    if (hasMultipleTabs && !wasMultiple) {
+      useUIStore.getState().setStatusBarPinned(true);
+    }
+  }, [hasMultipleTabs]);
+
+  // Status bar visibility controlled by pinned state (Cmd+J toggles)
+  const statusBarVisible = statusBarPinned;
+
+  const [contextMenu, setContextMenu] = useState<{
+    position: ContextMenuPosition;
+    tab: TabType;
+  } | null>(null);
 
   const [showAutoSave, setShowAutoSave] = useState(false);
   const [autoSaveTime, setAutoSaveTime] = useState<string>("");
 
-  // Show auto-save indicator when lastAutoSave changes
+  // Auto-save indicator effect
   useEffect(() => {
     if (!lastAutoSave) return;
 
     setAutoSaveTime(formatRelativeTime(lastAutoSave));
     setShowAutoSave(true);
 
-    // Update the relative time every 10 seconds
     const updateInterval = setInterval(() => {
       setAutoSaveTime(formatRelativeTime(lastAutoSave));
     }, 10000);
 
-    // Fade out after 5 seconds
     const fadeTimeout = setTimeout(() => {
       setShowAutoSave(false);
     }, 5000);
@@ -97,48 +114,133 @@ export function StatusBar() {
     };
   }, [lastAutoSave]);
 
+  // Tab handlers
+  const handleActivateTab = useCallback(
+    (tabId: string) => {
+      useTabStore.getState().setActiveTab(windowLabel, tabId);
+    },
+    [windowLabel]
+  );
+
+  const handleCloseTab = useCallback(
+    (tabId: string) => {
+      closeTabWithDirtyCheck(windowLabel, tabId);
+    },
+    [windowLabel]
+  );
+
+  const handleContextMenu = useCallback(
+    (e: MouseEvent, tab: TabType) => {
+      e.preventDefault();
+      setContextMenu({
+        position: { x: e.clientX, y: e.clientY },
+        tab,
+      });
+    },
+    []
+  );
+
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleNewTab = useCallback(() => {
+    const tabId = useTabStore.getState().createTab(windowLabel, null);
+    useDocumentStore.getState().initDocument(tabId, "", null);
+  }, [windowLabel]);
+
   const wordCount = useMemo(() => countWords(content), [content]);
   const charCount = useMemo(() => countCharacters(content), [content]);
-  const fileName = filePath ? getFileName(filePath) : "Untitled";
+
+  // Show tabs when there are multiple tabs, but always show the new tab button
+  const showTabs = isDocumentWindow && tabs.length > 1;
+  const showNewTabButton = isDocumentWindow;
 
   return (
-    <div className="status-bar-container">
-      <div className="status-bar">
-        <div className="status-bar-left">
-          <button
-            className={`status-toggle ${sidebarVisible ? "active" : ""}`}
-            title="Toggle Sidebar"
-            onClick={() => useUIStore.getState().toggleSidebar()}
-          >
-            {sidebarVisible ? <PanelRightOpen size={14} /> : <PanelLeftOpen size={14} />}
-          </button>
-          <span className="status-file">
-            {isDirty && <span className="status-dirty-indicator" />}
-            {fileName}
-          </span>
-        </div>
-        <div className="status-bar-right">
-          {showAutoSave && lastAutoSave && (
-            <span
-              className="status-autosave"
-              title={`Auto-saved at ${formatExactTime(lastAutoSave)}`}
+    <>
+      <div className={`status-bar-container ${statusBarVisible ? "visible" : ""}`}>
+        <div className="status-bar">
+          {/* Left section: sidebar toggle + tabs */}
+          <div className="status-bar-left">
+            <button
+              className={`status-toggle ${sidebarVisible ? "active" : ""}`}
+              title="Toggle Sidebar"
+              onClick={() => useUIStore.getState().toggleSidebar()}
             >
-              <Save size={12} />
-              {autoSaveTime}
-            </span>
-          )}
-          <span className="status-item">{wordCount} words</span>
-          <span className="status-item">{charCount} characters</span>
-          <button
-            className="status-mode"
-            title={sourceMode ? "Source Mode (F7)" : "Rich Text Mode (F7)"}
-            onClick={() => useEditorStore.getState().toggleSourceMode()}
-          >
-            {sourceMode ? <Code2 size={14} /> : <Type size={14} />}
-          </button>
+              {sidebarVisible ? <PanelRightOpen size={14} /> : <PanelLeftOpen size={14} />}
+            </button>
+
+            {/* New tab button - always on the left */}
+            {showNewTabButton && (
+              <button
+                type="button"
+                className="status-new-tab"
+                onClick={handleNewTab}
+                aria-label="New tab"
+                title="New Tab"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            )}
+
+            {/* Tabs section (pill style) */}
+            {showTabs && (
+              <div className="status-tabs" role="tablist">
+                {tabs.map((tab) => (
+                  <Tab
+                    key={tab.id}
+                    tab={tab}
+                    isActive={tab.id === activeTabId}
+                    onActivate={() => handleActivateTab(tab.id)}
+                    onClose={() => handleCloseTab(tab.id)}
+                    onContextMenu={(e) => handleContextMenu(e, tab)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Show dirty indicator + title when single tab */}
+            {!showTabs && (
+              <span className="status-file">
+                {isDirty && <span className="status-dirty-indicator" />}
+              </span>
+            )}
+          </div>
+
+          {/* Right section: stats + mode */}
+          <div className="status-bar-right">
+            {showAutoSave && lastAutoSave && (
+              <span
+                className="status-autosave"
+                title={`Auto-saved at ${formatExactTime(lastAutoSave)}`}
+              >
+                <Save size={12} />
+                {autoSaveTime}
+              </span>
+            )}
+            <span className="status-item">{wordCount} words</span>
+            <span className="status-item">{charCount} chars</span>
+            <button
+              className="status-mode"
+              title={sourceMode ? "Source Mode (F7)" : "Rich Text Mode (F7)"}
+              onClick={() => useEditorStore.getState().toggleSourceMode()}
+            >
+              {sourceMode ? <Code2 size={14} /> : <Type size={14} />}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Tab context menu */}
+      {contextMenu && (
+        <TabContextMenu
+          tab={contextMenu.tab}
+          position={contextMenu.position}
+          windowLabel={windowLabel}
+          onClose={handleCloseContextMenu}
+        />
+      )}
+    </>
   );
 }
 

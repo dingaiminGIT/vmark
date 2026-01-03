@@ -21,7 +21,7 @@ vi.mock("@/stores/editorStore", () => ({
 
 // Mock useDocumentStore as a zustand hook
 const mockDocumentStore = {
-  documents: { main: { documentId: 1, content: "", isDirty: false, filePath: null } },
+  documents: { "tab-1": { documentId: 1, content: "", isDirty: false, filePath: null } },
   getDocument: () => ({ content: "", isDirty: false, filePath: null }),
   initDocument: vi.fn(),
 };
@@ -32,6 +32,23 @@ vi.mock("@/stores/documentStore", () => ({
       return selector(mockDocumentStore);
     }
     return mockDocumentStore;
+  }),
+}));
+
+// Mock useTabStore as a zustand hook
+const mockTabStore = {
+  tabs: { main: [{ id: "tab-1", filePath: null, title: "Untitled", isPinned: false }] },
+  activeTabId: { main: "tab-1" },
+  getTabsByWindow: () => [{ id: "tab-1", filePath: null, title: "Untitled", isPinned: false }],
+  createTab: vi.fn(() => "tab-1"),
+};
+
+vi.mock("@/stores/tabStore", () => ({
+  useTabStore: vi.fn((selector) => {
+    if (typeof selector === "function") {
+      return selector(mockTabStore);
+    }
+    return mockTabStore;
   }),
 }));
 

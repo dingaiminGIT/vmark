@@ -5,13 +5,19 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import type { FileNode, FsChangeEvent } from "./types";
 
+interface LoadOptions {
+  filter: (name: string, isFolder: boolean) => boolean;
+  excludeFolders: string[];
+}
+
 async function loadDirectoryRecursive(
   dirPath: string,
-  filter: (name: string, isFolder: boolean) => boolean
+  options: LoadOptions
 ): Promise<FileNode[]> {
   try {
     const entries = await readDir(dirPath);
     const nodes: FileNode[] = [];
+    const { filter, excludeFolders } = options;
 
     for (const entry of entries) {
       const isFolder = entry.isDirectory;
@@ -20,13 +26,16 @@ async function loadDirectoryRecursive(
       // Skip hidden files/folders
       if (name.startsWith(".")) continue;
 
+      // Skip excluded folders (from workspace config)
+      if (isFolder && excludeFolders.includes(name)) continue;
+
       // Apply filter
       if (!filter(name, isFolder)) continue;
 
       const fullPath = await join(dirPath, name);
 
       if (isFolder) {
-        const children = await loadDirectoryRecursive(fullPath, filter);
+        const children = await loadDirectoryRecursive(fullPath, options);
         // Only include folders that have matching children
         if (children.length > 0) {
           nodes.push({
@@ -63,11 +72,21 @@ const mdFilter = (name: string, isFolder: boolean): boolean => {
   return name.endsWith(".md");
 };
 
-export function useFileTree(rootPath: string | null) {
+interface UseFileTreeOptions {
+  excludeFolders?: string[];
+}
+
+export function useFileTree(
+  rootPath: string | null,
+  options: UseFileTreeOptions = {}
+) {
+  const { excludeFolders = [] } = options;
   const [tree, setTree] = useState<FileNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
   const unlistenRef = useRef<UnlistenFn | null>(null);
+  // Serialize excludeFolders for dependency comparison
+  const excludeFoldersKey = excludeFolders.join(",");
 
   const loadTree = useCallback(async () => {
     if (!rootPath) {
@@ -79,7 +98,11 @@ export function useFileTree(rootPath: string | null) {
     setIsLoading(true);
 
     try {
-      const nodes = await loadDirectoryRecursive(rootPath, mdFilter);
+      const loadOptions: LoadOptions = {
+        filter: mdFilter,
+        excludeFolders,
+      };
+      const nodes = await loadDirectoryRecursive(rootPath, loadOptions);
       if (currentRequestId === requestIdRef.current) {
         setTree(nodes);
       }
@@ -93,7 +116,8 @@ export function useFileTree(rootPath: string | null) {
         setIsLoading(false);
       }
     }
-  }, [rootPath]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- excludeFoldersKey is stable serialization
+  }, [rootPath, excludeFoldersKey]);
 
   // Load tree and setup watcher when rootPath changes
   useEffect(() => {

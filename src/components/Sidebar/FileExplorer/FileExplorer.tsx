@@ -1,12 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Tree, type TreeApi } from "react-arborist";
-import { FilePlus, FolderPlus } from "lucide-react";
+import { FilePlus, FolderPlus, Folder } from "lucide-react";
 import { useFileTree, getDirectory } from "./useFileTree";
 import { useExplorerOperations } from "./useExplorerOperations";
 import { FileNode } from "./FileNode";
 import { ContextMenu, type ContextMenuType, type ContextMenuPosition } from "./ContextMenu";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import type { FileNode as FileNodeType } from "./types";
 import "./FileExplorer.css";
+
+// Stable empty array reference to avoid re-renders
+const EMPTY_FOLDERS: string[] = [];
 
 interface ContextMenuState {
   visible: boolean;
@@ -21,7 +25,14 @@ interface FileExplorerProps {
 }
 
 export function FileExplorer({ currentFilePath }: FileExplorerProps) {
-  const [rootPath, setRootPath] = useState<string | null>(null);
+  // Workspace mode takes precedence
+  const workspaceRootPath = useWorkspaceStore((s) => s.rootPath);
+  const isWorkspaceMode = useWorkspaceStore((s) => s.isWorkspaceMode);
+  const excludeFolders = useWorkspaceStore(
+    (s) => s.config?.excludeFolders ?? EMPTY_FOLDERS
+  );
+
+  const [inferredRootPath, setInferredRootPath] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     visible: false,
     type: "empty",
@@ -31,7 +42,13 @@ export function FileExplorer({ currentFilePath }: FileExplorerProps) {
   });
   const treeRef = useRef<TreeApi<FileNodeType> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { tree, isLoading, refresh } = useFileTree(rootPath);
+
+  // Use workspace root when in workspace mode, otherwise infer from file
+  const rootPath = isWorkspaceMode ? workspaceRootPath : inferredRootPath;
+
+  const { tree, isLoading, refresh } = useFileTree(rootPath, {
+    excludeFolders: isWorkspaceMode ? excludeFolders : [],
+  });
   const {
     createFile,
     createFolder,
@@ -44,22 +61,25 @@ export function FileExplorer({ currentFilePath }: FileExplorerProps) {
     revealInFinder,
   } = useExplorerOperations();
 
-  // Update root path only when opening a file outside current workspace
+  // Update inferred root path when not in workspace mode
   // This keeps the explorer stable when clicking files within the tree
   useEffect(() => {
+    // Skip if in workspace mode - workspace root is used instead
+    if (isWorkspaceMode) return;
+
     if (!currentFilePath) {
-      setRootPath(null);
+      setInferredRootPath(null);
       return;
     }
 
     // If we have a root and the new file is within it, don't change root
-    if (rootPath && currentFilePath.startsWith(rootPath + "/")) {
-      return; // File is within current workspace, keep root stable
+    if (inferredRootPath && currentFilePath.startsWith(inferredRootPath + "/")) {
+      return; // File is within current folder, keep root stable
     }
 
-    // New file is outside current workspace (or no workspace yet) - update root
-    getDirectory(currentFilePath).then(setRootPath);
-  }, [currentFilePath, rootPath]);
+    // New file is outside current folder (or no folder yet) - update root
+    getDirectory(currentFilePath).then(setInferredRootPath);
+  }, [currentFilePath, inferredRootPath, isWorkspaceMode]);
 
   // Close context menu
   const closeContextMenu = useCallback(() => {
@@ -258,11 +278,19 @@ export function FileExplorer({ currentFilePath }: FileExplorerProps) {
     [rootPath, createFolder, refresh]
   );
 
-  if (!currentFilePath) {
+  // Extract workspace name from path
+  const workspaceName = workspaceRootPath
+    ? workspaceRootPath.split("/").pop() || "Workspace"
+    : null;
+
+  // Show empty state if no root path available
+  if (!rootPath) {
     return (
       <div className="file-explorer">
         <div className="file-explorer-empty">
-          Save document to browse files
+          {isWorkspaceMode
+            ? "No workspace open"
+            : "Save document to browse files"}
         </div>
       </div>
     );
@@ -278,6 +306,13 @@ export function FileExplorer({ currentFilePath }: FileExplorerProps) {
 
   return (
     <div className="file-explorer" ref={containerRef}>
+      {/* Workspace header when in workspace mode */}
+      {isWorkspaceMode && workspaceName && (
+        <div className="file-explorer-workspace-header">
+          <Folder size={14} />
+          <span className="file-explorer-workspace-name">{workspaceName}</span>
+        </div>
+      )}
       <div className="file-explorer-toolbar">
         <button
           className="file-explorer-btn"
