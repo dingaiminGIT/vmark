@@ -1,8 +1,7 @@
 /**
  * Table Detection for Source Mode
  *
- * Utilities to detect if cursor is inside a markdown table
- * and perform table operations on raw markdown text.
+ * Utilities to detect if cursor is inside a markdown table.
  */
 
 import type { EditorView } from "@codemirror/view";
@@ -29,6 +28,8 @@ export interface SourceTableInfo {
   lines: string[];
 }
 
+export type TableAlignment = "left" | "center" | "right";
+
 /**
  * Check if a line is part of a markdown table.
  */
@@ -43,7 +44,6 @@ function isTableLine(line: string): boolean {
 function isSeparatorLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed.startsWith("|")) return false;
-  // Separator line contains only |, -, :, and whitespace
   return /^\|[\s|:-]+\|?$/.test(trimmed);
 }
 
@@ -52,7 +52,6 @@ function isSeparatorLine(line: string): boolean {
  */
 function parseRow(line: string): string[] {
   let trimmed = line.trim();
-  // Remove leading/trailing pipes
   if (trimmed.startsWith("|")) trimmed = trimmed.slice(1);
   if (trimmed.endsWith("|")) trimmed = trimmed.slice(0, -1);
   return trimmed.split("|").map((cell) => cell.trim());
@@ -66,16 +65,14 @@ export function getSourceTableInfo(view: EditorView): SourceTableInfo | null {
   const { from } = state.selection.main;
   const doc = state.doc;
 
-  // Get current line
   const currentLine = doc.lineAt(from);
   const currentLineText = currentLine.text;
 
-  // Check if current line looks like a table
   if (!isTableLine(currentLineText)) {
     return null;
   }
 
-  // Find table boundaries by scanning up and down
+  // Find table boundaries
   let startLine = currentLine.number;
   let endLine = currentLine.number;
 
@@ -106,7 +103,7 @@ export function getSourceTableInfo(view: EditorView): SourceTableInfo | null {
     lines.push(doc.line(i).text);
   }
 
-  // Need at least 2 lines for a valid table (header + separator)
+  // Need at least 2 lines for a valid table
   if (lines.length < 2) {
     return null;
   }
@@ -116,15 +113,17 @@ export function getSourceTableInfo(view: EditorView): SourceTableInfo | null {
     return null;
   }
 
-  // Calculate current row index (0-indexed, relative to table start)
+  // Calculate current row index
   const rowIndex = currentLine.number - startLine;
 
-  // Calculate column index based on cursor position within line
+  // Calculate column index
   const posInLine = from - currentLine.from;
   const beforeCursor = currentLineText.slice(0, posInLine);
-  const colIndex = (beforeCursor.match(/\|/g) || []).length - (beforeCursor.startsWith("|") ? 1 : 0);
+  const colIndex =
+    (beforeCursor.match(/\|/g) || []).length -
+    (beforeCursor.startsWith("|") ? 1 : 0);
 
-  // Get column count from separator line (most reliable)
+  // Get column count from separator line
   const separatorCells = parseRow(lines[1]);
   const colCount = separatorCells.length;
 
@@ -148,361 +147,20 @@ export function getSourceTableInfo(view: EditorView): SourceTableInfo | null {
  * Check if cursor is in table but not in separator row.
  */
 export function isInEditableTableRow(info: SourceTableInfo): boolean {
-  return info.rowIndex !== 1; // Row 1 is separator
+  return info.rowIndex !== 1;
 }
 
-/**
- * Insert a new row below current position.
- */
-export function insertRowBelow(view: EditorView, info: SourceTableInfo): void {
-  const doc = view.state.doc;
-  const currentLineNum = info.startLine + 1 + info.rowIndex;
-  const currentLine = doc.line(currentLineNum);
-
-  // Create new row with same number of columns
-  const cells = Array(info.colCount).fill("     ");
-  const newRow = `| ${cells.join(" | ")} |`;
-
-  // Insert after current line
-  view.dispatch({
-    changes: { from: currentLine.to, insert: `\n${newRow}` },
-    selection: { anchor: currentLine.to + 3 }, // Position in first cell
-  });
-
-  view.focus();
-}
-
-/**
- * Insert a new row above current position.
- * If in header row (row 0), inserts below header instead (GFM constraint).
- */
-export function insertRowAbove(view: EditorView, info: SourceTableInfo): void {
-  const doc = view.state.doc;
-
-  // Can't insert above header - insert below separator instead
-  if (info.rowIndex === 0) {
-    const separatorLine = doc.line(info.startLine + 2);
-    const cells = Array(info.colCount).fill("     ");
-    const newRow = `| ${cells.join(" | ")} |`;
-    view.dispatch({
-      changes: { from: separatorLine.to, insert: `\n${newRow}` },
-      selection: { anchor: separatorLine.to + 3 },
-    });
-    view.focus();
-    return;
-  }
-
-  const currentLineNum = info.startLine + 1 + info.rowIndex;
-  const currentLine = doc.line(currentLineNum);
-
-  // Create new row with same number of columns
-  const cells = Array(info.colCount).fill("     ");
-  const newRow = `| ${cells.join(" | ")} |\n`;
-
-  // Insert before current line
-  view.dispatch({
-    changes: { from: currentLine.from, insert: newRow },
-    selection: { anchor: currentLine.from + 2 }, // Position in first cell
-  });
-
-  view.focus();
-}
-
-/**
- * Insert a new column to the right of current position.
- */
-export function insertColumnRight(view: EditorView, info: SourceTableInfo): void {
-  const changes: { from: number; to: number; insert: string }[] = [];
-  const doc = view.state.doc;
-
-  for (let i = 0; i < info.lines.length; i++) {
-    const lineNum = info.startLine + 1 + i;
-    const line = doc.line(lineNum);
-    const cells = parseRow(info.lines[i]);
-
-    // Insert new cell after current column
-    const insertIdx = Math.min(info.colIndex + 1, cells.length);
-    cells.splice(insertIdx, 0, i === 1 ? "-----" : "     ");
-
-    const newLine = `| ${cells.join(" | ")} |`;
-    changes.push({ from: line.from, to: line.to, insert: newLine });
-  }
-
-  view.dispatch({ changes });
-  view.focus();
-}
-
-/**
- * Insert a new column to the left of current position.
- */
-export function insertColumnLeft(view: EditorView, info: SourceTableInfo): void {
-  const changes: { from: number; to: number; insert: string }[] = [];
-  const doc = view.state.doc;
-
-  for (let i = 0; i < info.lines.length; i++) {
-    const lineNum = info.startLine + 1 + i;
-    const line = doc.line(lineNum);
-    const cells = parseRow(info.lines[i]);
-
-    // Insert new cell before current column
-    cells.splice(info.colIndex, 0, i === 1 ? "-----" : "     ");
-
-    const newLine = `| ${cells.join(" | ")} |`;
-    changes.push({ from: line.from, to: line.to, insert: newLine });
-  }
-
-  view.dispatch({ changes });
-  view.focus();
-}
-
-/**
- * Delete current row. Cannot delete header or separator rows.
- */
-export function deleteRow(view: EditorView, info: SourceTableInfo): void {
-  // Can't delete header (row 0) or separator (row 1)
-  if (info.rowIndex <= 1) {
-    return;
-  }
-
-  const doc = view.state.doc;
-  const lineNum = info.startLine + 1 + info.rowIndex;
-  const line = doc.line(lineNum);
-
-  // Delete the line including newline before it
-  const deleteFrom = line.from - 1; // Include preceding newline
-  const deleteTo = line.to;
-
-  view.dispatch({
-    changes: { from: deleteFrom, to: deleteTo },
-  });
-
-  view.focus();
-}
-
-/**
- * Delete current column. Cannot delete if only one column remains.
- */
-export function deleteColumn(view: EditorView, info: SourceTableInfo): void {
-  // Can't delete if only one column
-  if (info.colCount <= 1) {
-    return;
-  }
-
-  const changes: { from: number; to: number; insert: string }[] = [];
-  const doc = view.state.doc;
-
-  for (let i = 0; i < info.lines.length; i++) {
-    const lineNum = info.startLine + 1 + i;
-    const line = doc.line(lineNum);
-    const cells = parseRow(info.lines[i]);
-
-    // Remove the column
-    if (info.colIndex < cells.length) {
-      cells.splice(info.colIndex, 1);
-    }
-
-    const newLine = `| ${cells.join(" | ")} |`;
-    changes.push({ from: line.from, to: line.to, insert: newLine });
-  }
-
-  view.dispatch({ changes });
-  view.focus();
-}
-
-/**
- * Delete entire table.
- */
-export function deleteTable(view: EditorView, info: SourceTableInfo): void {
-  const doc = view.state.doc;
-  const startLine = doc.line(info.startLine + 1);
-  const endLine = doc.line(info.endLine + 1);
-
-  // Delete from start of first line to end of last line
-  // Include trailing newline if present
-  let deleteTo = endLine.to;
-  if (deleteTo < doc.length && doc.sliceString(deleteTo, deleteTo + 1) === "\n") {
-    deleteTo++;
-  }
-
-  view.dispatch({
-    changes: { from: startLine.from, to: deleteTo },
-  });
-
-  view.focus();
-}
-
-export type TableAlignment = "left" | "center" | "right";
-
-/**
- * Parse alignment from a separator cell.
- * :--- = left, :---: = center, ---: = right, --- = default (left)
- */
-function parseAlignment(cell: string): TableAlignment {
-  const trimmed = cell.trim();
-  const hasLeft = trimmed.startsWith(":");
-  const hasRight = trimmed.endsWith(":");
-
-  if (hasLeft && hasRight) return "center";
-  if (hasRight) return "right";
-  return "left";
-}
-
-/**
- * Format a separator cell with alignment.
- */
-function formatAlignmentCell(alignment: TableAlignment, width = 5): string {
-  const dashes = "-".repeat(Math.max(3, width - 2));
-  switch (alignment) {
-    case "center":
-      return `:${dashes}:`;
-    case "right":
-      return `${dashes}:`;
-    default:
-      return dashes;
-  }
-}
-
-/**
- * Get current column alignment.
- */
-export function getColumnAlignment(info: SourceTableInfo): TableAlignment {
-  const separatorCells = parseRow(info.lines[1]);
-  if (info.colIndex < separatorCells.length) {
-    return parseAlignment(separatorCells[info.colIndex]);
-  }
-  return "left";
-}
-
-/**
- * Set alignment for current column.
- */
-export function setColumnAlignment(
-  view: EditorView,
-  info: SourceTableInfo,
-  alignment: TableAlignment
-): void {
-  const doc = view.state.doc;
-  const separatorLineNum = info.startLine + 2; // 1-indexed, row 1 is separator
-  const separatorLine = doc.line(separatorLineNum);
-
-  const cells = parseRow(info.lines[1]);
-  if (info.colIndex < cells.length) {
-    cells[info.colIndex] = formatAlignmentCell(alignment);
-  }
-
-  const newLine = `| ${cells.join(" | ")} |`;
-  view.dispatch({
-    changes: { from: separatorLine.from, to: separatorLine.to, insert: newLine },
-  });
-
-  view.focus();
-}
-
-/**
- * Set alignment for all columns.
- */
-export function setAllColumnsAlignment(
-  view: EditorView,
-  info: SourceTableInfo,
-  alignment: TableAlignment
-): void {
-  const doc = view.state.doc;
-  const separatorLineNum = info.startLine + 2;
-  const separatorLine = doc.line(separatorLineNum);
-
-  const cells = parseRow(info.lines[1]);
-  const newCells = cells.map(() => formatAlignmentCell(alignment));
-
-  const newLine = `| ${newCells.join(" | ")} |`;
-  view.dispatch({
-    changes: { from: separatorLine.from, to: separatorLine.to, insert: newLine },
-  });
-
-  view.focus();
-}
-
-/**
- * Get display width of a string (handles CJK characters as width 2).
- */
-function getDisplayWidth(str: string): number {
-  let width = 0;
-  for (const char of str) {
-    const code = char.codePointAt(0) || 0;
-    // CJK characters have width 2
-    if (
-      (code >= 0x4e00 && code <= 0x9fff) || // CJK Unified Ideographs
-      (code >= 0x3400 && code <= 0x4dbf) || // CJK Extension A
-      (code >= 0xf900 && code <= 0xfaff) || // CJK Compatibility
-      (code >= 0x3000 && code <= 0x303f) || // CJK Punctuation
-      (code >= 0xff00 && code <= 0xffef)    // Fullwidth Forms
-    ) {
-      width += 2;
-    } else {
-      width += 1;
-    }
-  }
-  return width;
-}
-
-/**
- * Pad a string to target display width.
- */
-function padToWidth(str: string, targetWidth: number): string {
-  const currentWidth = getDisplayWidth(str);
-  const padding = Math.max(0, targetWidth - currentWidth);
-  return str + " ".repeat(padding);
-}
-
-/**
- * Format table with space-padded columns for visual alignment.
- */
-export function formatTable(view: EditorView, info: SourceTableInfo): void {
-  const doc = view.state.doc;
-
-  // Parse all rows into cells
-  const parsedRows = info.lines.map((line) => parseRow(line));
-
-  // Calculate max width for each column (using display width for CJK)
-  const colWidths: number[] = [];
-  for (let col = 0; col < info.colCount; col++) {
-    let maxWidth = 3; // Minimum width for separator (---)
-    for (let row = 0; row < parsedRows.length; row++) {
-      if (row === 1) continue; // Skip separator row for content width
-      const cell = parsedRows[row][col] || "";
-      maxWidth = Math.max(maxWidth, getDisplayWidth(cell));
-    }
-    colWidths.push(maxWidth);
-  }
-
-  // Build formatted lines
-  const formattedLines: string[] = [];
-  for (let row = 0; row < parsedRows.length; row++) {
-    const cells = parsedRows[row];
-    const formattedCells: string[] = [];
-
-    for (let col = 0; col < info.colCount; col++) {
-      const cell = cells[col] || "";
-      if (row === 1) {
-        // Separator row: preserve alignment markers, pad with dashes
-        const alignment = parseAlignment(cell);
-        formattedCells.push(formatAlignmentCell(alignment, colWidths[col]));
-      } else {
-        // Content row: pad with spaces
-        formattedCells.push(padToWidth(cell, colWidths[col]));
-      }
-    }
-
-    formattedLines.push(`| ${formattedCells.join(" | ")} |`);
-  }
-
-  // Replace entire table
-  const startLine = doc.line(info.startLine + 1);
-  const endLine = doc.line(info.endLine + 1);
-  const newContent = formattedLines.join("\n");
-
-  view.dispatch({
-    changes: { from: startLine.from, to: endLine.to, insert: newContent },
-  });
-
-  view.focus();
-}
+// Re-export actions for convenience
+export {
+  insertRowAbove,
+  insertRowBelow,
+  insertColumnLeft,
+  insertColumnRight,
+  deleteRow,
+  deleteColumn,
+  deleteTable,
+  getColumnAlignment,
+  setColumnAlignment,
+  setAllColumnsAlignment,
+  formatTable,
+} from "./tableActions";
