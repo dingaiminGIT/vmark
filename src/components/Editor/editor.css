@@ -569,6 +569,140 @@
   display: none;
 }
 
+/* Syntax highlighting for code blocks - Light theme (GitHub style) */
+.source-editor .cm-hl-keyword {
+  color: #d73a49;
+}
+
+.source-editor .cm-hl-type {
+  color: #6f42c1;
+}
+
+.source-editor .cm-hl-function {
+  color: #6f42c1;
+}
+
+.source-editor .cm-hl-property {
+  color: #005cc5;
+}
+
+.source-editor .cm-hl-variable {
+  color: #24292e;
+}
+
+.source-editor .cm-hl-string {
+  color: #032f62;
+}
+
+.source-editor .cm-hl-number {
+  color: #005cc5;
+}
+
+.source-editor .cm-hl-operator {
+  color: #d73a49;
+}
+
+.source-editor .cm-hl-punctuation {
+  color: #24292e;
+}
+
+.source-editor .cm-hl-comment {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.source-editor .cm-hl-escape {
+  color: #005cc5;
+}
+
+.source-editor .cm-hl-constant {
+  color: #005cc5;
+}
+
+.source-editor .cm-hl-attribute {
+  color: #6f42c1;
+}
+
+.source-editor .cm-hl-tag {
+  color: #22863a;
+}
+
+.source-editor .cm-hl-link {
+  color: #032f62;
+  text-decoration: underline;
+}
+
+.source-editor .cm-hl-invalid {
+  color: #cb2431;
+}
+
+/* Dark theme syntax highlighting */
+.dark-theme .source-editor .cm-hl-keyword {
+  color: #ff7b72;
+}
+
+.dark-theme .source-editor .cm-hl-type {
+  color: #d2a8ff;
+}
+
+.dark-theme .source-editor .cm-hl-function {
+  color: #d2a8ff;
+}
+
+.dark-theme .source-editor .cm-hl-property {
+  color: #79c0ff;
+}
+
+.dark-theme .source-editor .cm-hl-variable {
+  color: #c9d1d9;
+}
+
+.dark-theme .source-editor .cm-hl-string {
+  color: #a5d6ff;
+}
+
+.dark-theme .source-editor .cm-hl-number {
+  color: #79c0ff;
+}
+
+.dark-theme .source-editor .cm-hl-operator {
+  color: #ff7b72;
+}
+
+.dark-theme .source-editor .cm-hl-punctuation {
+  color: #c9d1d9;
+}
+
+.dark-theme .source-editor .cm-hl-comment {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.dark-theme .source-editor .cm-hl-escape {
+  color: #79c0ff;
+}
+
+.dark-theme .source-editor .cm-hl-constant {
+  color: #79c0ff;
+}
+
+.dark-theme .source-editor .cm-hl-attribute {
+  color: #d2a8ff;
+}
+
+.dark-theme .source-editor .cm-hl-tag {
+  color: #7ee787;
+}
+
+.dark-theme .source-editor .cm-hl-link {
+  color: #a5d6ff;
+  text-decoration: underline;
+}
+
+.dark-theme .source-editor .cm-hl-invalid {
+  color: #f85149;
+}
+
 /* Print styles */
 @media print {
   .milkdown {

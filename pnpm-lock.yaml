@@ -20,6 +20,9 @@ importers:
       '@codemirror/language':
         specifier: ^6.12.1
         version: 6.12.1
+      '@codemirror/language-data':
+        specifier: ^6.5.2
+        version: 6.5.2
       '@codemirror/search':
         specifier: ^6.5.11
         version: 6.5.11
@@ -29,6 +32,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.39.7
         version: 6.39.7
+      '@lezer/highlight':
+        specifier: ^1.2.3
+        version: 1.2.3
       '@milkdown/kit':
         specifier: ^7.17.3
         version: 7.17.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.7)(typescript@5.8.3)

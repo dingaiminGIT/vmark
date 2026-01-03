@@ -3,6 +3,8 @@ import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, keymap, drawSelection, dropCursor } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { languages } from "@codemirror/language-data";
+import { syntaxHighlighting } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import {
   search,
@@ -29,6 +31,7 @@ import {
 } from "@/utils/cursorSync/codemirror";
 import {
   sourceEditorTheme,
+  codeHighlightStyle,
   createBrHidingPlugin,
   createListBlankLinePlugin,
   createMarkdownAutoPairPlugin,
@@ -168,8 +171,10 @@ export function SourceEditor() {
         ]),
         // Search extension (programmatic control only, no panel)
         search(),
-        // Markdown syntax
-        markdown(),
+        // Markdown syntax with code block language support
+        markdown({ codeLanguages: languages }),
+        // Syntax highlighting for code blocks
+        syntaxHighlighting(codeHighlightStyle, { fallback: true }),
         // Listen for changes
         updateListener,
         // Theme/styling
