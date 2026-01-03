@@ -27,14 +27,14 @@ import {
   getViewportBounds,
   type AnchorRect,
 } from "@/utils/popupPosition";
-import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow, alignAllColumns } from "./table-utils";
+import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow, alignAllColumns, formatTable } from "./table-utils";
 
-// SVG Icons
+// SVG Icons (row/col insert icons from source mode, delete icons with line-through style)
 const icons = {
-  addRowAbove: `<svg viewBox="0 0 24 24"><path d="M19 14v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5"/><line x1="12" y1="3" x2="12" y2="11"/><polyline points="8 7 12 3 16 7"/></svg>`,
-  addRowBelow: `<svg viewBox="0 0 24 24"><path d="M5 10V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5"/><line x1="12" y1="21" x2="12" y2="13"/><polyline points="16 17 12 21 8 17"/></svg>`,
-  addColLeft: `<svg viewBox="0 0 24 24"><path d="M14 5h5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"/><line x1="3" y1="12" x2="11" y2="12"/><polyline points="7 8 3 12 7 16"/></svg>`,
-  addColRight: `<svg viewBox="0 0 24 24"><path d="M10 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h5"/><line x1="21" y1="12" x2="13" y2="12"/><polyline points="17 16 21 12 17 8"/></svg>`,
+  addRowAbove: `<svg viewBox="0 0 24 24"><path d="M5 3h14"/><path d="m12 10-4-4 4-4"/><path d="M12 6v8"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>`,
+  addRowBelow: `<svg viewBox="0 0 24 24"><path d="M5 21h14"/><path d="m12 14 4 4-4 4"/><path d="M12 18v-8"/><rect width="20" height="8" x="2" y="2" rx="2"/></svg>`,
+  addColLeft: `<svg viewBox="0 0 24 24"><path d="M3 5v14"/><path d="m10 12-4-4 4-4"/><path d="M6 12h8"/><rect width="8" height="20" x="14" y="2" rx="2"/></svg>`,
+  addColRight: `<svg viewBox="0 0 24 24"><path d="M21 5v14"/><path d="m14 12 4-4-4-4"/><path d="M18 12h-8"/><rect width="8" height="20" x="2" y="2" rx="2"/></svg>`,
   deleteRow: `<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><rect x="3" y="6" width="18" height="12" rx="2" fill="none"/></svg>`,
   deleteCol: `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><rect x="6" y="3" width="12" height="18" rx="2" fill="none"/></svg>`,
   deleteTable: `<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
@@ -45,6 +45,8 @@ const icons = {
   alignAllLeft: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="7" y1="8" x2="14" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="14" y2="16"/></svg>`,
   alignAllCenter: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>`,
   alignAllRight: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="10" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="16" x2="17" y2="16"/></svg>`,
+  // Format table (space-padded)
+  formatTable: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>`,
 };
 
 /**
@@ -56,6 +58,7 @@ export class TableToolbarView {
   private editorView: EditorView;
   private getEditor: () => EditorLike | undefined;
   private wasOpen = false;
+  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(view: EditorView, getEditor: () => EditorLike | undefined) {
     this.editorView = view;
@@ -81,6 +84,54 @@ export class TableToolbarView {
         this.wasOpen = false;
       }
     });
+  }
+
+  private getFocusableElements(): HTMLElement[] {
+    return Array.from(
+      this.container.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    );
+  }
+
+  private setupKeyboardNavigation() {
+    this.keydownHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        useTableToolbarStore.getState().closeToolbar();
+        this.editorView.focus();
+        return;
+      }
+
+      if (e.key === "Tab") {
+        const focusable = this.getFocusableElements();
+        if (focusable.length === 0) return;
+
+        const activeEl = document.activeElement as HTMLElement;
+        const currentIndex = focusable.indexOf(activeEl);
+
+        // Only handle Tab if focus is inside the toolbar
+        if (currentIndex === -1) return;
+
+        e.preventDefault();
+
+        if (e.shiftKey) {
+          const prevIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
+          focusable[prevIndex].focus();
+        } else {
+          const nextIndex = currentIndex >= focusable.length - 1 ? 0 : currentIndex + 1;
+          focusable[nextIndex].focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", this.keydownHandler);
+  }
+
+  private removeKeyboardNavigation() {
+    if (this.keydownHandler) {
+      document.removeEventListener("keydown", this.keydownHandler);
+      this.keydownHandler = null;
+    }
   }
 
   private buildContainer(): HTMLElement {
@@ -113,6 +164,8 @@ export class TableToolbarView {
     row2.appendChild(this.buildButton(icons.alignAllLeft, "Align all left", () => this.handleAlignAll("left")));
     row2.appendChild(this.buildButton(icons.alignAllCenter, "Align all center", () => this.handleAlignAll("center")));
     row2.appendChild(this.buildButton(icons.alignAllRight, "Align all right", () => this.handleAlignAll("right")));
+    row2.appendChild(this.buildDivider());
+    row2.appendChild(this.buildButton(icons.formatTable, "Format table (space-padded)", this.handleFormatTable));
 
     container.appendChild(row1);
     container.appendChild(row2);
@@ -170,6 +223,17 @@ export class TableToolbarView {
     this.container.style.display = "flex";
     this.container.style.position = "fixed";
     this.updatePosition(anchorRect);
+
+    // Set up keyboard navigation
+    this.setupKeyboardNavigation();
+
+    // Focus first button after a short delay
+    setTimeout(() => {
+      const focusable = this.getFocusableElements();
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      }
+    }, 50);
   }
 
   private updatePosition(anchorRect: AnchorRect) {
@@ -198,6 +262,7 @@ export class TableToolbarView {
 
   private hide() {
     this.container.style.display = "none";
+    this.removeKeyboardNavigation();
   }
 
   private executeCommand<T>(command: { key: unknown }, payload?: T) {
@@ -250,8 +315,14 @@ export class TableToolbarView {
     alignAllColumns(this.editorView, alignment);
   };
 
+  private handleFormatTable = () => {
+    this.editorView.focus();
+    formatTable(this.editorView);
+  };
+
   destroy() {
     this.unsubscribe();
+    this.removeKeyboardNavigation();
     this.container.remove();
   }
 }

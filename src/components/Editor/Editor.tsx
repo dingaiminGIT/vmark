@@ -18,6 +18,8 @@ import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
 import { cursor } from "@milkdown/kit/plugin/cursor";
 import { indent } from "@milkdown/kit/plugin/indent";
 import { trailing, trailingConfig } from "@milkdown/kit/plugin/trailing";
+import { prism, prismConfig } from "@milkdown/plugin-prism";
+import { refractor } from "refractor";
 import { replaceAll } from "@milkdown/kit/utils";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { useEditorStore } from "@/stores/editorStore";
@@ -159,6 +161,13 @@ function MilkdownEditorInner() {
       .use(commonmark)
       // Filter out default strikethrough input rule (accepts single ~)
       .use(gfm.filter((plugin) => plugin !== strikethroughInputRule))
+      // Syntax highlighting for code blocks
+      .use(prism)
+      .config((ctx) => {
+        ctx.set(prismConfig.key, {
+          configureRefractor: () => refractor,
+        });
+      })
       // Add subscript/superscript plugin
       .use(subSuperscriptPlugin.flat())
       // Add highlight plugin

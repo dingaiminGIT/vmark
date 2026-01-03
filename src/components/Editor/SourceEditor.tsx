@@ -3,6 +3,8 @@ import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, keymap, drawSelection, dropCursor } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { languages } from "@codemirror/language-data";
+import { syntaxHighlighting } from "@codemirror/language";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import {
   search,
@@ -29,12 +31,25 @@ import {
 } from "@/utils/cursorSync/codemirror";
 import {
   sourceEditorTheme,
+  codeHighlightStyle,
   createBrHidingPlugin,
   createListBlankLinePlugin,
   createMarkdownAutoPairPlugin,
   markdownPairBackspace,
   tabEscapeKeymap,
+  listContinuationKeymap,
+  createSmartPastePlugin,
+  createSourceFocusModePlugin,
+  createSourceTypewriterPlugin,
 } from "@/plugins/codemirror";
+import { toggleTaskList } from "@/plugins/sourceFormatPopup/taskListActions";
+import {
+  sourceFormatExtension,
+  SourceFormatPopup,
+  toggleTablePopup,
+  triggerFormatPopup,
+  applyFormat,
+} from "@/plugins/sourceFormatPopup";
 
 // Custom brackets config for markdown (^, standard brackets)
 const markdownCloseBrackets = markdownLanguage.data.of({
@@ -110,6 +125,12 @@ export function SourceEditor() {
         createMarkdownAutoPairPlugin(),
         // Hide blank lines between list items
         createListBlankLinePlugin(),
+        // Smart paste: URL on selection creates markdown link
+        createSmartPastePlugin(),
+        // Focus mode: dim non-current paragraph
+        createSourceFocusModePlugin(),
+        // Typewriter mode: keep cursor centered
+        createSourceTypewriterPlugin(),
         // Multi-cursor support
         drawSelection(),
         dropCursor(),
@@ -117,28 +138,70 @@ export function SourceEditor() {
         history(),
         // Keymaps (no searchKeymap - we use our unified FindBar)
         keymap.of([
+          // Smart list continuation (must be before default keymap)
+          listContinuationKeymap,
           // Tab to jump over closing brackets (must be before default keymap)
           tabEscapeKeymap,
           // Backspace to delete both halves of markdown pairs
           markdownPairBackspace,
+          // Mod+Shift+Enter: toggle task list checkbox
+          {
+            key: "Mod-Shift-Enter",
+            run: (view) => toggleTaskList(view),
+            preventDefault: true,
+          },
           // Cmd+D: select next occurrence
           { key: "Mod-d", run: selectNextOccurrence, preventDefault: true },
           // Cmd+Shift+L: select all occurrences
           { key: "Mod-Shift-l", run: selectSelectionMatches, preventDefault: true },
+          // Cmd+Option+W: toggle word wrap
+          {
+            key: "Mod-Alt-w",
+            run: () => {
+              useEditorStore.getState().toggleWordWrap();
+              return true;
+            },
+            preventDefault: true,
+          },
+          // Cmd+Option+T: toggle table popup (when cursor is in table)
+          {
+            key: "Mod-Alt-t",
+            run: (view) => toggleTablePopup(view),
+            preventDefault: true,
+          },
+          // Cmd+E: trigger format popup at cursor (context-aware)
+          {
+            key: "Mod-e",
+            run: (view) => triggerFormatPopup(view),
+            preventDefault: true,
+          },
+          // Cmd+`: inline code (reassigned from Cmd+E)
+          {
+            key: "Mod-`",
+            run: (view) => {
+              applyFormat(view, "code");
+              return true;
+            },
+            preventDefault: true,
+          },
           ...closeBracketsKeymap,
           ...defaultKeymap,
           ...historyKeymap,
         ]),
         // Search extension (programmatic control only, no panel)
         search(),
-        // Markdown syntax
-        markdown(),
+        // Markdown syntax with code block language support
+        markdown({ codeLanguages: languages }),
+        // Syntax highlighting for code blocks
+        syntaxHighlighting(codeHighlightStyle, { fallback: true }),
         // Listen for changes
         updateListener,
         // Theme/styling
         sourceEditorTheme,
         // Allow multiple selections
         EditorState.allowMultipleSelections.of(true),
+        // Source format popup (shows on selection)
+        sourceFormatExtension,
       ],
     });
 
@@ -291,7 +354,12 @@ export function SourceEditor() {
     };
   }, []);
 
-  return <div ref={containerRef} className="source-editor" />;
+  return (
+    <>
+      <div ref={containerRef} className="source-editor" />
+      <SourceFormatPopup />
+    </>
+  );
 }
 
 export default SourceEditor;

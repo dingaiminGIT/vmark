@@ -569,6 +569,273 @@
   display: none;
 }
 
+/* Syntax highlighting for code blocks - Light theme (GitHub style) */
+.source-editor .cm-hl-keyword {
+  color: #d73a49;
+}
+
+.source-editor .cm-hl-type {
+  color: #6f42c1;
+}
+
+.source-editor .cm-hl-function {
+  color: #6f42c1;
+}
+
+.source-editor .cm-hl-property {
+  color: #005cc5;
+}
+
+.source-editor .cm-hl-variable {
+  color: #24292e;
+}
+
+.source-editor .cm-hl-string {
+  color: #032f62;
+}
+
+.source-editor .cm-hl-number {
+  color: #005cc5;
+}
+
+.source-editor .cm-hl-operator {
+  color: #d73a49;
+}
+
+.source-editor .cm-hl-punctuation {
+  color: #24292e;
+}
+
+.source-editor .cm-hl-comment {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.source-editor .cm-hl-escape {
+  color: #005cc5;
+}
+
+.source-editor .cm-hl-constant {
+  color: #005cc5;
+}
+
+.source-editor .cm-hl-attribute {
+  color: #6f42c1;
+}
+
+.source-editor .cm-hl-tag {
+  color: #22863a;
+}
+
+.source-editor .cm-hl-link {
+  color: #032f62;
+  text-decoration: underline;
+}
+
+.source-editor .cm-hl-invalid {
+  color: #cb2431;
+}
+
+/* Dark theme syntax highlighting */
+.dark-theme .source-editor .cm-hl-keyword {
+  color: #ff7b72;
+}
+
+.dark-theme .source-editor .cm-hl-type {
+  color: #d2a8ff;
+}
+
+.dark-theme .source-editor .cm-hl-function {
+  color: #d2a8ff;
+}
+
+.dark-theme .source-editor .cm-hl-property {
+  color: #79c0ff;
+}
+
+.dark-theme .source-editor .cm-hl-variable {
+  color: #c9d1d9;
+}
+
+.dark-theme .source-editor .cm-hl-string {
+  color: #a5d6ff;
+}
+
+.dark-theme .source-editor .cm-hl-number {
+  color: #79c0ff;
+}
+
+.dark-theme .source-editor .cm-hl-operator {
+  color: #ff7b72;
+}
+
+.dark-theme .source-editor .cm-hl-punctuation {
+  color: #c9d1d9;
+}
+
+.dark-theme .source-editor .cm-hl-comment {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.dark-theme .source-editor .cm-hl-escape {
+  color: #79c0ff;
+}
+
+.dark-theme .source-editor .cm-hl-constant {
+  color: #79c0ff;
+}
+
+.dark-theme .source-editor .cm-hl-attribute {
+  color: #d2a8ff;
+}
+
+.dark-theme .source-editor .cm-hl-tag {
+  color: #7ee787;
+}
+
+.dark-theme .source-editor .cm-hl-link {
+  color: #a5d6ff;
+  text-decoration: underline;
+}
+
+.dark-theme .source-editor .cm-hl-invalid {
+  color: #f85149;
+}
+
+/* ===========================================
+ * Prism Syntax Highlighting for WYSIWYG Mode
+ * (Milkdown code blocks) - GitHub style
+ * =========================================== */
+
+/* Light theme */
+.milkdown pre code .token.keyword,
+.milkdown pre code .token.important,
+.milkdown pre code .token.atrule {
+  color: #d73a49;
+}
+
+.milkdown pre code .token.function,
+.milkdown pre code .token.class-name,
+.milkdown pre code .token.attr-name {
+  color: #6f42c1;
+}
+
+.milkdown pre code .token.property,
+.milkdown pre code .token.number,
+.milkdown pre code .token.constant,
+.milkdown pre code .token.symbol,
+.milkdown pre code .token.boolean {
+  color: #005cc5;
+}
+
+.milkdown pre code .token.string,
+.milkdown pre code .token.char,
+.milkdown pre code .token.attr-value,
+.milkdown pre code .token.regex {
+  color: #032f62;
+}
+
+.milkdown pre code .token.comment,
+.milkdown pre code .token.prolog,
+.milkdown pre code .token.doctype,
+.milkdown pre code .token.cdata {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.milkdown pre code .token.operator,
+.milkdown pre code .token.entity,
+.milkdown pre code .token.url {
+  color: #d73a49;
+}
+
+.milkdown pre code .token.punctuation {
+  color: #24292e;
+}
+
+.milkdown pre code .token.tag,
+.milkdown pre code .token.selector {
+  color: #22863a;
+}
+
+.milkdown pre code .token.builtin,
+.milkdown pre code .token.inserted {
+  color: #22863a;
+}
+
+.milkdown pre code .token.deleted {
+  color: #cb2431;
+}
+
+.milkdown pre code .token.variable {
+  color: #e36209;
+}
+
+/* Dark theme */
+.dark-theme .milkdown pre code .token.keyword,
+.dark-theme .milkdown pre code .token.important,
+.dark-theme .milkdown pre code .token.atrule {
+  color: #ff7b72;
+}
+
+.dark-theme .milkdown pre code .token.function,
+.dark-theme .milkdown pre code .token.class-name,
+.dark-theme .milkdown pre code .token.attr-name {
+  color: #d2a8ff;
+}
+
+.dark-theme .milkdown pre code .token.property,
+.dark-theme .milkdown pre code .token.number,
+.dark-theme .milkdown pre code .token.constant,
+.dark-theme .milkdown pre code .token.symbol,
+.dark-theme .milkdown pre code .token.boolean {
+  color: #79c0ff;
+}
+
+.dark-theme .milkdown pre code .token.string,
+.dark-theme .milkdown pre code .token.char,
+.dark-theme .milkdown pre code .token.attr-value,
+.dark-theme .milkdown pre code .token.regex {
+  color: #a5d6ff;
+}
+
+.dark-theme .milkdown pre code .token.comment,
+.dark-theme .milkdown pre code .token.prolog,
+.dark-theme .milkdown pre code .token.doctype,
+.dark-theme .milkdown pre code .token.cdata {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.dark-theme .milkdown pre code .token.operator,
+.dark-theme .milkdown pre code .token.entity,
+.dark-theme .milkdown pre code .token.url {
+  color: #ff7b72;
+}
+
+.dark-theme .milkdown pre code .token.punctuation {
+  color: #c9d1d9;
+}
+
+.dark-theme .milkdown pre code .token.tag,
+.dark-theme .milkdown pre code .token.selector {
+  color: #7ee787;
+}
+
+.dark-theme .milkdown pre code .token.builtin,
+.dark-theme .milkdown pre code .token.inserted {
+  color: #7ee787;
+}
+
+.dark-theme .milkdown pre code .token.deleted {
+  color: #f85149;
+}
+
+.dark-theme .milkdown pre code .token.variable {
+  color: #ffa657;
+}
+
 /* Print styles */
 @media print {
   .milkdown {

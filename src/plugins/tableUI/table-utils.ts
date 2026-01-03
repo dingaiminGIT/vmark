@@ -8,6 +8,7 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 import type { Node, ResolvedPos } from "@milkdown/kit/prose/model";
 import { TextSelection } from "@milkdown/kit/prose/state";
 import type { AnchorRect } from "@/utils/popupPosition";
+import { getDisplayWidth, padToWidth } from "@/utils/stringWidth";
 
 export interface TableInfo {
   tableNode: Node;
@@ -396,4 +397,79 @@ function getCellPosition(
   pos += 1; // Inside cell (content position)
 
   return pos;
+}
+
+/**
+ * Format table with space-padded columns for visual alignment.
+ * Updates cell contents with trailing spaces for uniform column widths.
+ */
+export function formatTable(view: EditorView): boolean {
+  const tableInfo = getTableInfo(view);
+  if (!tableInfo) return false;
+
+  const { tableNode, tablePos, rowIndex, colIndex, numRows, numCols } = tableInfo;
+  const { state, dispatch } = view;
+
+  try {
+    // Extract cell contents (trimmed)
+    const cellContents: string[][] = [];
+    for (let r = 0; r < numRows; r++) {
+      const row = tableNode.child(r);
+      const rowContents: string[] = [];
+      for (let c = 0; c < row.childCount; c++) {
+        rowContents.push(row.child(c).textContent.trim());
+      }
+      cellContents.push(rowContents);
+    }
+
+    // Calculate max width for each column
+    const colWidths: number[] = [];
+    for (let c = 0; c < numCols; c++) {
+      let maxWidth = 1;
+      for (let r = 0; r < numRows; r++) {
+        const content = cellContents[r]?.[c] || "";
+        maxWidth = Math.max(maxWidth, getDisplayWidth(content));
+      }
+      colWidths.push(maxWidth);
+    }
+
+    // Build new table with padded cells
+    const newRows: Node[] = [];
+    for (let r = 0; r < numRows; r++) {
+      const row = tableNode.child(r);
+      const newCells: Node[] = [];
+      for (let c = 0; c < row.childCount; c++) {
+        const cell = row.child(c);
+        const content = cellContents[r][c];
+        const paddedContent = padToWidth(content, colWidths[c]);
+
+        // Create new cell with padded text content
+        const textNode = paddedContent
+          ? state.schema.text(paddedContent)
+          : null;
+        const newCell = cell.type.create(
+          cell.attrs,
+          textNode ? [textNode] : [],
+          cell.marks
+        );
+        newCells.push(newCell);
+      }
+      newRows.push(row.type.create(row.attrs, newCells));
+    }
+
+    const newTable = tableNode.type.create(tableNode.attrs, newRows);
+    const tr = state.tr.replaceWith(tablePos, tablePos + tableNode.nodeSize, newTable);
+
+    // Restore cursor position
+    const cursorPos = getCellPosition(newTable, tablePos, rowIndex, colIndex);
+    if (cursorPos !== null) {
+      tr.setSelection(TextSelection.near(tr.doc.resolve(cursorPos)));
+    }
+
+    dispatch(tr);
+    return true;
+  } catch (error) {
+    console.error("[table-utils] Format table failed:", error);
+    return false;
+  }
 }
