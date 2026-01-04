@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
@@ -20,6 +20,8 @@ interface WindowProviderProps {
 export function WindowProvider({ children }: WindowProviderProps) {
   const [windowLabel, setWindowLabel] = useState<string>("main");
   const [isReady, setIsReady] = useState(false);
+  // Guard against double-init from React.StrictMode in dev
+  const initStartedRef = useRef(false);
 
   useEffect(() => {
     const init = async () => {
@@ -32,8 +34,10 @@ export function WindowProvider({ children }: WindowProviderProps) {
         // Settings, print-preview, etc. don't need document state
         if (label === "main" || label.startsWith("doc-")) {
           // Check if we already have tabs for this window
+          // Also check initStartedRef to prevent double-init from StrictMode
           const existingTabs = useTabStore.getState().getTabsByWindow(label);
-          if (existingTabs.length === 0) {
+          if (existingTabs.length === 0 && !initStartedRef.current) {
+            initStartedRef.current = true;
             // Check if we have a file path in the URL query params
             const urlParams = new URLSearchParams(globalThis.location?.search || "");
             let filePath = urlParams.get("file");

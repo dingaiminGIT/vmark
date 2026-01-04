@@ -3,9 +3,12 @@
  *
  * Adds mermaid diagram support to the editor.
  * Renders ```mermaid code blocks as diagrams.
+ * Lazy-loads mermaid library (~2MB) only when first diagram is rendered.
  */
 
-import mermaid from "mermaid";
+// Lazy-loaded mermaid instance
+let mermaidModule: typeof import("mermaid") | null = null;
+let mermaidLoadPromise: Promise<typeof import("mermaid")> | null = null;
 
 // Track current theme for re-initialization
 let mermaidInitialized = false;
@@ -19,29 +22,49 @@ function isDarkMode(): boolean {
 }
 
 /**
+ * Lazy-load mermaid library
+ */
+async function loadMermaid(): Promise<typeof import("mermaid")> {
+  if (mermaidModule) return mermaidModule;
+  if (mermaidLoadPromise) return mermaidLoadPromise;
+
+  mermaidLoadPromise = import("mermaid").then((mod) => {
+    mermaidModule = mod;
+    return mod;
+  });
+
+  return mermaidLoadPromise;
+}
+
+/**
  * Update Mermaid theme when app theme changes.
  * Call this when theme switches to trigger re-render.
  */
-export function updateMermaidTheme(isDark: boolean): boolean {
+export async function updateMermaidTheme(isDark: boolean): Promise<boolean> {
   const newTheme = isDark ? "dark" : "default";
   if (newTheme !== currentTheme) {
     currentTheme = newTheme;
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: newTheme,
-      securityLevel: "strict",
-      fontFamily: "inherit",
-    });
+    // Only initialize if mermaid was already loaded
+    if (mermaidModule) {
+      mermaidModule.default.initialize({
+        startOnLoad: false,
+        theme: newTheme,
+        securityLevel: "strict",
+        fontFamily: "inherit",
+      });
+    }
     return true; // Theme changed
   }
   return false; // No change
 }
 
-function initMermaid() {
+async function initMermaid(): Promise<void> {
+  const mod = await loadMermaid();
+
   if (mermaidInitialized) return;
 
   currentTheme = isDarkMode() ? "dark" : "default";
-  mermaid.initialize({
+  mod.default.initialize({
     startOnLoad: false,
     theme: currentTheme,
     securityLevel: "strict",
@@ -54,17 +77,19 @@ function initMermaid() {
 /**
  * Render mermaid diagram content to SVG HTML.
  * Returns null if rendering fails.
+ * Lazy-loads mermaid on first call.
  */
 export async function renderMermaid(
   content: string,
   id?: string
 ): Promise<string | null> {
-  initMermaid();
+  await initMermaid();
 
   const diagramId = id ?? `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
   try {
-    const { svg } = await mermaid.render(diagramId, content);
+    const mod = await loadMermaid();
+    const { svg } = await mod.default.render(diagramId, content);
     return svg;
   } catch (error) {
     console.warn("[Mermaid] Failed to render diagram:", error);

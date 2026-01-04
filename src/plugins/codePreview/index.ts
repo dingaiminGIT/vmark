@@ -33,11 +33,13 @@ function setupThemeObserver() {
     for (const mutation of mutations) {
       if (mutation.attributeName === "class") {
         const isDark = document.documentElement.classList.contains("dark");
-        const themeChanged = updateMermaidTheme(isDark);
-        if (themeChanged) {
-          // Clear cache so mermaid diagrams re-render with new theme
-          renderCache.clear();
-        }
+        // updateMermaidTheme is async (lazy-loads mermaid)
+        updateMermaidTheme(isDark).then((themeChanged) => {
+          if (themeChanged) {
+            // Clear cache so mermaid diagrams re-render with new theme
+            renderCache.clear();
+          }
+        });
       }
     }
   });
