@@ -88,8 +88,8 @@ export async function renderMermaid(
   const diagramId = id ?? `mermaid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
   try {
-    const mod = await loadMermaid();
-    const { svg } = await mod.default.render(diagramId, content);
+    // mermaidModule is guaranteed non-null after initMermaid()
+    const { svg } = await mermaidModule!.default.render(diagramId, content);
     return svg;
   } catch (error) {
     console.warn("[Mermaid] Failed to render diagram:", error);
