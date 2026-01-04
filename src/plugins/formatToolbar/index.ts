@@ -22,17 +22,14 @@ import { Plugin, PluginKey, TextSelection } from "@milkdown/kit/prose/state";
 import { keymap } from "@milkdown/kit/prose/keymap";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { useFormatToolbarStore } from "@/stores/formatToolbarStore";
-import { useTableToolbarStore } from "@/stores/tableToolbarStore";
 import { useMilkdownCursorContextStore } from "@/stores/milkdownCursorContextStore";
-import { isInTable, getTableInfo, getTableRect } from "@/plugins/tableUI/table-utils";
 import { findWordAtCursor } from "@/plugins/syntaxReveal/marks";
 import { FormatToolbarView } from "./FormatToolbarView";
 import { computeMilkdownCursorContext } from "./cursorContext";
+import { getNodeContext } from "./nodeActions";
 import {
   getCodeBlockInfo,
   getHeadingInfo,
-  isInList,
-  isInBlockquote,
   isAtParagraphLineStart,
   getCursorRect,
   getContextMode,
@@ -47,17 +44,11 @@ export const formatToolbarPluginKey = new PluginKey("formatToolbar");
  */
 function toggleContextAwareToolbar(view: EditorView): boolean {
   const formatStore = useFormatToolbarStore.getState();
-  const tableStore = useTableToolbarStore.getState();
   const { empty } = view.state.selection;
 
-  // 1. Toggle: if any toolbar is open, close it
+  // 1. Toggle: if format toolbar is open, close it
   if (formatStore.isOpen) {
     formatStore.closeToolbar();
-    view.focus();
-    return true;
-  }
-  if (tableStore.isOpen) {
-    tableStore.closeToolbar();
     view.focus();
     return true;
   }
@@ -77,37 +68,11 @@ function toggleContextAwareToolbar(view: EditorView): boolean {
     return true;
   }
 
-  // 4. Table → TABLE toolbar (merged in Phase 2)
-  // TODO: Phase 2 will merge table toolbar into format toolbar
-  if (isInTable(view)) {
-    const info = getTableInfo(view);
-    if (info) {
-      const rect = getTableRect(view, info.tablePos);
-      if (rect) {
-        tableStore.openToolbar({
-          tablePos: info.tablePos,
-          anchorRect: rect,
-        });
-        return true;
-      }
-    }
-  }
-
-  // 5. List → LIST toolbar (merged in Phase 2)
-  // TODO: Phase 2 will add list-specific toolbar with format + list actions
-  if (isInList(view)) {
+  // 4-6. Table/List/Blockquote → MERGED toolbar (format + node-specific rows)
+  const nodeContext = getNodeContext(view);
+  if (nodeContext) {
     const anchorRect = getCursorRect(view);
-    const contextMode = getContextMode(view);
-    formatStore.openToolbar(anchorRect, view, contextMode);
-    return true;
-  }
-
-  // 6. Blockquote → BLOCKQUOTE toolbar (merged in Phase 2)
-  // TODO: Phase 2 will add blockquote-specific toolbar with format + quote actions
-  if (isInBlockquote(view)) {
-    const anchorRect = getCursorRect(view);
-    const contextMode = getContextMode(view);
-    formatStore.openToolbar(anchorRect, view, contextMode);
+    formatStore.openMergedToolbar(anchorRect, view, nodeContext);
     return true;
   }
 
@@ -175,11 +140,11 @@ export const formatToolbarKeymapPlugin = $prose(() =>
 /**
  * View plugin that creates and manages the toolbar DOM.
  */
-export const formatToolbarViewPlugin = $prose(() =>
+export const formatToolbarViewPlugin = $prose((ctx) =>
   new Plugin({
     key: formatToolbarPluginKey,
     view: (editorView) => {
-      const toolbarView = new FormatToolbarView(editorView);
+      const toolbarView = new FormatToolbarView(editorView, ctx);
       return {
         destroy: () => toolbarView.destroy(),
       };

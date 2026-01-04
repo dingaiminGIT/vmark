@@ -2,15 +2,43 @@
  * Format Toolbar View
  *
  * DOM-based floating toolbar for inline formatting in Milkdown.
- * Supports three modes:
+ * Supports four modes:
  * - format: inline formatting (bold, italic, etc.)
  * - heading: heading level selection (H1-H6, paragraph)
  * - code: language picker for code blocks
+ * - merged: format + node-specific actions (table, list, blockquote)
  */
 
 import type { EditorView } from "@milkdown/kit/prose/view";
-import { useFormatToolbarStore, type ToolbarMode, type ContextMode } from "@/stores/formatToolbarStore";
+import type { Ctx } from "@milkdown/kit/ctx";
+import { editorViewCtx } from "@milkdown/kit/core";
+import {
+  useFormatToolbarStore,
+  type ToolbarMode,
+  type ContextMode,
+  type NodeContext,
+} from "@/stores/formatToolbarStore";
 import { expandedToggleMark } from "@/plugins/editorPlugins";
+import {
+  handleAddRowAbove,
+  handleAddRowBelow,
+  handleAddColLeft,
+  handleAddColRight,
+  handleDeleteRow,
+  handleDeleteCol,
+  handleDeleteTable,
+  handleAlignColumn,
+  handleFormatTable,
+  handleListIndent,
+  handleListOutdent,
+  handleToBulletList,
+  handleToOrderedList,
+  handleToggleTaskList,
+  handleRemoveList,
+  handleBlockquoteNest,
+  handleBlockquoteUnnest,
+  handleRemoveBlockquote,
+} from "./nodeActions";
 import {
   calculatePopupPosition,
   getBoundaryRects,
@@ -53,6 +81,29 @@ const icons = {
   table: `<svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>`,
   divider: `<svg viewBox="0 0 24 24"><line x1="3" x2="21" y1="12" y2="12"/></svg>`,
   chevronDown: `<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>`,
+  // Table action icons
+  addRowAbove: `<svg viewBox="0 0 24 24"><path d="M5 3h14"/><path d="m12 10-4-4 4-4"/><path d="M12 6v8"/><rect width="20" height="8" x="2" y="14" rx="2"/></svg>`,
+  addRowBelow: `<svg viewBox="0 0 24 24"><path d="M5 21h14"/><path d="m12 14 4 4-4 4"/><path d="M12 18v-8"/><rect width="20" height="8" x="2" y="2" rx="2"/></svg>`,
+  addColLeft: `<svg viewBox="0 0 24 24"><path d="M3 5v14"/><path d="m10 12-4-4 4-4"/><path d="M6 12h8"/><rect width="8" height="20" x="14" y="2" rx="2"/></svg>`,
+  addColRight: `<svg viewBox="0 0 24 24"><path d="M21 5v14"/><path d="m14 12 4-4-4-4"/><path d="M18 12h-8"/><rect width="8" height="20" x="2" y="2" rx="2"/></svg>`,
+  deleteRow: `<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><rect x="3" y="6" width="18" height="12" rx="2" fill="none"/></svg>`,
+  deleteCol: `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><rect x="6" y="3" width="12" height="18" rx="2" fill="none"/></svg>`,
+  deleteTable: `<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+  alignLeft: `<svg viewBox="0 0 24 24"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>`,
+  alignCenter: `<svg viewBox="0 0 24 24"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>`,
+  alignRight: `<svg viewBox="0 0 24 24"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>`,
+  formatTable: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>`,
+  // List action icons
+  indent: `<svg viewBox="0 0 24 24"><path d="M12 6h9"/><path d="M12 12h9"/><path d="M12 18h9"/><path d="m3 8 4 4-4 4"/></svg>`,
+  outdent: `<svg viewBox="0 0 24 24"><path d="M12 6h9"/><path d="M12 12h9"/><path d="M12 18h9"/><path d="m7 8-4 4 4 4"/></svg>`,
+  bulletList: `<svg viewBox="0 0 24 24"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></svg>`,
+  orderedListIcon: `<svg viewBox="0 0 24 24"><line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>`,
+  taskList: `<svg viewBox="0 0 24 24"><path d="M12 6h9"/><path d="M12 12h9"/><path d="M12 18h9"/><rect x="3" y="4" width="4" height="4" rx="1"/><path d="m3 14 1.5 1.5L7 13"/><rect x="3" y="16" width="4" height="4" rx="1"/></svg>`,
+  removeList: `<svg viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/><line x1="2" y1="2" x2="22" y2="22" stroke-width="2"/></svg>`,
+  // Blockquote action icons
+  nestQuote: `<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/><path d="M3 21c3 0 7-1 7-8V5"/></svg>`,
+  unnestQuote: `<svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/><path d="M21 21c-3 0-7-1-7-8V5"/></svg>`,
+  removeQuote: `<svg viewBox="0 0 24 24"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4"/><line x1="2" y1="2" x2="22" y2="22" stroke-width="2"/></svg>`,
 };
 
 // Button definitions with mark types (reordered per requirements)
@@ -95,6 +146,9 @@ const HEADING_BUTTONS = [
   { icon: icons.paragraph, title: "Paragraph (⌘0)", level: 0 },
 ];
 
+// Editor getter type for command execution
+type EditorGetter = () => { action: (fn: (ctx: Ctx) => void) => void } | undefined;
+
 /**
  * Format toolbar view - manages the floating toolbar UI.
  */
@@ -102,13 +156,16 @@ export class FormatToolbarView {
   private container: HTMLElement;
   private unsubscribe: () => void;
   private editorView: EditorView;
+  private ctx: Ctx | null = null;
   private wasOpen = false;
   private currentMode: ToolbarMode = "format";
   private currentContextMode: ContextMode = "format";
+  private currentNodeContext: NodeContext = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
-  constructor(view: EditorView) {
+  constructor(view: EditorView, ctx?: Ctx) {
     this.editorView = view;
+    this.ctx = ctx ?? null;
 
     // Build DOM structure
     this.container = this.buildContainer("format");
@@ -123,18 +180,21 @@ export class FormatToolbarView {
         if (state.editorView) {
           this.editorView = state.editorView;
         }
-        // Rebuild container if mode or contextMode changed
+        // Rebuild container if mode, contextMode, or nodeContext changed
         const modeChanged = state.mode !== this.currentMode;
         const contextModeChanged = state.mode === "format" && state.contextMode !== this.currentContextMode;
-        if (modeChanged || contextModeChanged) {
+        const nodeContextChanged = state.mode === "merged" && this.nodeContextChanged(state.nodeContext);
+        if (modeChanged || contextModeChanged || nodeContextChanged) {
           this.rebuildContainer(
             state.mode,
             state.headingInfo?.level,
             state.contextMode,
-            state.codeBlockInfo?.language
+            state.codeBlockInfo?.language,
+            state.nodeContext
           );
           this.currentMode = state.mode;
           this.currentContextMode = state.contextMode;
+          this.currentNodeContext = state.nodeContext;
         } else if (state.mode === "heading" && state.headingInfo) {
           // Update active state for heading buttons
           this.updateHeadingActiveState(state.headingInfo.level);
@@ -151,6 +211,24 @@ export class FormatToolbarView {
       }
     });
   }
+
+  private nodeContextChanged(newContext: NodeContext): boolean {
+    if (this.currentNodeContext === null && newContext === null) return false;
+    if (this.currentNodeContext === null || newContext === null) return true;
+    return this.currentNodeContext.type !== newContext.type;
+  }
+
+  private getEditor: EditorGetter = () => {
+    if (!this.ctx) return undefined;
+    try {
+      this.ctx.get(editorViewCtx);
+      return {
+        action: (fn: (ctx: Ctx) => void) => fn(this.ctx!),
+      };
+    } catch {
+      return undefined;
+    }
+  };
 
   private getFocusableElements(): HTMLElement[] {
     return Array.from(
@@ -227,16 +305,25 @@ export class FormatToolbarView {
     }
   }
 
-  private buildContainer(mode: ToolbarMode, activeLevel?: number, contextMode: ContextMode = "format", activeLanguage?: string): HTMLElement {
+  private buildContainer(
+    mode: ToolbarMode,
+    activeLevel?: number,
+    contextMode: ContextMode = "format",
+    activeLanguage?: string,
+    nodeContext?: NodeContext
+  ): HTMLElement {
     const container = document.createElement("div");
     container.className = "format-toolbar";
     container.style.display = "none";
 
-    const row = document.createElement("div");
-    row.className = "format-toolbar-row";
-
-    if (mode === "code") {
+    if (mode === "merged" && nodeContext) {
+      // Merged mode: format row + node-specific rows
+      this.buildMergedToolbar(container, nodeContext);
+    } else if (mode === "code") {
       // Code mode: language picker (matching Source mode)
+      const row = document.createElement("div");
+      row.className = "format-toolbar-row";
+
       const recentLangs = getRecentLanguages();
       const quickLangs = recentLangs.length > 0
         ? recentLangs.slice(0, 5)
@@ -259,7 +346,10 @@ export class FormatToolbarView {
       // Dropdown trigger for more languages
       const dropdown = this.buildLanguageDropdown(activeLanguage || "");
       row.appendChild(dropdown);
+      container.appendChild(row);
     } else if (mode === "heading") {
+      const row = document.createElement("div");
+      row.className = "format-toolbar-row";
       for (const btn of HEADING_BUTTONS) {
         const btnEl = this.buildHeadingButton(btn.icon, btn.title, btn.level);
         if (btn.level === activeLevel) {
@@ -267,30 +357,232 @@ export class FormatToolbarView {
         }
         row.appendChild(btnEl);
       }
+      container.appendChild(row);
     } else if (contextMode === "inline-insert") {
+      const row = document.createElement("div");
+      row.className = "format-toolbar-row";
       for (const btn of INLINE_INSERT_BUTTONS) {
         row.appendChild(this.buildInsertButton(btn.icon, btn.title, btn.action));
       }
+      container.appendChild(row);
     } else if (contextMode === "block-insert") {
+      const row = document.createElement("div");
+      row.className = "format-toolbar-row";
       for (const btn of BLOCK_INSERT_BUTTONS) {
         row.appendChild(this.buildInsertButton(btn.icon, btn.title, btn.action));
       }
+      container.appendChild(row);
     } else {
       // Default: format buttons
+      const row = document.createElement("div");
+      row.className = "format-toolbar-row";
       for (const btn of FORMAT_BUTTONS) {
         row.appendChild(this.buildFormatButton(btn.icon, btn.title, btn.markType));
       }
+      container.appendChild(row);
     }
 
-    container.appendChild(row);
     return container;
   }
 
-  private rebuildContainer(mode: ToolbarMode, activeLevel?: number, contextMode: ContextMode = "format", activeLanguage?: string) {
+  /**
+   * Build merged toolbar with format row + node-specific rows.
+   */
+  private buildMergedToolbar(container: HTMLElement, nodeContext: NodeContext) {
+    if (!nodeContext) return;
+
+    // Row 1: Format buttons (always present)
+    const formatRow = document.createElement("div");
+    formatRow.className = "format-toolbar-row";
+    for (const btn of FORMAT_BUTTONS) {
+      formatRow.appendChild(this.buildFormatButton(btn.icon, btn.title, btn.markType));
+    }
+    container.appendChild(formatRow);
+
+    // Node-specific rows
+    if (nodeContext.type === "table") {
+      this.buildTableRows(container, nodeContext);
+    } else if (nodeContext.type === "list") {
+      this.buildListRow(container, nodeContext);
+    } else if (nodeContext.type === "blockquote") {
+      this.buildBlockquoteRow(container, nodeContext);
+    }
+  }
+
+  /**
+   * Build table-specific rows (row/col operations + alignment).
+   */
+  private buildTableRows(container: HTMLElement, _nodeContext: NodeContext) {
+    // Row 2: Add/Delete row/col
+    const row2 = document.createElement("div");
+    row2.className = "format-toolbar-row";
+
+    row2.appendChild(this.buildActionButton(icons.addRowAbove, "Insert row above", () => {
+      handleAddRowAbove(this.editorView, this.getEditor);
+    }));
+    row2.appendChild(this.buildActionButton(icons.addRowBelow, "Insert row below", () => {
+      handleAddRowBelow(this.editorView, this.getEditor);
+    }));
+    row2.appendChild(this.buildDivider());
+    row2.appendChild(this.buildActionButton(icons.addColLeft, "Insert column left", () => {
+      handleAddColLeft(this.editorView, this.getEditor);
+    }));
+    row2.appendChild(this.buildActionButton(icons.addColRight, "Insert column right", () => {
+      handleAddColRight(this.editorView, this.getEditor);
+    }));
+    row2.appendChild(this.buildDivider());
+    row2.appendChild(this.buildActionButton(icons.deleteRow, "Delete row", () => {
+      handleDeleteRow(this.editorView);
+    }, "danger"));
+    row2.appendChild(this.buildActionButton(icons.deleteCol, "Delete column", () => {
+      handleDeleteCol(this.editorView);
+    }, "danger"));
+
+    container.appendChild(row2);
+
+    // Row 3: Alignment + Delete table
+    const row3 = document.createElement("div");
+    row3.className = "format-toolbar-row";
+
+    row3.appendChild(this.buildActionButton(icons.alignLeft, "Align column left", () => {
+      handleAlignColumn(this.editorView, this.getEditor, "left", false);
+    }));
+    row3.appendChild(this.buildActionButton(icons.alignCenter, "Align column center", () => {
+      handleAlignColumn(this.editorView, this.getEditor, "center", false);
+    }));
+    row3.appendChild(this.buildActionButton(icons.alignRight, "Align column right", () => {
+      handleAlignColumn(this.editorView, this.getEditor, "right", false);
+    }));
+    row3.appendChild(this.buildDivider());
+    row3.appendChild(this.buildActionButton(icons.formatTable, "Format table", () => {
+      handleFormatTable(this.editorView);
+    }));
+    row3.appendChild(this.buildDivider());
+    row3.appendChild(this.buildActionButton(icons.deleteTable, "Delete table", () => {
+      const store = useFormatToolbarStore.getState();
+      if (handleDeleteTable(this.editorView, store.nodeContext)) {
+        store.closeToolbar();
+      }
+    }, "danger"));
+
+    container.appendChild(row3);
+  }
+
+  /**
+   * Build list-specific row.
+   */
+  private buildListRow(container: HTMLElement, nodeContext: NodeContext) {
+    if (nodeContext?.type !== "list") return;
+
+    const row = document.createElement("div");
+    row.className = "format-toolbar-row";
+
+    row.appendChild(this.buildActionButton(icons.outdent, "Outdent", () => {
+      handleListOutdent(this.editorView, this.getEditor);
+    }));
+    row.appendChild(this.buildActionButton(icons.indent, "Indent", () => {
+      handleListIndent(this.editorView, this.getEditor);
+    }));
+    row.appendChild(this.buildDivider());
+
+    // List type buttons with active state
+    const bulletBtn = this.buildActionButton(icons.bulletList, "Bullet list", () => {
+      handleToBulletList(this.editorView, this.getEditor);
+    });
+    if (nodeContext.listType === "bullet") bulletBtn.classList.add("active");
+    row.appendChild(bulletBtn);
+
+    const orderedBtn = this.buildActionButton(icons.orderedListIcon, "Ordered list", () => {
+      handleToOrderedList(this.editorView, this.getEditor);
+    });
+    if (nodeContext.listType === "ordered") orderedBtn.classList.add("active");
+    row.appendChild(orderedBtn);
+
+    const taskBtn = this.buildActionButton(icons.taskList, "Task list", () => {
+      handleToggleTaskList(this.editorView);
+    });
+    if (nodeContext.listType === "task") taskBtn.classList.add("active");
+    row.appendChild(taskBtn);
+
+    row.appendChild(this.buildDivider());
+    row.appendChild(this.buildActionButton(icons.removeList, "Remove list", () => {
+      handleRemoveList(this.editorView, this.getEditor);
+      useFormatToolbarStore.getState().closeToolbar();
+    }, "danger"));
+
+    container.appendChild(row);
+  }
+
+  /**
+   * Build blockquote-specific row.
+   */
+  private buildBlockquoteRow(container: HTMLElement, _nodeContext: NodeContext) {
+    const row = document.createElement("div");
+    row.className = "format-toolbar-row";
+
+    row.appendChild(this.buildActionButton(icons.nestQuote, "Nest deeper", () => {
+      handleBlockquoteNest(this.editorView);
+    }));
+    row.appendChild(this.buildActionButton(icons.unnestQuote, "Unnest", () => {
+      handleBlockquoteUnnest(this.editorView);
+    }));
+    row.appendChild(this.buildDivider());
+    row.appendChild(this.buildActionButton(icons.removeQuote, "Remove quote", () => {
+      handleRemoveBlockquote(this.editorView);
+      useFormatToolbarStore.getState().closeToolbar();
+    }, "danger"));
+
+    container.appendChild(row);
+  }
+
+  /**
+   * Build a generic action button.
+   */
+  private buildActionButton(
+    iconSvg: string,
+    title: string,
+    onClick: () => void,
+    variant?: "danger"
+  ): HTMLElement {
+    const btn = document.createElement("button");
+    btn.className = `format-toolbar-btn${variant ? ` format-toolbar-btn-${variant}` : ""}`;
+    btn.type = "button";
+    btn.title = title;
+    btn.innerHTML = iconSvg;
+
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+    });
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onClick();
+    });
+
+    return btn;
+  }
+
+  /**
+   * Build a visual divider between button groups.
+   */
+  private buildDivider(): HTMLElement {
+    const divider = document.createElement("div");
+    divider.className = "format-toolbar-divider";
+    return divider;
+  }
+
+  private rebuildContainer(
+    mode: ToolbarMode,
+    activeLevel?: number,
+    contextMode: ContextMode = "format",
+    activeLanguage?: string,
+    nodeContext?: NodeContext
+  ) {
     const wasVisible = this.container.style.display !== "none";
     const oldContainer = this.container;
 
-    this.container = this.buildContainer(mode, activeLevel, contextMode, activeLanguage);
+    this.container = this.buildContainer(mode, activeLevel, contextMode, activeLanguage, nodeContext);
     this.container.style.display = wasVisible ? "flex" : "none";
     this.container.style.position = "fixed";
 

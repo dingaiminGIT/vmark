@@ -12,7 +12,6 @@ import { $prose } from "@milkdown/kit/utils";
 import { useUIStore } from "@/stores/uiStore";
 import { useEditorStore } from "@/stores/editorStore";
 import { useFormatToolbarStore } from "@/stores/formatToolbarStore";
-import { useTableToolbarStore } from "@/stores/tableToolbarStore";
 import { getCursorInfoFromProseMirror } from "@/utils/cursorSync/prosemirror";
 import { findMarkRange, findAnyMarkRangeAtCursor } from "@/plugins/syntaxReveal/marks";
 
@@ -263,15 +262,10 @@ export const expandedMarkTogglePlugin = $prose(() =>
     },
     "Escape": (_state, _dispatch, view) => {
       if (!view) return false;
-      // Close any open toolbar first
+      // Close format toolbar if open
       const formatStore = useFormatToolbarStore.getState();
-      const tableStore = useTableToolbarStore.getState();
       if (formatStore.isOpen) {
         formatStore.closeToolbar();
-        return true;
-      }
-      if (tableStore.isOpen) {
-        tableStore.closeToolbar();
         return true;
       }
       // No toolbar open - handle mark boundary escape

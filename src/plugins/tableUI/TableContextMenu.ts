@@ -15,8 +15,7 @@ import {
   addColAfterCommand,
   setAlignCommand,
 } from "@milkdown/kit/preset/gfm";
-import { useTableToolbarStore } from "@/stores/tableToolbarStore";
-import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow, alignAllColumns } from "./table-utils";
+import { deleteTableAtPos, deleteRow, deleteColumn, isInHeaderRow, alignAllColumns, getTableInfo } from "./table-utils";
 
 // Interface for editor-like object with action method
 interface EditorLike {
@@ -219,9 +218,9 @@ export class TableContextMenu {
   }
 
   private handleDeleteTable() {
-    const { tablePos } = useTableToolbarStore.getState();
-    if (deleteTableAtPos(this.editorView, tablePos)) {
-      useTableToolbarStore.getState().closeToolbar();
+    const tableInfo = getTableInfo(this.editorView);
+    if (tableInfo && deleteTableAtPos(this.editorView, tableInfo.tablePos)) {
+      this.editorView.focus();
     }
   }
 

@@ -6,6 +6,7 @@
  * - format: inline formatting (bold, italic, etc.)
  * - heading: heading level selection (H1-H6, paragraph)
  * - code: language picker for code blocks
+ * - merged: format + node-specific actions (table, list, blockquote)
  */
 
 import { create } from "zustand";
@@ -13,8 +14,9 @@ import type { AnchorRect } from "@/utils/popupPosition";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { TextSelection } from "@milkdown/kit/prose/state";
 
-export type ToolbarMode = "format" | "heading" | "code";
+export type ToolbarMode = "format" | "heading" | "code" | "merged";
 export type ContextMode = "format" | "inline-insert" | "block-insert";
+export type NodeContextType = "table" | "list" | "blockquote" | null;
 
 export interface HeadingInfo {
   level: number; // 1-6, or 0 for paragraph
@@ -26,6 +28,30 @@ export interface CodeBlockInfo {
   nodePos: number; // Position of the code_block node
 }
 
+export interface TableNodeContext {
+  type: "table";
+  tablePos: number;
+  rowIndex: number;
+  colIndex: number;
+  numRows: number;
+  numCols: number;
+}
+
+export interface ListNodeContext {
+  type: "list";
+  listType: "bullet" | "ordered" | "task";
+  nodePos: number;
+  depth: number; // Nesting level
+}
+
+export interface BlockquoteNodeContext {
+  type: "blockquote";
+  nodePos: number;
+  depth: number; // Nesting level
+}
+
+export type NodeContext = TableNodeContext | ListNodeContext | BlockquoteNodeContext | null;
+
 interface FormatToolbarState {
   isOpen: boolean;
   mode: ToolbarMode;
@@ -34,6 +60,7 @@ interface FormatToolbarState {
   editorView: EditorView | null;
   headingInfo: HeadingInfo | null;
   codeBlockInfo: CodeBlockInfo | null;
+  nodeContext: NodeContext;
   /** Original cursor position before auto-select (for restore on cancel) */
   originalCursorPos: number | null;
 }
@@ -47,10 +74,12 @@ interface FormatToolbarActions {
   openToolbar: (rect: AnchorRect, view: EditorView, options?: ContextMode | OpenToolbarOptions) => void;
   openHeadingToolbar: (rect: AnchorRect, view: EditorView, headingInfo: HeadingInfo) => void;
   openCodeToolbar: (rect: AnchorRect, view: EditorView, codeBlockInfo: CodeBlockInfo) => void;
+  openMergedToolbar: (rect: AnchorRect, view: EditorView, nodeContext: NodeContext) => void;
   closeToolbar: () => void;
   /** Clear original cursor pos after format action (so close won't restore) */
   clearOriginalCursor: () => void;
   updatePosition: (rect: AnchorRect) => void;
+  updateNodeContext: (nodeContext: NodeContext) => void;
 }
 
 const initialState: FormatToolbarState = {
@@ -61,6 +90,7 @@ const initialState: FormatToolbarState = {
   editorView: null,
   headingInfo: null,
   codeBlockInfo: null,
+  nodeContext: null,
   originalCursorPos: null,
 };
 
@@ -83,6 +113,7 @@ export const useFormatToolbarStore = create<FormatToolbarState & FormatToolbarAc
         editorView: view,
         headingInfo: null,
         codeBlockInfo: null,
+        nodeContext: null,
         originalCursorPos,
       });
     },
@@ -95,6 +126,7 @@ export const useFormatToolbarStore = create<FormatToolbarState & FormatToolbarAc
         editorView: view,
         headingInfo,
         codeBlockInfo: null,
+        nodeContext: null,
       }),
 
     openCodeToolbar: (rect, view, codeBlockInfo) =>
@@ -105,6 +137,19 @@ export const useFormatToolbarStore = create<FormatToolbarState & FormatToolbarAc
         editorView: view,
         headingInfo: null,
         codeBlockInfo,
+        nodeContext: null,
+      }),
+
+    openMergedToolbar: (rect, view, nodeContext) =>
+      set({
+        isOpen: true,
+        mode: "merged",
+        contextMode: "format",
+        anchorRect: rect,
+        editorView: view,
+        headingInfo: null,
+        codeBlockInfo: null,
+        nodeContext,
       }),
 
     closeToolbar: () => {
@@ -124,5 +169,7 @@ export const useFormatToolbarStore = create<FormatToolbarState & FormatToolbarAc
     clearOriginalCursor: () => set({ originalCursorPos: null }),
 
     updatePosition: (rect) => set({ anchorRect: rect }),
+
+    updateNodeContext: (nodeContext) => set({ nodeContext }),
   })
 );
