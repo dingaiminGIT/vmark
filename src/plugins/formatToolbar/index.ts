@@ -1,7 +1,7 @@
 /**
  * Format Toolbar Plugin
  *
- * Provides Cmd+E toggle for a floating format toolbar in Milkdown.
+ * Provides Cmd+/ toggle for a floating format toolbar in Milkdown.
  * Similar to source mode's format popup.
  */
 
@@ -49,11 +49,11 @@ function toggleFormatToolbar(view: EditorView): boolean {
 }
 
 /**
- * Keymap plugin for Cmd+E format toolbar toggle.
+ * Keymap plugin for Cmd+/ format toolbar toggle.
  */
 export const formatToolbarKeymapPlugin = $prose(() =>
   keymap({
-    "Mod-e": (_state, _dispatch, view) => {
+    "Mod-/": (_state, _dispatch, view) => {
       if (!view) return false;
       return toggleFormatToolbar(view);
     },

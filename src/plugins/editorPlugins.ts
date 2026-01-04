@@ -255,6 +255,18 @@ export const expandedMarkTogglePlugin = $prose(() =>
       if (!view) return false;
       return expandedToggleMark(view, "link");
     },
+    "Alt-Mod-=": (_state, _dispatch, view) => {
+      if (!view) return false;
+      return expandedToggleMark(view, "subscript");
+    },
+    "Alt-Mod-Shift-=": (_state, _dispatch, view) => {
+      if (!view) return false;
+      return expandedToggleMark(view, "superscript");
+    },
+    "Alt-Mod-h": (_state, _dispatch, view) => {
+      if (!view) return false;
+      return expandedToggleMark(view, "highlight");
+    },
     "Escape": (_state, _dispatch, view) => {
       if (!view) return false;
       return escapeMarkBoundary(view);

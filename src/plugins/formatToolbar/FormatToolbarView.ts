@@ -2,7 +2,7 @@
  * Format Toolbar View
  *
  * DOM-based floating toolbar for inline formatting in Milkdown.
- * Similar to source mode's format popup, triggered by Cmd+E.
+ * Similar to source mode's format popup, triggered by Cmd+/.
  */
 
 import type { EditorView } from "@milkdown/kit/prose/view";
