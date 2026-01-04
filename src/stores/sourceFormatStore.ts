@@ -9,6 +9,9 @@ import { create } from "zustand";
 import type { EditorView } from "@codemirror/view";
 import type { SourceTableInfo } from "@/plugins/sourceFormatPopup/tableDetection";
 import type { CodeFenceInfo } from "@/plugins/sourceFormatPopup/codeFenceDetection";
+import type { ListItemInfo } from "@/plugins/sourceFormatPopup/listDetection";
+import type { BlockquoteInfo } from "@/plugins/sourceFormatPopup/blockquoteDetection";
+import type { BlockMathInfo } from "@/plugins/sourceFormatPopup/blockMathDetection";
 
 export interface AnchorRect {
   top: number;
@@ -18,7 +21,15 @@ export interface AnchorRect {
 }
 
 /** Popup mode determines which buttons to show */
-export type PopupMode = "format" | "table" | "heading" | "code";
+export type PopupMode =
+  | "format"
+  | "table"
+  | "heading"
+  | "code"
+  | "list"
+  | "blockquote"
+  | "math"
+  | "footnote";
 
 /** Context mode for format popup (when mode is "format") */
 export type ContextMode = "format" | "inline-insert" | "block-insert";
@@ -40,6 +51,9 @@ interface SourceFormatState {
   tableInfo: SourceTableInfo | null;
   headingInfo: HeadingInfo | null;
   codeFenceInfo: CodeFenceInfo | null;
+  listInfo: ListItemInfo | null;
+  blockquoteInfo: BlockquoteInfo | null;
+  blockMathInfo: BlockMathInfo | null;
 }
 
 interface SourceFormatActions {
@@ -64,6 +78,25 @@ interface SourceFormatActions {
     editorView: EditorView;
     codeFenceInfo: CodeFenceInfo;
   }) => void;
+  openListPopup: (data: {
+    anchorRect: AnchorRect;
+    editorView: EditorView;
+    listInfo: ListItemInfo;
+  }) => void;
+  openBlockquotePopup: (data: {
+    anchorRect: AnchorRect;
+    editorView: EditorView;
+    blockquoteInfo: BlockquoteInfo;
+  }) => void;
+  openMathPopup: (data: {
+    anchorRect: AnchorRect;
+    editorView: EditorView;
+    blockMathInfo: BlockMathInfo;
+  }) => void;
+  openFootnotePopup: (data: {
+    anchorRect: AnchorRect;
+    editorView: EditorView;
+  }) => void;
   closePopup: () => void;
   updatePosition: (anchorRect: AnchorRect) => void;
 }
@@ -80,6 +113,9 @@ const initialState: SourceFormatState = {
   tableInfo: null,
   headingInfo: null,
   codeFenceInfo: null,
+  listInfo: null,
+  blockquoteInfo: null,
+  blockMathInfo: null,
 };
 
 export const useSourceFormatStore = create<SourceFormatStore>((set) => ({
@@ -87,51 +123,82 @@ export const useSourceFormatStore = create<SourceFormatStore>((set) => ({
 
   openPopup: (data) =>
     set({
+      ...initialState,
       isOpen: true,
       mode: "format",
       contextMode: data.contextMode ?? "format",
       anchorRect: data.anchorRect,
       selectedText: data.selectedText,
       editorView: data.editorView,
-      tableInfo: null,
-      headingInfo: null,
-      codeFenceInfo: null,
     }),
 
   openTablePopup: (data) =>
     set({
+      ...initialState,
       isOpen: true,
       mode: "table",
       anchorRect: data.anchorRect,
-      selectedText: "",
       editorView: data.editorView,
       tableInfo: data.tableInfo,
-      headingInfo: null,
-      codeFenceInfo: null,
     }),
 
   openHeadingPopup: (data) =>
     set({
+      ...initialState,
       isOpen: true,
       mode: "heading",
       anchorRect: data.anchorRect,
-      selectedText: "",
       editorView: data.editorView,
-      tableInfo: null,
       headingInfo: data.headingInfo,
-      codeFenceInfo: null,
     }),
 
   openCodePopup: (data) =>
     set({
+      ...initialState,
       isOpen: true,
       mode: "code",
       anchorRect: data.anchorRect,
-      selectedText: "",
       editorView: data.editorView,
-      tableInfo: null,
-      headingInfo: null,
       codeFenceInfo: data.codeFenceInfo,
+    }),
+
+  openListPopup: (data) =>
+    set({
+      ...initialState,
+      isOpen: true,
+      mode: "list",
+      anchorRect: data.anchorRect,
+      editorView: data.editorView,
+      listInfo: data.listInfo,
+    }),
+
+  openBlockquotePopup: (data) =>
+    set({
+      ...initialState,
+      isOpen: true,
+      mode: "blockquote",
+      anchorRect: data.anchorRect,
+      editorView: data.editorView,
+      blockquoteInfo: data.blockquoteInfo,
+    }),
+
+  openMathPopup: (data) =>
+    set({
+      ...initialState,
+      isOpen: true,
+      mode: "math",
+      anchorRect: data.anchorRect,
+      editorView: data.editorView,
+      blockMathInfo: data.blockMathInfo,
+    }),
+
+  openFootnotePopup: (data) =>
+    set({
+      ...initialState,
+      isOpen: true,
+      mode: "footnote",
+      anchorRect: data.anchorRect,
+      editorView: data.editorView,
     }),
 
   closePopup: () => set(initialState),
