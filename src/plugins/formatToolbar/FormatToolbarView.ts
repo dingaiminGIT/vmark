@@ -88,20 +88,38 @@ export class FormatToolbarView {
 
   private setupKeyboardNavigation() {
     this.keydownHandler = (e: KeyboardEvent) => {
+      // Only handle when toolbar is visible and open
+      if (!useFormatToolbarStore.getState().isOpen) return;
+      if (this.container.style.display === "none") return;
+
+      // Check if focus is inside toolbar for keyboard nav
+      const activeEl = document.activeElement as HTMLElement;
+      const focusInToolbar = this.container.contains(activeEl);
+
+      // Close on Escape (always, regardless of focus)
       if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
         useFormatToolbarStore.getState().closeToolbar();
         this.editorView.focus();
         return;
       }
 
-      if (e.key === "Tab") {
+      // Toggle on Cmd+E only if focus is inside toolbar
+      if (focusInToolbar && (e.key === "e" || e.key === "E") && (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        useFormatToolbarStore.getState().closeToolbar();
+        this.editorView.focus();
+        return;
+      }
+
+      // Tab navigation only if focus is inside toolbar
+      if (focusInToolbar && e.key === "Tab") {
         const focusable = this.getFocusableElements();
         if (focusable.length === 0) return;
 
-        const activeEl = document.activeElement as HTMLElement;
         const currentIndex = focusable.indexOf(activeEl);
-
-        // Only handle Tab if focus is inside the toolbar
         if (currentIndex === -1) return;
 
         e.preventDefault();

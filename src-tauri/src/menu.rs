@@ -140,7 +140,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
                 "use-selection-find",
                 "Use Selection for Find",
                 true,
-                Some("CmdOrCtrl+E"),
+                Some("Alt+F"), // ⌥F - ⌘E now used for context-aware format toolbar
             )?,
         ],
     )?;
