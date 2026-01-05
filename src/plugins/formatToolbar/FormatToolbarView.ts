@@ -93,6 +93,10 @@ const icons = {
   alignLeft: `<svg viewBox="0 0 24 24"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>`,
   alignCenter: `<svg viewBox="0 0 24 24"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>`,
   alignRight: `<svg viewBox="0 0 24 24"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>`,
+  // Align all icons (with table outline indicator)
+  alignAllLeft: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="7" y1="8" x2="14" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="14" y2="16"/></svg>`,
+  alignAllCenter: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></svg>`,
+  alignAllRight: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="10" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="16" x2="17" y2="16"/></svg>`,
   formatTable: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="none"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>`,
   // List action icons
   indent: `<svg viewBox="0 0 24 24"><path d="M12 6h9"/><path d="M12 12h9"/><path d="M12 18h9"/><path d="m3 8 4 4-4 4"/></svg>`,
@@ -412,9 +416,10 @@ export class FormatToolbarView {
 
   /**
    * Build table-specific rows (row/col operations + alignment).
+   * Layout matches Source mode's TableMode.
    */
   private buildTableRows(container: HTMLElement, _nodeContext: NodeContext) {
-    // Row 2: Add/Delete row/col
+    // Row 2: Add/Delete operations (including delete table)
     const row2 = document.createElement("div");
     row2.className = "format-toolbar-row";
 
@@ -424,7 +429,6 @@ export class FormatToolbarView {
     row2.appendChild(this.buildActionButton(icons.addRowBelow, "Insert row below", () => {
       handleAddRowBelow(this.editorView, this.getEditor);
     }));
-    row2.appendChild(this.buildDivider());
     row2.appendChild(this.buildActionButton(icons.addColLeft, "Insert column left", () => {
       handleAddColLeft(this.editorView, this.getEditor);
     }));
@@ -438,10 +442,16 @@ export class FormatToolbarView {
     row2.appendChild(this.buildActionButton(icons.deleteCol, "Delete column", () => {
       handleDeleteCol(this.editorView);
     }, "danger"));
+    row2.appendChild(this.buildActionButton(icons.deleteTable, "Delete table", () => {
+      const store = useFormatToolbarStore.getState();
+      if (handleDeleteTable(this.editorView, store.nodeContext)) {
+        store.closeToolbar();
+      }
+    }, "danger"));
 
     container.appendChild(row2);
 
-    // Row 3: Alignment + Delete table
+    // Row 3: Alignment (column + all) + Format
     const row3 = document.createElement("div");
     row3.className = "format-toolbar-row";
 
@@ -455,16 +465,19 @@ export class FormatToolbarView {
       handleAlignColumn(this.editorView, this.getEditor, "right", false);
     }));
     row3.appendChild(this.buildDivider());
+    row3.appendChild(this.buildActionButton(icons.alignAllLeft, "Align all left", () => {
+      handleAlignColumn(this.editorView, this.getEditor, "left", true);
+    }));
+    row3.appendChild(this.buildActionButton(icons.alignAllCenter, "Align all center", () => {
+      handleAlignColumn(this.editorView, this.getEditor, "center", true);
+    }));
+    row3.appendChild(this.buildActionButton(icons.alignAllRight, "Align all right", () => {
+      handleAlignColumn(this.editorView, this.getEditor, "right", true);
+    }));
+    row3.appendChild(this.buildDivider());
     row3.appendChild(this.buildActionButton(icons.formatTable, "Format table", () => {
       handleFormatTable(this.editorView);
     }));
-    row3.appendChild(this.buildDivider());
-    row3.appendChild(this.buildActionButton(icons.deleteTable, "Delete table", () => {
-      const store = useFormatToolbarStore.getState();
-      if (handleDeleteTable(this.editorView, store.nodeContext)) {
-        store.closeToolbar();
-      }
-    }, "danger"));
 
     container.appendChild(row3);
   }
