@@ -17,6 +17,44 @@
   border-radius: 3px;
 }
 
+/* Inline math - block style cursor-aware rendering */
+.math-inline.editing {
+  background-color: var(--code-bg, rgba(0, 0, 0, 0.04));
+  border-radius: 3px;
+}
+
+.math-inline-preview {
+  display: inline;
+}
+
+.math-inline-content {
+  display: none;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.9em;
+  color: var(--text-color, inherit);
+}
+
+/* Show $ delimiters when editing */
+.math-inline.editing::before,
+.math-inline.editing::after {
+  content: "$";
+  color: var(--text-secondary, #656d76);
+  font-family: var(--font-mono, monospace);
+}
+
+.math-inline.editing .math-inline-content {
+  display: inline;
+}
+
+.math-inline.editing .math-inline-preview {
+  display: none;
+}
+
+.math-inline-placeholder {
+  color: var(--text-secondary, #656d76);
+  font-style: italic;
+}
+
 /* Selected inline math */
 .ProseMirror-selectednode .math-inline,
 .math-inline.ProseMirror-selectednode {

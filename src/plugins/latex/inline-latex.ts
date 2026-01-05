@@ -2,67 +2,57 @@
  * Inline LaTeX Schema
  *
  * Defines a ProseMirror node for inline math expressions.
- * Renders using KaTeX.
+ * Renders using KaTeX. Stores content as text within the node.
  */
 
 import { $nodeSchema } from "@milkdown/kit/utils";
-import katex from "katex";
 
 export const mathInlineId = "math_inline";
 
 /**
  * Schema for inline math node.
  * Supports syntax: $a^2 + b^2 = c^2$
+ * Stores LaTeX content as text content within the node.
  */
 export const mathInlineSchema = $nodeSchema(mathInlineId, () => ({
   group: "inline",
   inline: true,
-  draggable: true,
-  atom: true,
-  attrs: {
-    value: {
-      default: "",
-    },
-  },
+  content: "text*",
+  marks: "",
+  atom: false,
+  code: true,
   parseDOM: [
     {
       tag: `span[data-type="${mathInlineId}"]`,
-      getAttrs: (dom) => {
-        return {
-          value: (dom as HTMLElement).dataset.value ?? "",
-        };
-      },
+      preserveWhitespace: "full" as const,
+      getAttrs: () => ({}),
     },
   ],
-  toDOM: (node) => {
-    const code: string = node.attrs.value;
-    const dom = document.createElement("span");
-    dom.dataset.type = mathInlineId;
-    dom.dataset.value = code;
-    dom.className = "math-inline";
-
-    try {
-      katex.render(code, dom, {
-        throwOnError: false,
-        displayMode: false,
-      });
-    } catch {
-      dom.textContent = code;
-      dom.classList.add("math-error");
-    }
-
-    return dom;
+  toDOM: () => {
+    return [
+      "span",
+      {
+        "data-type": mathInlineId,
+        class: "math-inline",
+      },
+      0,
+    ] as const;
   },
   parseMarkdown: {
     match: (node) => node.type === "inlineMath",
     runner: (state, node, type) => {
-      state.addNode(type, { value: node.value as string });
+      const value = (node.value as string) || "";
+      state.openNode(type);
+      if (value) {
+        state.addText(value);
+      }
+      state.closeNode();
     },
   },
   toMarkdown: {
     match: (node) => node.type.name === mathInlineId,
     runner: (state, node) => {
-      state.addNode("inlineMath", undefined, node.attrs.value);
+      state.addNode("inlineMath", undefined, node.textContent || "");
     },
   },
 }));

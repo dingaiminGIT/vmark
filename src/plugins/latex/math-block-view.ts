@@ -10,6 +10,7 @@
 import { $view } from "@milkdown/kit/utils";
 import type { EditorView, NodeView } from "@milkdown/kit/prose/view";
 import type { Node } from "@milkdown/kit/prose/model";
+import { Selection } from "@milkdown/kit/prose/state";
 import katex from "katex";
 import { mathBlockSchema } from "./math-block-schema";
 
@@ -92,6 +93,7 @@ class MathBlockNodeView implements NodeView {
     if (e.key === "Escape") {
       e.preventDefault();
       this.commitAndClose();
+      return;
     }
     // Allow Tab to insert tab character
     if (e.key === "Tab") {
@@ -100,6 +102,43 @@ class MathBlockNodeView implements NodeView {
       const end = this.editor.selectionEnd;
       this.editor.value = this.editor.value.substring(0, start) + "  " + this.editor.value.substring(end);
       this.editor.selectionStart = this.editor.selectionEnd = start + 2;
+      return;
+    }
+    // Arrow navigation out of math block
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      const cursorPos = this.editor.selectionStart;
+      const content = this.editor.value;
+      const lines = content.split("\n");
+
+      // Find which line the cursor is on
+      let charCount = 0;
+      let currentLine = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (charCount + lines[i].length >= cursorPos) {
+          currentLine = i;
+          break;
+        }
+        charCount += lines[i].length + 1; // +1 for newline
+      }
+
+      // ArrowUp on first line or ArrowDown on last line exits the block
+      if ((e.key === "ArrowUp" && currentLine === 0) || (e.key === "ArrowDown" && currentLine === lines.length - 1)) {
+        e.preventDefault();
+        this.commitAndClose();
+        // Move cursor to appropriate position after the block
+        const pos = this.getPos();
+        if (pos !== undefined) {
+          const { state } = this.view;
+          const node = state.doc.nodeAt(pos);
+          if (node) {
+            const targetPos = e.key === "ArrowUp" ? pos : pos + node.nodeSize;
+            const tr = state.tr.setSelection(
+              Selection.near(state.doc.resolve(targetPos), e.key === "ArrowUp" ? -1 : 1)
+            );
+            this.view.dispatch(tr);
+          }
+        }
+      }
     }
   };
 
@@ -177,6 +216,13 @@ class MathBlockNodeView implements NodeView {
 
   selectNode(): void {
     this.dom.classList.add("ProseMirror-selectednode");
+    // Auto-enter edit mode when selected via keyboard navigation
+    // Use setTimeout to avoid interfering with ProseMirror's selection handling
+    setTimeout(() => {
+      if (this.dom.classList.contains("ProseMirror-selectednode") && !this.isEditing) {
+        this.showEditor();
+      }
+    }, 0);
   }
 
   deselectNode(): void {

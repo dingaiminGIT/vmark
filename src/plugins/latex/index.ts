@@ -42,6 +42,8 @@ export { mathInlineSchema, mathInlineId } from "./inline-latex";
 export { blockLatexSchema } from "./block-latex";
 export { mathBlockSchema, mathBlockId } from "./math-block-schema";
 export { mathBlockView } from "./math-block-view";
+export { mathBlockKeymap } from "./math-block-keymap";
+export { mathInlineView, mathInlineCursorPlugin } from "./math-inline-view";
 export { mathInlineInputRule, mathBlockInputRule } from "./input-rule";
 export { remarkMathPlugin } from "./remark";
 export { mathInlinePlugin } from "./math-inline-plugin";

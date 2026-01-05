@@ -71,9 +71,12 @@ import {
   mathInlineSchema,
   mathInlineInputRule,
   mathInlinePlugin,
+  mathInlineView,
+  mathInlineCursorPlugin,
   mathBlockInputRule,
   mathBlockSchema,
   mathBlockView,
+  mathBlockKeymap,
 } from "@/plugins/latex";
 import {
   mermaidBlockSchema,
@@ -163,6 +166,7 @@ function MilkdownEditorInner() {
         }));
       })
       .use(overrideKeymapPlugin)
+      .use(mathBlockKeymap) // Before commonmark to intercept arrow keys into math blocks
       .use(expandedMarkTogglePlugin)
       .use(listContinuationPlugin) // Before commonmark to override Enter
       .use(commonmark)
@@ -225,6 +229,8 @@ function MilkdownEditorInner() {
       .use(mathInlineSchema)
       .use(mathInlineInputRule)
       .use(mathInlinePlugin)
+      .use(mathInlineView)
+      .use(mathInlineCursorPlugin)
       .use(mathBlockSchema)
       .use(mathBlockView)
       .use(mathBlockInputRule)
