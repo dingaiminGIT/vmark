@@ -12,6 +12,7 @@
 import type { EditorView } from "@milkdown/kit/prose/view";
 import type { Ctx } from "@milkdown/kit/ctx";
 import { editorViewCtx } from "@milkdown/kit/core";
+import { TextSelection } from "@milkdown/kit/prose/state";
 import {
   useFormatToolbarStore,
   type ToolbarMode,
@@ -872,36 +873,56 @@ export class FormatToolbarView {
     const { state, dispatch } = this.editorView;
     const { from } = state.selection;
     let textToInsert = "";
+    let selectionStart = 0;
+    let selectionEnd = 0;
 
     switch (action) {
       // Inline inserts
       case "inline-image":
         textToInsert = "![](url)";
+        selectionStart = from + 4; // After "![]("
+        selectionEnd = from + 7;   // After "url"
         break;
       case "inline-math":
         textToInsert = "$formula$";
+        selectionStart = from + 1; // After "$"
+        selectionEnd = from + 8;   // After "formula"
         break;
       case "footnote":
         textToInsert = "[^1]";
+        selectionStart = from + 4; // After "]"
+        selectionEnd = from + 4;   // Same (cursor, no selection)
         break;
       // Block inserts
       case "block-image":
         textToInsert = "![](url)\n";
+        selectionStart = from + 4; // After "![]("
+        selectionEnd = from + 7;   // After "url"
         break;
       case "ordered-list":
         textToInsert = "1. ";
+        selectionStart = from + 3; // After "1. "
+        selectionEnd = from + 3;
         break;
       case "unordered-list":
         textToInsert = "- ";
+        selectionStart = from + 2; // After "- "
+        selectionEnd = from + 2;
         break;
       case "blockquote":
         textToInsert = "> ";
+        selectionStart = from + 2; // After "> "
+        selectionEnd = from + 2;
         break;
       case "table":
         textToInsert = "| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n";
+        selectionStart = from + 2; // After "| " (in first header cell)
+        selectionEnd = from + 10;  // Select "Header 1"
         break;
       case "divider":
         textToInsert = "---\n";
+        selectionStart = from + 4; // After "---\n"
+        selectionEnd = from + 4;
         break;
       default:
         return;
@@ -910,6 +931,12 @@ export class FormatToolbarView {
     // Insert text at cursor position
     const tr = state.tr.insertText(textToInsert, from);
     dispatch(tr);
+
+    // Set selection appropriately based on content type
+    const newTr = this.editorView.state.tr.setSelection(
+      TextSelection.create(this.editorView.state.doc, selectionStart, selectionEnd)
+    );
+    this.editorView.dispatch(newTr);
 
     this.editorView.focus();
     const store = useFormatToolbarStore.getState();
