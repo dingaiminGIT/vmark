@@ -13,13 +13,13 @@ import { Plugin, PluginKey } from "@milkdown/kit/prose/state";
 import type { EditorView } from "@milkdown/kit/prose/view";
 import { message } from "@tauri-apps/plugin-dialog";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useTabStore } from "@/stores/tabStore";
+import { withReentryGuard } from "@/utils/reentryGuard";
 import { getWindowLabel } from "@/utils/windowFocus";
 import { saveImageToAssets, insertBlockImageNode } from "@/utils/imageUtils";
 
 export const imageHandlerPluginKey = new PluginKey("imageHandler");
-
-// Re-entry guard for clipboard image processing (prevents duplicate dialogs)
-let isProcessingClipboardImage = false;
+const CLIPBOARD_IMAGE_GUARD = "clipboard-image";
 
 /**
  * Process clipboard image item.
@@ -28,42 +28,40 @@ async function processClipboardImage(
   view: EditorView,
   item: DataTransferItem
 ): Promise<void> {
-  // Guard against rapid pastes causing duplicate dialogs
-  if (isProcessingClipboardImage) return;
-  isProcessingClipboardImage = true;
+  const windowLabel = getWindowLabel();
 
-  try {
-    const windowLabel = getWindowLabel();
-    const doc = useDocumentStore.getState().getDocument(windowLabel);
-    const filePath = doc?.filePath;
+  await withReentryGuard(windowLabel, CLIPBOARD_IMAGE_GUARD, async () => {
+    try {
+      const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+      const doc = tabId ? useDocumentStore.getState().getDocument(tabId) : undefined;
+      const filePath = doc?.filePath;
 
-    if (!filePath) {
-      await message(
-        "Please save the document first before pasting images. " +
-          "Images are stored relative to the document location.",
-        { title: "Unsaved Document", kind: "warning" }
-      );
-      return;
+      if (!filePath) {
+        await message(
+          "Please save the document first before pasting images. " +
+            "Images are stored relative to the document location.",
+          { title: "Unsaved Document", kind: "warning" }
+        );
+        return;
+      }
+
+      const file = item.getAsFile();
+      if (!file) return;
+
+      const buffer = await file.arrayBuffer();
+      const imageData = new Uint8Array(buffer);
+      const filename = file.name || "clipboard-image.png";
+
+      // Save image and get relative path (portable)
+      const relativePath = await saveImageToAssets(imageData, filename, filePath);
+
+      // Insert block image node (default behavior for pasted images)
+      insertBlockImageNode(view, relativePath);
+    } catch (error) {
+      console.error("Failed to process clipboard image:", error);
+      await message("Failed to save image from clipboard.", { kind: "error" });
     }
-
-    const file = item.getAsFile();
-    if (!file) return;
-
-    const buffer = await file.arrayBuffer();
-    const imageData = new Uint8Array(buffer);
-    const filename = file.name || "clipboard-image.png";
-
-    // Save image and get relative path (portable)
-    const relativePath = await saveImageToAssets(imageData, filename, filePath);
-
-    // Insert block image node (default behavior for pasted images)
-    insertBlockImageNode(view, relativePath);
-  } catch (error) {
-    console.error("Failed to process clipboard image:", error);
-    await message("Failed to save image from clipboard.", { kind: "error" });
-  } finally {
-    isProcessingClipboardImage = false;
-  }
+  });
 }
 
 /**
