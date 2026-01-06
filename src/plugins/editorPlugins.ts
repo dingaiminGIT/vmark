@@ -10,9 +10,13 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 import { keymap } from "@milkdown/kit/prose/keymap";
 import { $prose } from "@milkdown/kit/utils";
 import { useUIStore } from "@/stores/uiStore";
-import { useEditorStore } from "@/stores/editorStore";
 import { useFormatToolbarStore } from "@/stores/formatToolbarStore";
+import { useDocumentStore } from "@/stores/documentStore";
+import type { CursorInfo } from "@/stores/documentStore";
+import { useTabStore } from "@/stores/tabStore";
+import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { getCursorInfoFromProseMirror } from "@/utils/cursorSync/prosemirror";
+import { getWindowLabel } from "@/utils/windowFocus";
 import { findMarkRange, findAnyMarkRangeAtCursor } from "@/plugins/syntaxReveal/marks";
 
 /**
@@ -225,38 +229,42 @@ function escapeMarkBoundary(view: EditorView): boolean {
  * Keymap plugin for expanded mark toggle (seamless behavior).
  * Overrides Milkdown's default Mod-b, Mod-i, etc. to toggle entire mark ranges.
  * Also handles ESC to escape from mark boundaries.
+ *
+ * Reads keyboard shortcuts from the shortcuts store for customization.
  */
-export const expandedMarkTogglePlugin = $prose(() =>
-  keymap({
-    "Mod-b": (_state, _dispatch, view) => {
+export const expandedMarkTogglePlugin = $prose(() => {
+  const shortcuts = useShortcutsStore.getState();
+
+  return keymap({
+    [shortcuts.getShortcut("bold")]: (_state, _dispatch, view) => {
       if (!view) return false;
       return expandedToggleMark(view, "strong");
     },
-    "Mod-i": (_state, _dispatch, view) => {
+    [shortcuts.getShortcut("italic")]: (_state, _dispatch, view) => {
       if (!view) return false;
       return expandedToggleMark(view, "emphasis");
     },
-    "Mod-`": (_state, _dispatch, view) => {
+    [shortcuts.getShortcut("code")]: (_state, _dispatch, view) => {
       if (!view) return false;
       return expandedToggleMark(view, "inlineCode");
     },
-    "Mod-Shift-x": (_state, _dispatch, view) => {
+    [shortcuts.getShortcut("strikethrough")]: (_state, _dispatch, view) => {
       if (!view) return false;
       return expandedToggleMark(view, "strike_through");
     },
-    "Mod-k": (_state, _dispatch, view) => {
+    [shortcuts.getShortcut("link")]: (_state, _dispatch, view) => {
       if (!view) return false;
       return expandedToggleMark(view, "link");
     },
-    "Alt-Mod-=": (_state, _dispatch, view) => {
+    [shortcuts.getShortcut("subscript")]: (_state, _dispatch, view) => {
       if (!view) return false;
       return expandedToggleMark(view, "subscript");
     },
-    "Alt-Mod-Shift-=": (_state, _dispatch, view) => {
+    [shortcuts.getShortcut("superscript")]: (_state, _dispatch, view) => {
       if (!view) return false;
       return expandedToggleMark(view, "superscript");
     },
-    "Alt-Mod-h": (_state, _dispatch, view) => {
+    [shortcuts.getShortcut("highlight")]: (_state, _dispatch, view) => {
       if (!view) return false;
       return expandedToggleMark(view, "highlight");
     },
@@ -271,8 +279,8 @@ export const expandedMarkTogglePlugin = $prose(() =>
       // No toolbar open - handle mark boundary escape
       return escapeMarkBoundary(view);
     },
-  })
-);
+  });
+});
 
 /**
  * ProseMirror plugin to track cursor position for mode synchronization.
@@ -281,6 +289,37 @@ export const expandedMarkTogglePlugin = $prose(() =>
  */
 export const cursorSyncPlugin = $prose(() => {
   let trackingEnabled = false;
+  let pendingCursorInfo: CursorInfo | null = null;
+  let rafId: number | null = null;
+
+  const getActiveTabId = (): string | null => {
+    try {
+      const windowLabel = getWindowLabel();
+      return useTabStore.getState().activeTabId[windowLabel] ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const flushCursorInfo = () => {
+    rafId = null;
+    if (!pendingCursorInfo) return;
+
+    const activeTabId = getActiveTabId();
+    if (activeTabId) {
+      // Defer state update away from the ProseMirror transaction to avoid input glitches
+      useDocumentStore.getState().setCursorInfo(activeTabId, pendingCursorInfo);
+    }
+
+    pendingCursorInfo = null;
+  };
+
+  const scheduleCursorUpdate = (cursorInfo: CursorInfo) => {
+    pendingCursorInfo = cursorInfo;
+    if (rafId === null) {
+      rafId = requestAnimationFrame(flushCursorInfo);
+    }
+  };
 
   // Delay tracking to allow cursor restoration to complete first
   setTimeout(() => {
@@ -294,13 +333,17 @@ export const cursorSyncPlugin = $prose(() => {
         // Skip tracking until restoration is complete
         if (!trackingEnabled) return;
         // Track selection changes
-        // NOTE: Using editorStore instead of documentStore here because
-        // documentStore.setCursorInfo() interferes with ProseMirror input handling
-        // and causes characters to be dropped. Root cause TBD.
         if (!view.state.selection.eq(prevState.selection)) {
           const cursorInfo = getCursorInfoFromProseMirror(view);
-          useEditorStore.getState().setCursorInfo(cursorInfo);
+          scheduleCursorUpdate(cursorInfo);
         }
+      },
+      destroy: () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+          rafId = null;
+        }
+        pendingCursorInfo = null;
       },
     }),
   });
