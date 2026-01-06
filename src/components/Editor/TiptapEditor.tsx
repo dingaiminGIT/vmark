@@ -26,6 +26,13 @@ import { formatToolbarExtension } from "@/plugins/formatToolbar/tiptap";
 import { editorKeymapExtension } from "@/plugins/editorPlugins.tiptap";
 import { highlightExtension } from "@/plugins/highlight/tiptap";
 import { subscriptExtension, superscriptExtension } from "@/plugins/subSuperscript/tiptap";
+import { alertBlockExtension } from "@/plugins/alertBlock/tiptap";
+import { detailsBlockExtension, detailsSummaryExtension } from "@/plugins/detailsBlock/tiptap";
+import { taskListItemExtension } from "@/plugins/taskToggle/tiptap";
+import { mathInlineExtension } from "@/plugins/latex/tiptapInlineMath";
+import { footnotePopupExtension } from "@/plugins/footnotePopup/tiptap";
+import { footnoteDefinitionExtension, footnoteReferenceExtension } from "@/plugins/footnotePopup/tiptapNodes";
+import { slashMenuExtension } from "@/plugins/triggerMenu/tiptapSlashMenu";
 import { useTiptapCJKFormatCommands } from "@/hooks/useTiptapCJKFormatCommands";
 import { useTiptapFormatCommands } from "@/hooks/useTiptapFormatCommands";
 import { useTiptapParagraphCommands } from "@/hooks/useTiptapParagraphCommands";
@@ -96,10 +103,19 @@ export function TiptapEditorInner() {
       StarterKit.configure({
         // We parse/serialize markdown ourselves.
         // Keep Tiptap defaults for schema names and commands.
+        listItem: false,
       }),
+      slashMenuExtension,
+      taskListItemExtension,
       highlightExtension,
       subscriptExtension,
       superscriptExtension,
+      mathInlineExtension,
+      alertBlockExtension,
+      detailsSummaryExtension,
+      detailsBlockExtension,
+      footnoteReferenceExtension,
+      footnoteDefinitionExtension,
       Table.configure({ resizable: false }),
       TableRow,
       AlignedTableHeader,
@@ -107,6 +123,7 @@ export function TiptapEditorInner() {
       tableUIExtension,
       imageViewExtension,
       cursorAwareExtension,
+      footnotePopupExtension,
       smartPasteExtension,
       linkPopupExtension,
       searchExtension,
@@ -255,7 +272,7 @@ export function TiptapEditorInner() {
   }, [content, editor]);
 
   return (
-    <div className="tiptap-editor">
+    <div className="tiptap-editor milkdown">
       <EditorContent editor={editor} />
     </div>
   );

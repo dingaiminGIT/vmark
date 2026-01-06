@@ -3,6 +3,8 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import { liftListItem, sinkListItem } from "@tiptap/pm/schema-list";
 import { isWindowFocused } from "@/utils/windowFocus";
+import { ALERT_TYPES, type AlertType } from "@/plugins/alertBlock/tiptap";
+import { convertSelectionToTaskList } from "@/plugins/taskToggle/tiptapTaskListUtils";
 
 function getCurrentHeadingLevel(editor: TiptapEditor): number | null {
   const { $from } = editor.state.selection;
@@ -144,7 +146,7 @@ export function useTiptapParagraphCommands(editor: TiptapEditor | null) {
         if (!(await isWindowFocused())) return;
         const editor = editorRef.current;
         if (!editor) return;
-        editor.chain().focus().toggleBulletList().run();
+        convertSelectionToTaskList(editor);
       });
       if (cancelled) {
         unlistenTaskList();
@@ -195,6 +197,35 @@ export function useTiptapParagraphCommands(editor: TiptapEditor | null) {
         return;
       }
       unlistenRefs.current.push(unlistenHorizontalLine);
+
+      // Info Boxes (Alert Blocks)
+      for (const alertType of ALERT_TYPES) {
+        if (cancelled) break;
+        const unlisten = await listen(`menu:info-${alertType.toLowerCase()}`, async () => {
+          if (!(await isWindowFocused())) return;
+          const editor = editorRef.current;
+          if (!editor) return;
+          editor.commands.insertAlertBlock(alertType as AlertType);
+        });
+        if (cancelled) {
+          unlisten();
+          return;
+        }
+        unlistenRefs.current.push(unlisten);
+      }
+
+      // Collapsible Block (Details)
+      const unlistenCollapsible = await listen("menu:collapsible-block", async () => {
+        if (!(await isWindowFocused())) return;
+        const editor = editorRef.current;
+        if (!editor) return;
+        editor.commands.insertDetailsBlock();
+      });
+      if (cancelled) {
+        unlistenCollapsible();
+        return;
+      }
+      unlistenRefs.current.push(unlistenCollapsible);
     };
 
     setupListeners();
