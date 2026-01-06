@@ -9,6 +9,8 @@ import type { EditorView } from "@milkdown/kit/prose/view";
 import { open, message } from "@tauri-apps/plugin-dialog";
 import { useImagePopupStore } from "@/stores/imagePopupStore";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useTabStore } from "@/stores/tabStore";
+import { withReentryGuard } from "@/utils/reentryGuard";
 import { getWindowLabel } from "@/utils/windowFocus";
 import { copyImageToAssets } from "@/utils/imageUtils";
 import {
@@ -28,9 +30,6 @@ const icons = {
   // Inline image icon (image with text line)
   inlineImage: `<svg viewBox="0 0 24 24"><rect x="2" y="6" width="10" height="10" rx="1"/><circle cx="5" cy="9" r="1.5"/><path d="m12 13-2-2-3 5"/><line x1="16" y1="8" x2="22" y2="8"/><line x1="16" y1="12" x2="22" y2="12"/><line x1="16" y1="16" x2="22" y2="16"/></svg>`,
 };
-
-// Re-entry guard for browse action
-let isBrowsing = false;
 
 /**
  * Image popup view - manages the floating popup UI.
@@ -365,73 +364,67 @@ export class ImagePopupView {
   };
 
   private handleBrowse = async () => {
-    if (isBrowsing) return;
-    isBrowsing = true;
+    const windowLabel = getWindowLabel();
 
-    const state = useImagePopupStore.getState();
-    const { imageNodePos } = state;
+    const ran = await withReentryGuard(windowLabel, "image-popup:browse", async () => {
+      const state = useImagePopupStore.getState();
+      const { imageNodePos } = state;
 
-    try {
-      const sourcePath = await open({
-        filters: [
-          {
-            name: "Images",
-            extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"],
-          },
-        ],
-      });
-
-      if (!sourcePath) {
-        isBrowsing = false;
-        return;
-      }
-
-      const windowLabel = getWindowLabel();
-      const doc = useDocumentStore.getState().getDocument(windowLabel);
-      const filePath = doc?.filePath;
-
-      if (!filePath) {
-        await message("Please save the document first to use local images.", {
-          title: "Unsaved Document",
-          kind: "warning",
+      try {
+        const sourcePath = await open({
+          filters: [
+            {
+              name: "Images",
+              extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"],
+            },
+          ],
         });
-        isBrowsing = false;
-        return;
+
+        if (!sourcePath) {
+          return;
+        }
+
+        const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+        const doc = tabId ? useDocumentStore.getState().getDocument(tabId) : undefined;
+        const filePath = doc?.filePath;
+
+        if (!filePath) {
+          await message("Please save the document first to use local images.", {
+            title: "Unsaved Document",
+            kind: "warning",
+          });
+          return;
+        }
+
+        // Copy new image to assets folder
+        const relativePath = await copyImageToAssets(sourcePath as string, filePath);
+
+        // Update the image node with new src
+        const { state: editorState, dispatch } = this.editorView;
+        if (!editorState) {
+          return;
+        }
+
+        const node = editorState.doc.nodeAt(imageNodePos);
+        if (!node || (node.type.name !== "image" && node.type.name !== "block_image")) {
+          return;
+        }
+
+        const tr = editorState.tr.setNodeMarkup(imageNodePos, null, {
+          ...node.attrs,
+          src: relativePath,
+        });
+
+        dispatch(tr);
+        state.closePopup();
+        this.editorView.focus();
+      } catch (error) {
+        console.error("[ImagePopup] Browse failed:", error);
+        await message("Failed to change image.", { kind: "error" });
       }
+    });
 
-      // Copy new image to assets folder
-      const relativePath = await copyImageToAssets(
-        sourcePath as string,
-        filePath
-      );
-
-      // Update the image node with new src
-      const { state: editorState, dispatch } = this.editorView;
-      if (!editorState) {
-        isBrowsing = false;
-        return;
-      }
-
-      const node = editorState.doc.nodeAt(imageNodePos);
-      if (!node || (node.type.name !== "image" && node.type.name !== "block_image")) {
-        isBrowsing = false;
-        return;
-      }
-
-      const tr = editorState.tr.setNodeMarkup(imageNodePos, null, {
-        ...node.attrs,
-        src: relativePath,
-      });
-
-      dispatch(tr);
-      state.closePopup();
-      this.editorView.focus();
-    } catch (error) {
-      console.error("[ImagePopup] Browse failed:", error);
-      await message("Failed to change image.", { kind: "error" });
-    } finally {
-      isBrowsing = false;
-    }
+    if (ran === undefined) return;
   };
 
   private handleCopy = async () => {

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
 import { useDocumentActions, useDocumentContent, useDocumentCursorInfo } from "@/hooks/useDocumentState";
 import { parseMarkdownToTiptapDoc, serializeTiptapDocToMarkdown } from "@/utils/tiptapMarkdown";
 import { registerActiveWysiwygFlusher } from "@/utils/wysiwygFlush";
@@ -16,6 +15,11 @@ import { spellCheckExtension } from "@/plugins/spellCheck/tiptap";
 import { autoPairExtension } from "@/plugins/autoPair/tiptap";
 import { focusModeExtension } from "@/plugins/focusMode/tiptap";
 import { typewriterModeExtension } from "@/plugins/typewriterMode/tiptap";
+import { imageViewExtension } from "@/plugins/imageView/tiptap";
+import { imagePopupExtension } from "@/plugins/imagePopup/tiptap";
+import { imageHandlerExtension } from "@/plugins/imageHandler/tiptap";
+import { codePreviewExtension } from "@/plugins/codePreview/tiptap";
+import { listContinuationExtension } from "@/plugins/listContinuation/tiptap";
 
 const CURSOR_TRACKING_DELAY_MS = 200;
 
@@ -40,7 +44,7 @@ export function TiptapEditorInner() {
         // We parse/serialize markdown ourselves.
         // Keep Tiptap defaults for schema names and commands.
       }),
-      Image.configure({ inline: false }),
+      imageViewExtension,
       cursorAwareExtension,
       smartPasteExtension,
       linkPopupExtension,
@@ -49,6 +53,10 @@ export function TiptapEditorInner() {
       autoPairExtension,
       focusModeExtension,
       typewriterModeExtension,
+      imageHandlerExtension,
+      imagePopupExtension,
+      codePreviewExtension,
+      listContinuationExtension,
     ],
     []
   );

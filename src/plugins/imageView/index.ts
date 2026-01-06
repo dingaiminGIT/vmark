@@ -12,10 +12,20 @@ import { dirname, join } from "@tauri-apps/api/path";
 import type { NodeView } from "@milkdown/kit/prose/view";
 import type { Node } from "@milkdown/kit/prose/model";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useTabStore } from "@/stores/tabStore";
 import { useImageContextMenuStore } from "@/stores/imageContextMenuStore";
 import { useImagePopupStore } from "@/stores/imagePopupStore";
 import { getWindowLabel } from "@/utils/windowFocus";
 import { isRelativePath, isAbsolutePath, isExternalUrl, validateImagePath } from "./security";
+
+function getActiveTabIdForCurrentWindow(): string | null {
+  try {
+    const windowLabel = getWindowLabel();
+    return useTabStore.getState().activeTabId[windowLabel] ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Convert image path to asset URL for webview rendering.
@@ -40,8 +50,8 @@ async function resolveImageSrc(src: string): Promise<string> {
       return "";
     }
 
-    const windowLabel = getWindowLabel();
-    const doc = useDocumentStore.getState().getDocument(windowLabel);
+    const tabId = getActiveTabIdForCurrentWindow();
+    const doc = tabId ? useDocumentStore.getState().getDocument(tabId) : undefined;
     const filePath = doc?.filePath;
     if (!filePath) {
       return src; // No document path, can't resolve
@@ -66,7 +76,7 @@ async function resolveImageSrc(src: string): Promise<string> {
  * Custom NodeView for image nodes.
  * Renders images with resolved asset URLs while keeping relative paths in the document.
  */
-class ImageNodeView implements NodeView {
+export class ImageNodeView implements NodeView {
   dom: HTMLImageElement;
   private originalSrc: string;
   private getPos: () => number | undefined;
