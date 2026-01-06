@@ -58,57 +58,12 @@ A writer's tool enhanced with local AI.
 
 ## Skills
 
-### Milkdown Plugin Development Expert
+Project skills are auto-discovered from `.claude/skills/`:
 
-Located at `.claude/skills/milkdown-plugin-dev-expert/`
-
-Use this skill when:
-- Creating custom nodes, marks, or commands for Milkdown
-- Implementing input rules or integrating remark plugins
-- Working with Milkdown's context system (slices, timers)
-- Building React or Vue integrations for Milkdown
-
-Reference files:
-- `references/context-system.md` - Slices, timers, plugin lifecycle
-- `references/plugin-patterns.md` - Common implementation patterns
-- `references/examples.md` - Complete working examples
-
-### Tauri App Development
-
-Located at `.claude/skills/tauri-app-dev/`
-
-Use this skill when:
-- Building cross-platform desktop applications with Tauri 2.0 and Rust
-- Implementing commands and IPC between frontend and Rust backend
-- Working with file system, window management, or state management
-- Setting up system tray, menus, or plugin development
-- Configuring security (capabilities/permissions)
-- Bundling, distribution, or auto-updates
-
-Reference files:
-- `references/commands-and-ipc.md` - Frontend-backend communication
-- `references/plugins.md` - Plugin development guide
-- `references/security.md` - Capabilities and permissions
-- `references/bundling.md` - Build and distribution
-- `references/patterns.md` - Common patterns for editor apps
-
-### -Style Editor Design
-
-Located at `.claude/skills/wysiwyg-editor/`
-
-Use this skill when:
-- Designing UI/UX for a seamless markdown editor
-- Implementing seamless WYSIWYG with inline syntax reveal
-- Building focus mode or typewriter mode features
-- Handling images (paste, drag-drop, auto-copy)
-- Creating file management, outline panels, or theming
-- Any feature that mimics the writing experience
-
-Reference files:
-- `references/ui-design.md` - Layout, sidebar, outline, theming
-- `references/wysiwyg-behavior.md` - Inline editing, focus mode, typewriter
-- `references/features.md` - File management, export, search, shortcuts
-- `references/milkdown-implementation.md` - Plugin code for  features
+- @.claude/skills/milkdown-plugin-dev-expert/SKILL.md
+- @.claude/skills/tauri-app-dev/SKILL.md
+- @.claude/skills/wysiwyg-editor/SKILL.md
+- @.claude/skills/tiptap-dev/SKILL.md
 
 ## PR Checklist
 
