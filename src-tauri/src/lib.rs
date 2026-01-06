@@ -5,7 +5,7 @@ mod window_manager;
 mod workspace;
 
 use std::sync::Mutex;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 /// Stores file paths opened via Finder before the main window is ready
 static PENDING_OPEN_FILES: Mutex<Vec<String>> = Mutex::new(Vec::new());
@@ -95,9 +95,9 @@ pub fn run() {
                         if let Ok(path) = url.to_file_path() {
                             if let Some(path_str) = path.to_str() {
                                 // Check if main window exists and is ready
-                                if let Some(_main_window) = app.get_webview_window("main") {
-                                    // App is running - open in new window
-                                    let _ = window_manager::create_document_window(app, Some(path_str));
+                                if let Some(main_window) = app.get_webview_window("main") {
+                                    // App is running - notify main window to open file
+                                    let _ = main_window.emit("app:open-file", path_str);
                                 } else {
                                     // App just launched - store for main window to pick up
                                     if let Ok(mut pending) = PENDING_OPEN_FILES.lock() {
