@@ -115,6 +115,12 @@ const tiptapMarkdownSerializer = new MarkdownSerializer(
         `![${state.esc(node.attrs.alt || "")}](${node.attrs.src.replace(/[()]/g, "\\$&")}${node.attrs.title ? ` "${node.attrs.title.replace(/"/g, '\\"')}"` : ""})`
       );
     },
+    block_image: (state, node) => {
+      state.write(
+        `![${state.esc(node.attrs.alt || "")}](${node.attrs.src.replace(/[()]/g, "\\$&")}${node.attrs.title ? ` "${node.attrs.title.replace(/"/g, '\\"')}"` : ""})`
+      );
+      state.closeBlock(node);
+    },
     hardBreak: (state, node, parent, index) => {
       for (let i = index + 1; i < parent.childCount; i++) {
         if (parent.child(i).type !== node.type) {

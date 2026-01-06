@@ -6,6 +6,52 @@ import { patchTokenHandlers, type TokenHandler } from "./tiptapMarkdownTokenHand
 const markdownIt = createVmarkMarkdownIt();
 const parserCache = new WeakMap<Schema, MarkdownParser>();
 
+function convertStandaloneImageParagraphs(schema: Schema, doc: PMNode): PMNode {
+  const blockImageType = schema.nodes.block_image;
+  const paragraphType = schema.nodes.paragraph;
+  const imageType = schema.nodes.image;
+
+  if (!blockImageType || !paragraphType || !imageType) return doc;
+
+  const allowedParents = new Set(["doc", "blockquote", "alertBlock", "detailsBlock"]);
+
+  const mapNode = (node: PMNode): PMNode => {
+    if (node.isText || node.isLeaf) return node;
+
+    let changed = false;
+    const nextChildren: PMNode[] = [];
+
+    node.forEach((child) => {
+      const pmChild = child as PMNode;
+      const mappedChild = mapNode(pmChild);
+
+      let nextChild = mappedChild;
+
+      if (
+        allowedParents.has(node.type.name) &&
+        mappedChild.type === paragraphType &&
+        mappedChild.childCount === 1 &&
+        mappedChild.firstChild?.type === imageType
+      ) {
+        const img = mappedChild.firstChild as PMNode;
+        nextChild = blockImageType.create({
+          src: img.attrs.src ?? "",
+          alt: img.attrs.alt ?? "",
+          title: img.attrs.title ?? "",
+        }) as PMNode;
+      }
+
+      if (nextChild !== pmChild) changed = true;
+      nextChildren.push(nextChild);
+    });
+
+    if (!changed) return node;
+    return node.type.create(node.attrs, nextChildren, node.marks) as PMNode;
+  };
+
+  return mapNode(doc);
+}
+
 function normalizeMathBlocks(markdown: string): string {
   const lines = markdown.split(/\r?\n/);
   const out: string[] = [];
@@ -92,7 +138,7 @@ export function parseMarkdownToTiptapDoc(schema: Schema, markdown: string): PMNo
   const normalized = normalizeMathBlocks(markdown);
   const { main, defs } = extractFootnoteDefinitions(normalized);
   if (cached) {
-    const baseDoc = cached.parse(main) as PMNode;
+    const baseDoc = convertStandaloneImageParagraphs(schema, cached.parse(main) as PMNode);
     if (defs.length === 0) return baseDoc;
 
     const defType = schema.nodes.footnote_definition;
@@ -177,7 +223,7 @@ export function parseMarkdownToTiptapDoc(schema: Schema, markdown: string): PMNo
   patchTokenHandlers(handlers);
 
   parserCache.set(schema, parser);
-  const baseDoc = parser.parse(main) as PMNode;
+  const baseDoc = convertStandaloneImageParagraphs(schema, parser.parse(main) as PMNode);
   if (defs.length === 0) return baseDoc;
 
   const defType = schema.nodes.footnote_definition;

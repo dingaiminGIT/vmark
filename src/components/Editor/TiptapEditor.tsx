@@ -17,6 +17,7 @@ import { autoPairExtension } from "@/plugins/autoPair/tiptap";
 import { focusModeExtension } from "@/plugins/focusMode/tiptap";
 import { typewriterModeExtension } from "@/plugins/typewriterMode/tiptap";
 import { imageViewExtension } from "@/plugins/imageView/tiptap";
+import { blockImageExtension } from "@/plugins/blockImage/tiptap";
 import { imagePopupExtension } from "@/plugins/imagePopup/tiptap";
 import { imageHandlerExtension } from "@/plugins/imageHandler/tiptap";
 import { codePreviewExtension } from "@/plugins/codePreview/tiptap";
@@ -121,6 +122,7 @@ export function TiptapEditorInner() {
       AlignedTableHeader,
       AlignedTableCell,
       tableUIExtension,
+      blockImageExtension,
       imageViewExtension,
       cursorAwareExtension,
       footnotePopupExtension,

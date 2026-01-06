@@ -11,4 +11,4 @@ export const imageViewExtension = Image.extend({
       ) as unknown as NodeView;
     };
   },
-}).configure({ inline: false });
+}).configure({ inline: true });

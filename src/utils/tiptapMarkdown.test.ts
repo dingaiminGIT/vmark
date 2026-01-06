@@ -8,6 +8,7 @@ import { subscriptExtension, superscriptExtension } from "@/plugins/subSuperscri
 import { alertBlockExtension } from "@/plugins/alertBlock/tiptap";
 import { detailsBlockExtension, detailsSummaryExtension } from "@/plugins/detailsBlock/tiptap";
 import { taskListItemExtension } from "@/plugins/taskToggle/tiptap";
+import { blockImageExtension } from "@/plugins/blockImage/tiptap";
 import { footnoteDefinitionExtension, footnoteReferenceExtension } from "@/plugins/footnotePopup/tiptapNodes";
 import { mathInlineExtension } from "@/plugins/latex/tiptapInlineMath";
 import { parseMarkdownToTiptapDoc, serializeTiptapDocToMarkdown } from "./tiptapMarkdown";
@@ -47,7 +48,8 @@ function createSchema() {
     detailsBlockExtension,
     footnoteReferenceExtension,
     footnoteDefinitionExtension,
-    Image,
+    Image.configure({ inline: true }),
+    blockImageExtension,
     Table.configure({ resizable: false }),
     TableRow,
     AlignedTableHeader,
@@ -81,6 +83,38 @@ describe("tiptapMarkdown inline mark support", () => {
   it("round-trips highlight/subscript/superscript", () => {
     const schema = createSchema();
     const input = "a ==hi== ~sub~ ^sup^ ~~strike~~";
+
+    const doc = parseMarkdownToTiptapDoc(schema, input);
+    const output = serializeTiptapDocToMarkdown(doc).trim();
+
+    expect(output).toBe(input);
+  });
+});
+
+describe("tiptapMarkdown image support", () => {
+  it("round-trips an inline image", () => {
+    const schema = createSchema();
+    const input = "Hello ![alt](./assets/images/a.png) world";
+
+    const doc = parseMarkdownToTiptapDoc(schema, input);
+    const output = serializeTiptapDocToMarkdown(doc).trim();
+
+    expect(output).toBe(input);
+  });
+
+  it("round-trips a standalone image", () => {
+    const schema = createSchema();
+    const input = "![alt](./assets/images/a.png)";
+
+    const doc = parseMarkdownToTiptapDoc(schema, input);
+    const output = serializeTiptapDocToMarkdown(doc).trim();
+
+    expect(output).toBe(input);
+  });
+
+  it("round-trips an image inside a list item", () => {
+    const schema = createSchema();
+    const input = "- ![alt](./assets/images/a.png)";
 
     const doc = parseMarkdownToTiptapDoc(schema, input);
     const output = serializeTiptapDocToMarkdown(doc).trim();
