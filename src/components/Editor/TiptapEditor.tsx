@@ -4,6 +4,8 @@ import type { Editor as TiptapEditor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import { useDocumentActions, useDocumentContent, useDocumentCursorInfo } from "@/hooks/useDocumentState";
+import { useImageContextMenu } from "@/hooks/useImageContextMenu";
+import { useOutlineSync } from "@/hooks/useOutlineSync";
 import { parseMarkdownToTiptapDoc, serializeTiptapDocToMarkdown } from "@/utils/tiptapMarkdown";
 import { registerActiveWysiwygFlusher } from "@/utils/wysiwygFlush";
 import { getCursorInfoFromTiptap, restoreCursorInTiptap } from "@/utils/cursorSync/tiptap";
@@ -39,6 +41,7 @@ import { useTiptapFormatCommands } from "@/hooks/useTiptapFormatCommands";
 import { useTiptapParagraphCommands } from "@/hooks/useTiptapParagraphCommands";
 import { useTiptapSelectionCommands } from "@/hooks/useTiptapSelectionCommands";
 import { useTiptapTableCommands } from "@/hooks/useTiptapTableCommands";
+import { ImageContextMenu } from "./ImageContextMenu";
 
 const CURSOR_TRACKING_DELAY_MS = 200;
 
@@ -225,6 +228,10 @@ export function TiptapEditorInner() {
     },
   });
 
+  const getEditorView = useCallback(() => editor?.view ?? null, [editor]);
+  const handleImageContextMenuAction = useImageContextMenu(getEditorView);
+  useOutlineSync(getEditorView);
+
   useTiptapParagraphCommands(editor);
   useTiptapFormatCommands(editor);
   useTiptapTableCommands(editor);
@@ -274,8 +281,11 @@ export function TiptapEditorInner() {
   }, [content, editor]);
 
   return (
-    <div className="tiptap-editor milkdown">
-      <EditorContent editor={editor} />
-    </div>
+    <>
+      <div className="tiptap-editor milkdown">
+        <EditorContent editor={editor} />
+      </div>
+      <ImageContextMenu onAction={handleImageContextMenuAction} />
+    </>
   );
 }

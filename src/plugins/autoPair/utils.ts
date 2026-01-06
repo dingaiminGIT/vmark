@@ -4,7 +4,7 @@
  * Helper functions for smart auto-pairing detection.
  */
 
-import type { EditorState } from "@milkdown/kit/prose/state";
+import type { EditorState } from "@tiptap/pm/state";
 import { SMART_QUOTE_CHARS } from "./pairs";
 
 /**

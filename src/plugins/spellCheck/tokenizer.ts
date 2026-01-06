@@ -5,7 +5,7 @@
  * Skips code blocks, URLs, emails, and numbers.
  */
 
-import type { Node as ProseMirrorNode } from "@milkdown/kit/prose/model";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { WordToken } from "./types";
 
 /**

@@ -4,7 +4,7 @@
  * Dims all lines except the current paragraph.
  * A paragraph is defined as lines between blank lines.
  *
- * Mirrors the behavior of the Milkdown focus mode plugin.
+ * Mirrors the behavior of the WYSIWYG focus mode plugin.
  */
 
 import { RangeSetBuilder } from "@codemirror/state";

@@ -16,7 +16,7 @@
 }
 
 /* WYSIWYG Editor Styles - GitHub Theme */
-/* Both Milkdown and Tiptap editors share these styles */
+/* Note: `.milkdown` is a legacy style-scope class applied to the Tiptap wrapper. */
 .milkdown,
 .tiptap-editor {
   width: 100%;
@@ -508,7 +508,7 @@
 
 /* Focus mode styles moved to src/plugins/focusMode/focus-mode.css */
 
-/* Source editor (CodeMirror) - matches .milkdown styling */
+/* Source editor (CodeMirror) - matches WYSIWYG styling */
 .source-editor {
   width: 100%;
   min-height: 100%;
@@ -707,7 +707,7 @@
 
 /* ===========================================
  * Prism Syntax Highlighting for WYSIWYG Mode
- * (Milkdown code blocks) - GitHub style
+ * (WYSIWYG code blocks) - GitHub style
  * =========================================== */
 
 /* Light theme */

@@ -67,10 +67,10 @@ export function normalizeEllipsis(text: string): string {
 
 /**
  * Collapse excessive newlines (3+) to max 2
- * Also handles Milkdown's <br /> tags for empty paragraphs
+ * Also handles legacy <br /> tags for empty paragraphs
  */
 export function collapseNewlines(text: string): string {
-  // Remove standalone <br /> lines (empty paragraphs from Milkdown)
+  // Remove standalone <br /> lines (empty paragraphs from legacy WYSIWYG output)
   // Pattern: \n\n<br />\n\n or multiple consecutive ones
   text = text.replace(/(\n\n)(<br\s*\/?>\n\n)+/g, "\n\n");
 

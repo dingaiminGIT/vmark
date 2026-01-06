@@ -19,26 +19,6 @@ export default defineConfig(async () => ({
   // Pre-bundle heavy dependencies to speed up dev server startup
   optimizeDeps: {
     include: [
-      // Milkdown and its dependencies
-      "@milkdown/kit/core",
-      "@milkdown/kit/preset/commonmark",
-      "@milkdown/kit/preset/gfm",
-      "@milkdown/kit/plugin/history",
-      "@milkdown/kit/plugin/clipboard",
-      "@milkdown/kit/plugin/listener",
-      "@milkdown/kit/plugin/cursor",
-      "@milkdown/kit/plugin/indent",
-      "@milkdown/kit/plugin/trailing",
-      "@milkdown/kit/prose/state",
-      "@milkdown/kit/prose/view",
-      "@milkdown/kit/prose/model",
-      "@milkdown/kit/prose/transform",
-      "@milkdown/kit/prose/commands",
-      "@milkdown/kit/prose/keymap",
-      "@milkdown/kit/prose/inputrules",
-      "@milkdown/kit/utils",
-      "@milkdown/react",
-      "@milkdown/plugin-prism",
       // CodeMirror
       "@codemirror/state",
       "@codemirror/view",
@@ -50,7 +30,6 @@ export default defineConfig(async () => ({
       "@codemirror/search",
       // Heavy utilities (mermaid is lazy-loaded, not included here)
       "katex",
-      "refractor",
       // Tauri APIs
       "@tauri-apps/api/core",
       "@tauri-apps/api/event",

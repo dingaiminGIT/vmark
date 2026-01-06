@@ -2,7 +2,7 @@
  * Syntax Reveal Plugin - Shared Utilities
  */
 
-import { Decoration } from "@milkdown/kit/prose/view";
+import { Decoration } from "@tiptap/pm/view";
 
 /**
  * Create a syntax widget element factory

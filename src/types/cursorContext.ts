@@ -2,14 +2,14 @@
  * Cursor Context Types
  *
  * Shared interface for cursor position context across both editor modes.
- * Source mode (CodeMirror) and Milkdown mode (ProseMirror) implement
+ * Source mode (CodeMirror) and WYSIWYG mode (Tiptap/ProseMirror) implement
  * this interface with their own detection logic.
  */
 
 import type { FormatType } from "@/plugins/sourceFormatPopup/formatActions";
 
 /**
- * Code block context (code fence in source, fence node in Milkdown)
+ * Code block context (code fence in source, code block node in WYSIWYG)
  */
 export interface CodeBlockContext {
   language: string;

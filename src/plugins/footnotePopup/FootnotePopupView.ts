@@ -5,7 +5,6 @@
  * Similar to LinkPopupView - allows editing footnote content directly.
  */
 
-import type { EditorView } from "@milkdown/kit/prose/view";
 import { useFootnotePopupStore } from "@/stores/footnotePopupStore";
 import {
   calculatePopupPosition,
@@ -13,29 +12,17 @@ import {
   getViewportBounds,
   type AnchorRect,
 } from "@/utils/popupPosition";
-import { scrollToPosition } from "./utils";
-
-// SVG Icons
-const icons = {
-  save: `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
-  goto: `<svg viewBox="0 0 24 24"><path d="M12 5v14"/><polyline points="19 12 12 19 5 12"/></svg>`,
-};
-
-// Timing constants
-/** Delay before focusing textarea after autoFocus open (allows DOM to settle) */
-const AUTOFOCUS_DELAY_MS = 50;
-/** Delay before removing editing class on blur (allows click on buttons) */
-const BLUR_CHECK_DELAY_MS = 100;
-
-// Layout constants
-/** Default popup width when not yet measured */
-const DEFAULT_POPUP_WIDTH = 280;
-/** Default popup height when not yet measured */
-const DEFAULT_POPUP_HEIGHT = 80;
-/** Gap between popup and anchor element */
-const POPUP_GAP_PX = 8;
-/** Maximum height for textarea auto-resize */
-const TEXTAREA_MAX_HEIGHT = 120;
+import type { EditorView } from "@tiptap/pm/view";
+import { scrollToPosition } from "./tiptapDomUtils";
+import {
+  AUTOFOCUS_DELAY_MS,
+  BLUR_CHECK_DELAY_MS,
+  DEFAULT_POPUP_HEIGHT,
+  DEFAULT_POPUP_WIDTH,
+  POPUP_GAP_PX,
+  TEXTAREA_MAX_HEIGHT,
+  createFootnotePopupDom,
+} from "./footnotePopupDom";
 
 export class FootnotePopupView {
   private container: HTMLDivElement;
@@ -52,11 +39,16 @@ export class FootnotePopupView {
   constructor(view: EditorView) {
     this.view = view;
 
-    // Build DOM structure
-    this.container = this.buildContainer();
-    this.textarea = this.container.querySelector(
-      ".footnote-popup-textarea"
-    ) as HTMLTextAreaElement;
+    const dom = createFootnotePopupDom({
+      onInputChange: this.handleInputChange,
+      onInputKeydown: this.handleInputKeydown,
+      onTextareaClick: this.handleTextareaClick,
+      onTextareaBlur: this.handleTextareaBlur,
+      onGoto: this.handleGoto,
+      onSave: this.handleSave,
+    });
+    this.container = dom.container;
+    this.textarea = dom.textarea;
 
     // Add to DOM
     document.body.appendChild(this.container);
@@ -97,53 +89,6 @@ export class FootnotePopupView {
       this.lastLabel = state.label;
       this.lastAutoFocus = state.autoFocus;
     }
-  }
-
-  private buildContainer(): HTMLDivElement {
-    const container = document.createElement("div");
-    container.className = "footnote-popup";
-    container.style.display = "none";
-
-    const textarea = document.createElement("textarea");
-    textarea.className = "footnote-popup-textarea";
-    textarea.placeholder = "Footnote content...";
-    textarea.rows = 2;
-    textarea.addEventListener("input", this.handleInputChange);
-    textarea.addEventListener("keydown", this.handleInputKeydown);
-    textarea.addEventListener("click", this.handleTextareaClick);
-    textarea.addEventListener("blur", this.handleTextareaBlur);
-    container.appendChild(textarea);
-
-    const btnRow = document.createElement("div");
-    btnRow.className = "footnote-popup-buttons";
-
-    const labelEl = document.createElement("div");
-    labelEl.className = "footnote-popup-label";
-    btnRow.appendChild(labelEl);
-
-    const spacer = document.createElement("div");
-    spacer.style.flex = "1";
-    btnRow.appendChild(spacer);
-
-    const gotoBtn = this.buildIconButton(icons.goto, "Go to definition", this.handleGoto);
-    gotoBtn.classList.add("footnote-popup-btn-goto");
-    const saveBtn = this.buildIconButton(icons.save, "Save (Enter)", this.handleSave);
-    saveBtn.classList.add("footnote-popup-btn-save");
-
-    btnRow.appendChild(gotoBtn);
-    btnRow.appendChild(saveBtn);
-    container.appendChild(btnRow);
-    return container;
-  }
-
-  private buildIconButton(svg: string, title: string, onClick: () => void): HTMLButtonElement {
-    const btn = document.createElement("button");
-    btn.className = "footnote-popup-btn";
-    btn.type = "button";
-    btn.title = title;
-    btn.innerHTML = svg;
-    btn.addEventListener("click", onClick);
-    return btn;
   }
 
   private show(content: string, anchorRect: DOMRect, definitionPos: number | null) {

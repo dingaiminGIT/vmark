@@ -5,12 +5,10 @@
  * while keeping relative paths in the document (for portability).
  */
 
-import { $view } from "@milkdown/kit/utils";
-import { imageSchema } from "@milkdown/kit/preset/commonmark";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { dirname, join } from "@tauri-apps/api/path";
-import type { NodeView } from "@milkdown/kit/prose/view";
-import type { Node } from "@milkdown/kit/prose/model";
+import type { NodeView } from "@tiptap/pm/view";
+import type { Node } from "@tiptap/pm/model";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useImageContextMenuStore } from "@/stores/imageContextMenuStore";
@@ -230,12 +228,3 @@ export class ImageNodeView implements NodeView {
     this.dom.classList.remove("ProseMirror-selectednode");
   }
 }
-
-/**
- * Milkdown plugin for custom image rendering.
- */
-export const imageViewPlugin = $view(imageSchema.node, () => {
-  return (node, _view, getPos): NodeView => new ImageNodeView(node, getPos);
-});
-
-export default imageViewPlugin;

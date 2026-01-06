@@ -12,14 +12,12 @@ import { useCallback } from "react";
 import { open, message } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { dirname, join } from "@tauri-apps/api/path";
-import { editorViewCtx } from "@milkdown/kit/core";
-import type { Editor } from "@milkdown/kit/core";
-import { useDocumentStore } from "@/stores/documentStore";
-import { getWindowLabel } from "@/utils/windowFocus";
+import type { EditorView } from "@tiptap/pm/view";
 import { useImageContextMenuStore } from "@/stores/imageContextMenuStore";
 import { copyImageToAssets } from "@/utils/imageUtils";
+import { useDocumentFilePath } from "@/hooks/useDocumentState";
 
-type GetEditor = () => Editor | undefined;
+type GetEditorView = () => EditorView | null;
 
 // Re-entry guard for change image (prevents duplicate dialogs)
 let isChangingImage = false;
@@ -47,17 +45,16 @@ async function resolveImagePath(
   }
 }
 
-export function useImageContextMenu(getEditor: GetEditor) {
+export function useImageContextMenu(getEditorView: GetEditorView) {
+  const filePath = useDocumentFilePath();
+
   const handleAction = useCallback(
     async (action: string) => {
       const { imageSrc, imageNodePos } = useImageContextMenuStore.getState();
-      const windowLabel = getWindowLabel();
-      const doc = useDocumentStore.getState().getDocument(windowLabel);
-      const filePath = doc?.filePath;
-      const editor = getEditor();
+      const view = getEditorView();
 
-      if (!editor) {
-        console.warn("[ImageContextMenu] No editor available");
+      if (!view) {
+        console.warn("[ImageContextMenu] No editor view available");
         return;
       }
 
@@ -93,25 +90,20 @@ export function useImageContextMenu(getEditor: GetEditor) {
             );
 
             // Update the image node with new src
-            editor.action((ctx) => {
-              const view = ctx.get(editorViewCtx);
-              if (!view) return;
+            const { state, dispatch } = view;
+            const node = state.doc.nodeAt(imageNodePos);
 
-              const { state, dispatch } = view;
-              const node = state.doc.nodeAt(imageNodePos);
+            if (!node || (node.type.name !== "image" && node.type.name !== "block_image")) {
+              console.warn("[ImageContextMenu] No image node at position");
+              return;
+            }
 
-              if (!node || node.type.name !== "image") {
-                console.warn("[ImageContextMenu] No image node at position");
-                return;
-              }
-
-              const tr = state.tr.setNodeMarkup(imageNodePos, null, {
-                ...node.attrs,
-                src: relativePath,
-              });
-
-              dispatch(tr);
+            const tr = state.tr.setNodeMarkup(imageNodePos, null, {
+              ...node.attrs,
+              src: relativePath,
             });
+
+            dispatch(tr);
           } catch (error) {
             console.error("Failed to change image:", error);
             await message("Failed to change image.", { kind: "error" });
@@ -122,22 +114,16 @@ export function useImageContextMenu(getEditor: GetEditor) {
         }
 
         case "delete": {
-          editor.action((ctx) => {
-            const view = ctx.get(editorViewCtx);
-            if (!view) return;
+          const { state, dispatch } = view;
+          const node = state.doc.nodeAt(imageNodePos);
 
-            const { state, dispatch } = view;
-            const node = state.doc.nodeAt(imageNodePos);
+          if (!node || (node.type.name !== "image" && node.type.name !== "block_image")) {
+            console.warn("[ImageContextMenu] No image node at position");
+            return;
+          }
 
-            if (!node || node.type.name !== "image") {
-              console.warn("[ImageContextMenu] No image node at position");
-              return;
-            }
-
-            // Delete the node
-            const tr = state.tr.delete(imageNodePos, imageNodePos + node.nodeSize);
-            dispatch(tr);
-          });
+          const tr = state.tr.delete(imageNodePos, imageNodePos + node.nodeSize);
+          dispatch(tr);
           break;
         }
 
@@ -184,7 +170,7 @@ export function useImageContextMenu(getEditor: GetEditor) {
         }
       }
     },
-    [getEditor]
+    [filePath, getEditorView]
   );
 
   return handleAction;

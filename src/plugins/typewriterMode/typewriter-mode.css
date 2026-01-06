@@ -5,7 +5,7 @@
  */
 
 /* Add padding so content can scroll to center the cursor */
-.typewriter-mode .milkdown .editor {
+.typewriter-mode .tiptap-editor .ProseMirror {
   padding-bottom: 50vh;
 }
 

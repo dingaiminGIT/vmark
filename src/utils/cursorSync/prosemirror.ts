@@ -1,6 +1,6 @@
-import type { EditorView } from "@milkdown/kit/prose/view";
-import type { Node as PMNode } from "@milkdown/kit/prose/model";
-import { TextSelection } from "@milkdown/kit/prose/state";
+import type { EditorView } from "@tiptap/pm/view";
+import type { Node as PMNode } from "@tiptap/pm/model";
+import { TextSelection } from "@tiptap/pm/state";
 import type { CursorInfo, NodeType } from "@/stores/editorStore";
 import { getContentLineIndex } from "./markdown";
 import { extractCursorContext, findBestPosition } from "./matching";

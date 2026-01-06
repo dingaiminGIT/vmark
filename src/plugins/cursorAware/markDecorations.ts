@@ -3,12 +3,11 @@
  *
  * Adds widget decorations to show syntax markers when cursor is inside marks.
  * Uses widget decorations (inserting new DOM elements) instead of inline
- * decorations to avoid infinite loop issues with React/Milkdown.
+ * decorations to avoid infinite loop issues with React/ProseMirror.
  */
 
-import type { Decoration } from "@milkdown/kit/prose/view";
-import { Decoration as Dec } from "@milkdown/kit/prose/view";
-import type { Node, Mark, ResolvedPos } from "@milkdown/kit/prose/model";
+import { Decoration } from "@tiptap/pm/view";
+import type { Node, Mark, ResolvedPos } from "@tiptap/pm/model";
 
 // Mark type to syntax mapping
 const MARK_SYNTAX: Record<string, { open: string; close: string }> = {
@@ -138,7 +137,7 @@ function addWidgetDecoration(
   side: -1 | 1 = -1
 ): void {
   decorations.push(
-    Dec.widget(pos, createSyntaxWidget(text, type), { side })
+    Decoration.widget(pos, createSyntaxWidget(text, type), { side })
   );
 }
 

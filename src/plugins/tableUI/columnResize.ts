@@ -5,7 +5,7 @@
  * Width is stored as CSS only (resets on reload).
  */
 
-import type { EditorView } from "@milkdown/kit/prose/view";
+import type { EditorView } from "@tiptap/pm/view";
 
 const MIN_COLUMN_WIDTH = 50;
 const HANDLE_CLASS = "table-resize-handle";

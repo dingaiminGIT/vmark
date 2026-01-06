@@ -15,8 +15,7 @@ import {
 
 type EditorViewLike = {
   dom: HTMLElement;
-  // We keep this structural to support both Milkdown and Tiptap EditorView objects.
-  // `any` is intentional here because ProseMirror’s internal types are nominal across packages.
+  // We keep this structural because ProseMirror’s internal types are nominal across packages.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   state: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

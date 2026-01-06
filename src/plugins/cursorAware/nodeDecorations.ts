@@ -10,9 +10,8 @@
  * - footnote_reference: [^label]
  */
 
-import type { Decoration } from "@milkdown/kit/prose/view";
-import { Decoration as Dec } from "@milkdown/kit/prose/view";
-import type { Node } from "@milkdown/kit/prose/model";
+import { Decoration } from "@tiptap/pm/view";
+import type { Node } from "@tiptap/pm/model";
 
 // Node types that support cursor-aware editing
 const CURSOR_AWARE_NODES = new Set([
@@ -46,7 +45,7 @@ export function addNodeDecorations(
 
     if (cursorInside) {
       decorations.push(
-        Dec.node(nodeStart, nodeEnd, {
+        Decoration.node(nodeStart, nodeEnd, {
           class: "editing",
         })
       );

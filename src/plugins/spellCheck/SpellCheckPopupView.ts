@@ -5,7 +5,7 @@
  * Shows when right-clicking on a misspelled word.
  */
 
-import type { EditorView } from "@milkdown/kit/prose/view";
+import type { EditorView } from "@tiptap/pm/view";
 import { useSpellCheckStore } from "@/stores/spellCheckStore";
 
 /**

@@ -2,7 +2,7 @@
  * Format Toolbar Store
  *
  * Manages the visibility and position of the format toolbar
- * in Milkdown WYSIWYG mode. Supports multiple modes:
+ * in WYSIWYG mode. Supports multiple modes:
  * - format: inline formatting (bold, italic, etc.)
  * - heading: heading level selection (H1-H6, paragraph)
  * - code: language picker for code blocks
@@ -11,7 +11,7 @@
 
 import { create } from "zustand";
 import type { AnchorRect } from "@/utils/popupPosition";
-import type { EditorView } from "@milkdown/kit/prose/view";
+import type { EditorView } from "@tiptap/pm/view";
 
 export type ToolbarMode = "format" | "heading" | "code" | "merged";
 export type ContextMode = "format" | "inline-insert" | "block-insert";

@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { Editor as MilkdownEditor, editorViewCtx } from "@milkdown/kit/core";
-import { Selection } from "@milkdown/kit/prose/state";
-import type { Node } from "@milkdown/kit/prose/model";
+import { Selection } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
+import type { Node } from "@tiptap/pm/model";
 import { useUIStore } from "@/stores/uiStore";
 
-type EditorGetter = () => MilkdownEditor | undefined;
+type EditorViewGetter = () => EditorView | null;
 
 // Constants
 const SCROLL_OFFSET_PX = 100;
@@ -64,7 +64,7 @@ function findHeadingIndexAtPosition(doc: Node, cursorPos: number): number {
  * 1. Listen for scroll-to-heading events and scroll editor
  * 2. Track cursor position and update active heading index
  */
-export function useOutlineSync(getEditor: EditorGetter) {
+export function useOutlineSync(getEditorView: EditorViewGetter) {
   const unlistenRef = useRef<UnlistenFn | null>(null);
   const domRef = useRef<HTMLElement | null>(null);
   const handlersRef = useRef<{ keyup: () => void; mouseup: () => void } | null>(null);
@@ -80,38 +80,34 @@ export function useOutlineSync(getEditor: EditorGetter) {
           (event) => {
             if (cancelled) return;
 
-            const editor = getEditor();
-            if (!editor) return;
-
             const { headingIndex } = event.payload;
+            const view = getEditorView();
+            if (!view) return;
 
-            editor.action((ctx) => {
-              const view = ctx.get(editorViewCtx);
-              const { doc } = view.state;
+            const { doc } = view.state;
 
-              const pos = findHeadingPosition(doc, headingIndex);
-              if (pos === -1) return;
+            const pos = findHeadingPosition(doc, headingIndex);
+            if (pos === -1) return;
 
-              // Scroll to position
+            const scrollContainer = (view.dom as HTMLElement).closest(".editor-content") as HTMLElement | null;
+            try {
               const coords = view.coordsAtPos(pos);
-              if (coords) {
-                const editorRect = view.dom.getBoundingClientRect();
-                const scrollTop = coords.top - editorRect.top - SCROLL_OFFSET_PX;
+              if (scrollContainer) {
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const scrollTop = coords.top - containerRect.top - SCROLL_OFFSET_PX;
 
-                view.dom.parentElement?.scrollTo({
-                  top: Math.max(0, view.dom.parentElement.scrollTop + scrollTop),
+                scrollContainer.scrollTo({
+                  top: Math.max(0, scrollContainer.scrollTop + scrollTop),
                   behavior: "smooth",
                 });
-
-                // Set cursor at the heading
-                const tr = view.state.tr.setSelection(
-                  Selection.near(doc.resolve(pos + 1))
-                );
-                view.dispatch(tr.scrollIntoView());
               }
+            } catch {
+              // Ignore coords errors
+            }
 
-              view.focus();
-            });
+            const tr = view.state.tr.setSelection(Selection.near(doc.resolve(pos + 1)));
+            view.dispatch(tr.scrollIntoView());
+            view.focus();
           }
         );
 
@@ -133,7 +129,7 @@ export function useOutlineSync(getEditor: EditorGetter) {
       unlistenRef.current?.();
       unlistenRef.current = null;
     };
-  }, [getEditor]);
+  }, [getEditorView]);
 
   // Track cursor position and update active heading index
   useEffect(() => {
@@ -143,15 +139,12 @@ export function useOutlineSync(getEditor: EditorGetter) {
     let attempts = 0;
 
     const updateActiveHeading = () => {
-      const editor = getEditor();
-      if (!editor || cancelled) return;
+      const view = getEditorView();
+      if (!view || cancelled) return;
 
-      editor.action((ctx) => {
-        const view = ctx.get(editorViewCtx);
-        const { selection, doc } = view.state;
-        const headingIndex = findHeadingIndexAtPosition(doc, selection.anchor);
-        useUIStore.getState().setActiveHeadingLine(headingIndex);
-      });
+      const { selection, doc } = view.state;
+      const headingIndex = findHeadingIndexAtPosition(doc, selection.anchor);
+      useUIStore.getState().setActiveHeadingLine(headingIndex);
     };
 
     const handleUpdate = () => {
@@ -160,8 +153,8 @@ export function useOutlineSync(getEditor: EditorGetter) {
     };
 
     const setupListeners = () => {
-      const editor = getEditor();
-      if (!editor) {
+      const view = getEditorView();
+      if (!view) {
         // Editor not ready, poll until available or max attempts reached
         attempts++;
         if (attempts < EDITOR_POLL_MAX_ATTEMPTS && !cancelled) {
@@ -170,15 +163,12 @@ export function useOutlineSync(getEditor: EditorGetter) {
         return;
       }
 
-      editor.action((ctx) => {
-        const view = ctx.get(editorViewCtx);
-        // Capture DOM reference for cleanup
-        domRef.current = view.dom;
-        handlersRef.current = { keyup: handleUpdate, mouseup: handleUpdate };
+      // Capture DOM reference for cleanup
+      domRef.current = view.dom as HTMLElement;
+      handlersRef.current = { keyup: handleUpdate, mouseup: handleUpdate };
 
-        view.dom.addEventListener("keyup", handleUpdate);
-        view.dom.addEventListener("mouseup", handleUpdate);
-      });
+      view.dom.addEventListener("keyup", handleUpdate);
+      view.dom.addEventListener("mouseup", handleUpdate);
 
       // Initial update
       updateActiveHeading();
@@ -199,5 +189,5 @@ export function useOutlineSync(getEditor: EditorGetter) {
       domRef.current = null;
       handlersRef.current = null;
     };
-  }, [getEditor]);
+  }, [getEditorView]);
 }

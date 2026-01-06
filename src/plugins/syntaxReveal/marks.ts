@@ -4,8 +4,8 @@
  * Handles inline marks: bold, italic, code, strikethrough, link
  */
 
-import type { Decoration } from "@milkdown/kit/prose/view";
-import type { Node, Mark, ResolvedPos } from "@milkdown/kit/prose/model";
+import type { Decoration } from "@tiptap/pm/view";
+import type { Node, Mark, ResolvedPos } from "@tiptap/pm/model";
 import { addWidgetDecoration } from "./utils";
 
 // Mark type to syntax mapping

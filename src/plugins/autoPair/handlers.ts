@@ -4,8 +4,8 @@
  * Handlers for text input, closing bracket skip, and backspace pair deletion.
  */
 
-import type { EditorView } from "@milkdown/kit/prose/view";
-import { TextSelection } from "@milkdown/kit/prose/state";
+import type { EditorView } from "@tiptap/pm/view";
+import { TextSelection } from "@tiptap/pm/state";
 import {
   getClosingChar,
   isClosingChar,

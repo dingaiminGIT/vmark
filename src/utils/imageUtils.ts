@@ -7,7 +7,7 @@
 
 import { mkdir, exists, copyFile, writeFile } from "@tauri-apps/plugin-fs";
 import { dirname, join } from "@tauri-apps/api/path";
-import type { EditorView } from "@milkdown/kit/prose/view";
+import type { EditorView } from "@tiptap/pm/view";
 
 const ASSETS_FOLDER = "assets/images";
 

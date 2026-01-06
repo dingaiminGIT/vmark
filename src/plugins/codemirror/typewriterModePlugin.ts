@@ -4,7 +4,7 @@
  * Keeps the cursor vertically centered on screen as you type.
  * The page scrolls to keep your writing position at a comfortable eye level.
  *
- * Mirrors the behavior of the Milkdown typewriter mode plugin.
+ * Mirrors the behavior of the WYSIWYG typewriter mode plugin.
  */
 
 import { ViewPlugin, type ViewUpdate } from "@codemirror/view";

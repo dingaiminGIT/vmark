@@ -2,7 +2,7 @@
  * Shared SVG Icons
  *
  * Lucide-style icons (24x24 viewBox, stroke-based) used across
- * both Milkdown and CodeMirror editors.
+ * both WYSIWYG (Tiptap/ProseMirror) and CodeMirror editors.
  */
 
 import type { ReactNode } from "react";
