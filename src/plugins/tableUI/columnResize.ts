@@ -9,7 +9,6 @@ import type { EditorView } from "@tiptap/pm/view";
 
 const MIN_COLUMN_WIDTH = 50;
 const HANDLE_CLASS = "table-resize-handle";
-const INIT_DELAY_MS = 100;
 const DEBOUNCE_MS = 200;
 
 interface ResizeState {
@@ -41,17 +40,11 @@ export class ColumnResizeManager {
   private view: EditorView;
   private observer: MutationObserver | null = null;
   private updateTimeout: ReturnType<typeof setTimeout> | null = null;
-  private initTimeout: ReturnType<typeof setTimeout> | null = null;
   private resizeState: ResizeState = createInitialResizeState();
+  private pendingTable: HTMLTableElement | null = null;
 
   constructor(view: EditorView) {
     this.view = view;
-
-    // Initial setup (delayed to not interfere with editor init)
-    this.initTimeout = setTimeout(() => {
-      this.initTimeout = null;
-      this.updateHandles();
-    }, INIT_DELAY_MS);
 
     // NOTE: MutationObserver disabled - it interferes with ProseMirror's input handling
     // Table handle updates are triggered from plugin update() method instead
@@ -61,24 +54,20 @@ export class ColumnResizeManager {
    * Schedule a debounced update of resize handles.
    * Called from plugin update() to avoid synchronous DOM operations during input.
    */
-  scheduleUpdate() {
+  scheduleUpdate(table: HTMLTableElement | null) {
+    this.pendingTable = table;
     if (this.updateTimeout) {
       clearTimeout(this.updateTimeout);
     }
+    if (!table) return;
     this.updateTimeout = setTimeout(() => {
       this.updateTimeout = null;
-      this.updateHandles();
+      const targetTable = this.pendingTable;
+      this.pendingTable = null;
+      if (targetTable) {
+        this.addHandlesToTable(targetTable);
+      }
     }, DEBOUNCE_MS);
-  }
-
-  /**
-   * Update resize handles on all tables.
-   */
-  updateHandles() {
-    const tables = this.view.dom.querySelectorAll("table");
-    tables.forEach((table) => {
-      this.addHandlesToTable(table as HTMLTableElement);
-    });
   }
 
   /**
@@ -229,10 +218,6 @@ export class ColumnResizeManager {
    */
   destroy() {
     // Clear pending timeouts
-    if (this.initTimeout) {
-      clearTimeout(this.initTimeout);
-      this.initTimeout = null;
-    }
     if (this.updateTimeout) {
       clearTimeout(this.updateTimeout);
       this.updateTimeout = null;

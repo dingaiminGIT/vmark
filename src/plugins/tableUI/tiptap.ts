@@ -6,6 +6,7 @@ import { goToNextCell } from "@tiptap/pm/tables";
 import { ColumnResizeManager } from "./columnResize";
 import { TiptapTableContextMenu } from "./TiptapTableContextMenu";
 import { addRowAbove, addRowBelow, deleteCurrentRow, isInTable } from "./tableActions.tiptap";
+import { getActiveTableElement } from "./tableDom";
 
 interface TableUIPluginState {
   contextMenu: TiptapTableContextMenu | null;
@@ -30,8 +31,11 @@ class TiptapTableUIPluginView {
   update(view: EditorView) {
     this.view = view;
     this.contextMenu.updateView(view);
-    if (isInTable(view)) {
-      this.columnResize.scheduleUpdate();
+    if (!isInTable(view)) return;
+
+    const table = getActiveTableElement(view);
+    if (table) {
+      this.columnResize.scheduleUpdate(table);
     }
   }
 
