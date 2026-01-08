@@ -7,6 +7,7 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
+import { useTabStore } from "@/stores/tabStore";
 import { clearAllHistory } from "@/utils/historyUtils";
 import { historyLog } from "@/utils/debug";
 import { exportToHtml, exportToPdf, savePdf, copyAsHtml } from "@/utils/exportUtils";
@@ -14,6 +15,7 @@ import { isWindowFocused } from "@/utils/windowFocus";
 import { getFileNameWithoutExtension } from "@/utils/pathUtils";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { withReentryGuard } from "@/utils/reentryGuard";
+import { getActiveDocument } from "@/utils/activeDocument";
 
 export function useMenuEvents() {
   const unlistenRefs = useRef<UnlistenFn[]>([]);
@@ -153,7 +155,7 @@ export function useMenuEvents() {
       if (cancelled) { unlistenClearRecent(); return; }
       unlistenRefs.current.push(unlistenClearRecent);
 
-      // Open Recent File from menu
+      // Open Recent File from menu - always opens in a new tab
       const unlistenOpenRecent = await listen<number>("menu:open-recent-file", async (event) => {
         if (!(await isWindowFocused())) return;
         const windowLabel = getCurrentWebviewWindow().label;
@@ -165,21 +167,14 @@ export function useMenuEvents() {
         const file = files[index];
 
         await withReentryGuard(windowLabel, "open-recent", async () => {
-          const doc = useDocumentStore.getState().getDocument(windowLabel);
-          if (doc?.isDirty) {
-            const confirmed = await ask("You have unsaved changes. Discard them?", {
-              title: "Unsaved Changes",
-              kind: "warning",
-            });
-            if (!confirmed) return;
-          }
-
           try {
             const content = await readTextFile(file.path);
-            useDocumentStore.getState().loadContent(windowLabel, content, file.path);
+            // Always open in a new tab (per workspace-first design)
+            const tabId = useTabStore.getState().createTab(windowLabel, file.path);
+            useDocumentStore.getState().initDocument(tabId, content, file.path);
             useRecentFilesStore.getState().addFile(file.path); // Move to top
           } catch (error) {
-            console.error("Failed to open recent file:", error);
+            console.error("[Menu] Failed to open recent file:", error);
             const remove = await ask(
               "This file could not be opened. It may have been moved or deleted.\n\nRemove from recent files?",
               { title: "File Not Found", kind: "warning" }
@@ -200,7 +195,7 @@ export function useMenuEvents() {
         const windowLabel = getCurrentWebviewWindow().label;
 
         await withReentryGuard(windowLabel, "export", async () => {
-          const doc = useDocumentStore.getState().getDocument(windowLabel);
+          const doc = getActiveDocument(windowLabel);
           if (!doc) return;
           const defaultName = doc.filePath
             ? getFileNameWithoutExtension(doc.filePath) || "document"
@@ -208,7 +203,7 @@ export function useMenuEvents() {
           try {
             await exportToHtml(doc.content, defaultName);
           } catch (error) {
-            console.error("Failed to export HTML:", error);
+            console.error("[Menu] Failed to export HTML:", error);
           }
         });
       });
@@ -221,7 +216,7 @@ export function useMenuEvents() {
         const windowLabel = getCurrentWebviewWindow().label;
 
         await withReentryGuard(windowLabel, "export", async () => {
-          const doc = useDocumentStore.getState().getDocument(windowLabel);
+          const doc = getActiveDocument(windowLabel);
           if (!doc) return;
           const defaultName = doc.filePath
             ? getFileNameWithoutExtension(doc.filePath) || "document"
@@ -229,7 +224,7 @@ export function useMenuEvents() {
           try {
             await savePdf(doc.content, defaultName);
           } catch (error) {
-            console.error("Failed to save PDF:", error);
+            console.error("[Menu] Failed to save PDF:", error);
           }
         });
       });
@@ -242,7 +237,7 @@ export function useMenuEvents() {
         const windowLabel = getCurrentWebviewWindow().label;
 
         await withReentryGuard(windowLabel, "export", async () => {
-          const doc = useDocumentStore.getState().getDocument(windowLabel);
+          const doc = getActiveDocument(windowLabel);
           if (!doc) return;
           const title = doc.filePath
             ? getFileNameWithoutExtension(doc.filePath) || "Document"
@@ -250,7 +245,7 @@ export function useMenuEvents() {
           try {
             await exportToPdf(doc.content, title);
           } catch (error) {
-            console.error("Failed to export PDF:", error);
+            console.error("[Menu] Failed to export PDF:", error);
           }
         });
       });
@@ -263,12 +258,12 @@ export function useMenuEvents() {
         const windowLabel = getCurrentWebviewWindow().label;
 
         await withReentryGuard(windowLabel, "export", async () => {
-          const doc = useDocumentStore.getState().getDocument(windowLabel);
+          const doc = getActiveDocument(windowLabel);
           if (!doc) return;
           try {
             await copyAsHtml(doc.content);
           } catch (error) {
-            console.error("Failed to copy HTML:", error);
+            console.error("[Menu] Failed to copy HTML:", error);
           }
         });
       });
