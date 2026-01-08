@@ -16,3 +16,5 @@ export {
   type OpenFileContext,
   type OpenFileResult,
 } from "./openFileCommand";
+
+export { applyPathReconciliation } from "./applyPathReconciliation";

@@ -29,6 +29,8 @@ export interface DocumentState {
   documentId: number;
   cursorInfo: CursorInfo | null;
   lastAutoSave: number | null;
+  /** True when the file was deleted externally - show warning UI */
+  isMissing: boolean;
 }
 
 interface DocumentStore {
@@ -40,6 +42,8 @@ interface DocumentStore {
   setContent: (tabId: string, content: string) => void;
   loadContent: (tabId: string, content: string, filePath?: string | null) => void;
   setFilePath: (tabId: string, path: string | null) => void;
+  markMissing: (tabId: string) => void;
+  clearMissing: (tabId: string) => void;
   markSaved: (tabId: string) => void;
   markAutoSaved: (tabId: string) => void;
   setCursorInfo: (tabId: string, info: CursorInfo | null) => void;
@@ -58,6 +62,7 @@ const createInitialDocument = (content = "", filePath: string | null = null): Do
   documentId: 0,
   cursorInfo: null,
   lastAutoSave: null,
+  isMissing: false,
 });
 
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
@@ -114,6 +119,30 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         documents: {
           ...state.documents,
           [tabId]: { ...doc, filePath: path },
+        },
+      };
+    }),
+
+  markMissing: (tabId) =>
+    set((state) => {
+      const doc = state.documents[tabId];
+      if (!doc) return state;
+      return {
+        documents: {
+          ...state.documents,
+          [tabId]: { ...doc, isMissing: true },
+        },
+      };
+    }),
+
+  clearMissing: (tabId) =>
+    set((state) => {
+      const doc = state.documents[tabId];
+      if (!doc) return state;
+      return {
+        documents: {
+          ...state.documents,
+          [tabId]: { ...doc, isMissing: false },
         },
       };
     }),

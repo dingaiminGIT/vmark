@@ -44,6 +44,8 @@ interface TabActions {
   getTabsByWindow: (windowLabel: string) => Tab[];
   getActiveTab: (windowLabel: string) => Tab | null;
   findTabByPath: (windowLabel: string, filePath: string) => Tab | null;
+  findTabByFilePath: (filePath: string) => { tab: Tab; windowLabel: string } | null;
+  getAllOpenFilePaths: () => string[];
 
   // Cleanup
   removeWindow: (windowLabel: string) => void;
@@ -326,6 +328,26 @@ export const useTabStore = create<TabState & TabActions>((set, get) => ({
   findTabByPath: (windowLabel, filePath) => {
     const windowTabs = get().tabs[windowLabel] || [];
     return windowTabs.find((t) => t.filePath === filePath) || null;
+  },
+
+  findTabByFilePath: (filePath) => {
+    const state = get();
+    for (const [windowLabel, windowTabs] of Object.entries(state.tabs)) {
+      const tab = windowTabs.find((t) => t.filePath === filePath);
+      if (tab) return { tab, windowLabel };
+    }
+    return null;
+  },
+
+  getAllOpenFilePaths: () => {
+    const state = get();
+    const paths: string[] = [];
+    for (const windowTabs of Object.values(state.tabs)) {
+      for (const tab of windowTabs) {
+        if (tab.filePath) paths.push(tab.filePath);
+      }
+    }
+    return paths;
   },
 
   removeWindow: (windowLabel) => {

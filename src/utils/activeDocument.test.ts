@@ -121,6 +121,7 @@ describe("activeDocument", () => {
             documentId: 1,
             cursorInfo: null,
             lastAutoSave: null,
+            isMissing: false,
           },
         },
       });
@@ -151,6 +152,7 @@ describe("activeDocument", () => {
             documentId: 1,
             cursorInfo: null,
             lastAutoSave: null,
+            isMissing: false,
           },
           "tab-2": {
             content: "Second content",
@@ -160,6 +162,7 @@ describe("activeDocument", () => {
             documentId: 2,
             cursorInfo: null,
             lastAutoSave: null,
+            isMissing: false,
           },
         },
       });

@@ -12,6 +12,9 @@ import { join, basename } from "@tauri-apps/api/path";
 import { emit } from "@tauri-apps/api/event";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { useTabStore } from "@/stores/tabStore";
+import { reconcilePathChange } from "@/utils/pathReconciliation";
+import { applyPathReconciliation } from "@/hooks/commands";
 
 // Re-entry guards
 const isCreatingRef = { current: false };
@@ -95,7 +98,20 @@ export function useExplorerOperations() {
           return null;
         }
 
+        // Get open file paths before rename
+        const openFilePaths = useTabStore.getState().getAllOpenFilePaths();
+
         await rename(oldPath, newPath);
+
+        // Reconcile: update any open tabs/documents pointing to old path
+        const results = reconcilePathChange({
+          changeType: "rename",
+          oldPath,
+          newPath,
+          openFilePaths,
+        });
+        applyPathReconciliation(results);
+
         return newPath;
       } catch (error) {
         console.error("[Explorer] Failed to rename:", error);
@@ -126,7 +142,19 @@ export function useExplorerOperations() {
 
         if (!confirmed) return false;
 
+        // Get open file paths before delete
+        const openFilePaths = useTabStore.getState().getAllOpenFilePaths();
+
         await remove(path, { recursive: isFolder });
+
+        // Reconcile: mark any open tabs/documents as missing
+        const results = reconcilePathChange({
+          changeType: "delete",
+          oldPath: path,
+          openFilePaths,
+        });
+        applyPathReconciliation(results);
+
         return true;
       } catch (error) {
         console.error("[Explorer] Failed to delete:", error);
@@ -151,9 +179,22 @@ export function useExplorerOperations() {
           return null;
         }
 
+        // Get open file paths before move
+        const openFilePaths = useTabStore.getState().getAllOpenFilePaths();
+
         // For files, use rename (more efficient)
         // For folders, rename also works on most systems
         await rename(srcPath, destPath);
+
+        // Reconcile: update any open tabs/documents pointing to old path
+        const results = reconcilePathChange({
+          changeType: "move",
+          oldPath: srcPath,
+          newPath: destPath,
+          openFilePaths,
+        });
+        applyPathReconciliation(results);
+
         return destPath;
       } catch (error) {
         console.error("[Explorer] Failed to move:", error);
