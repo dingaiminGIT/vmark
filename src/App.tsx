@@ -66,6 +66,7 @@ import { useWindowTitle } from "@/hooks/useWindowTitle";
 import { useDisableContextMenu } from "@/hooks/useDisableContextMenu";
 import { useViewShortcuts } from "@/hooks/useViewShortcuts";
 import { useTabShortcuts } from "@/hooks/useTabShortcuts";
+import { useReloadGuard } from "@/hooks/useReloadGuard";
 
 // Separate component for window lifecycle hooks to avoid conditional hook calls
 function DocumentWindowHooks() {
@@ -128,6 +129,7 @@ function MainLayout() {
   useDisableContextMenu(); // Disable browser context menu
   useViewShortcuts(); // F7, F8, F9 shortcuts
   useTabShortcuts(); // Cmd+T, Cmd+W tab shortcuts
+  useReloadGuard(); // Prevent reload when dirty
 
   const classNames = [
     "app-layout",
