@@ -8,12 +8,26 @@
  * @module utils/markdownPipeline
  *
  * @example
- * // Parse markdown to MDAST
- * const mdast = parseMarkdownToMdast("# Hello");
+ * // Use the adapter with feature flag
+ * import { parseMarkdown, serializeMarkdown, setUseRemarkPipeline } from './markdownPipeline';
  *
- * // Serialize MDAST back to markdown
+ * setUseRemarkPipeline(true); // Enable remark pipeline
+ * const doc = parseMarkdown(schema, "# Hello");
+ * const md = serializeMarkdown(schema, doc);
+ *
+ * @example
+ * // Direct MDAST usage
+ * const mdast = parseMarkdownToMdast("# Hello");
  * const md = serializeMdastToMarkdown(mdast);
  */
+
+// Adapter - unified interface with feature flag
+export {
+  parseMarkdown,
+  serializeMarkdown,
+  setUseRemarkPipeline,
+  getUseRemarkPipeline,
+} from "./adapter";
 
 // Core parsing/serialization
 export { parseMarkdownToMdast } from "./parser";
