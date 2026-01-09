@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { emit } from "@tauri-apps/api/event";
-import { useDocumentFilePath, useDocumentIsDirty, useActiveTabId } from "@/hooks/useDocumentState";
+import { useDocumentFilePath, useDocumentIsDirty, useDocumentIsMissing, useActiveTabId } from "@/hooks/useDocumentState";
 import { useTabStore } from "@/stores/tabStore";
 import { useTitleBarRename } from "./useTitleBarRename";
 import { getFileNameWithoutExtension } from "@/utils/pathUtils";
@@ -11,6 +11,7 @@ const DEFAULT_DISPLAY_NAME = "Untitled";
 export function TitleBar() {
   const filePath = useDocumentFilePath();
   const isDirty = useDocumentIsDirty();
+  const isMissing = useDocumentIsMissing();
   const activeTabId = useActiveTabId();
   const { renameFile, isRenaming } = useTitleBarRename();
 
@@ -112,10 +113,12 @@ export function TitleBar() {
           />
         ) : (
           <span
-            className={`title-bar-filename ${isUnsaved ? "unsaved" : ""}`}
+            className={`title-bar-filename ${isUnsaved ? "unsaved" : ""} ${isMissing ? "missing" : ""}`}
             onDoubleClick={handleDoubleClick}
+            title={isMissing ? "File deleted from disk" : undefined}
           >
             {isDirty && <span className="dirty-indicator">•</span>}
+            {isMissing && <span className="missing-indicator">⚠</span>}
             {displayName}
           </span>
         )}

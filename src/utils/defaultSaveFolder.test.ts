@@ -29,21 +29,24 @@ describe("resolveDefaultSaveFolder", () => {
     expect(result).toBe("/workspace/project");
   });
 
-  it("returns first saved tab folder when no workspace", () => {
+  it("returns home directory when no workspace (ignores saved tabs)", () => {
+    // When not in workspace mode, always use home directory
+    // This prevents save dialogs opening in unexpected folders
     const result = resolveDefaultSaveFolder({
       ...defaultInput,
       savedFilePaths: ["/docs/notes/file.md", "/other/path/doc.md"],
     });
 
-    expect(result).toBe("/docs/notes");
+    expect(result).toBe("/Users/test");
   });
 
-  it("skips untitled files (null paths) when finding saved tab folder", () => {
-    // savedFilePaths should only contain actual paths, not nulls
-    // The hook layer filters these out
+  it("uses saved tab folder only when in workspace mode but missing root", () => {
+    // Edge case: in workspace mode but rootPath is null
     const result = resolveDefaultSaveFolder({
-      ...defaultInput,
+      isWorkspaceMode: true,
+      workspaceRoot: null,
       savedFilePaths: ["/docs/notes/file.md"],
+      homeDirectory: "/Users/test",
     });
 
     expect(result).toBe("/docs/notes");
@@ -81,16 +84,18 @@ describe("resolveDefaultSaveFolder", () => {
     expect(result).toBe("/workspace/project");
   });
 
-  it("handles Windows-style paths", () => {
+  it("handles Windows-style paths in workspace mode", () => {
     const result = resolveDefaultSaveFolder({
-      ...defaultInput,
+      isWorkspaceMode: true,
+      workspaceRoot: null, // Edge case: in workspace mode but missing root
       savedFilePaths: ["C:\\Users\\Test\\Documents\\file.md"],
+      homeDirectory: "C:\\Users\\Test",
     });
 
     expect(result).toBe("C:\\Users\\Test\\Documents");
   });
 
-  it("ignores workspace root if not in workspace mode", () => {
+  it("ignores workspace root and saved tabs if not in workspace mode", () => {
     const result = resolveDefaultSaveFolder({
       isWorkspaceMode: false,
       workspaceRoot: "/workspace/project", // Set but not in workspace mode
@@ -98,8 +103,8 @@ describe("resolveDefaultSaveFolder", () => {
       homeDirectory: "/Users/test",
     });
 
-    // Should use saved tab folder, not workspace root
-    expect(result).toBe("/other/path");
+    // Should use home directory directly when not in workspace mode
+    expect(result).toBe("/Users/test");
   });
 
   it("ignores null workspace root even in workspace mode", () => {

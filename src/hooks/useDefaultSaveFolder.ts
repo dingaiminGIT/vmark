@@ -20,8 +20,7 @@ import { resolveDefaultSaveFolder } from "@/utils/defaultSaveFolder";
  *
  * Precedence:
  * 1. Workspace root - if the window is in workspace mode
- * 2. Saved tab folder - folder of any saved file in the window
- * 3. Home directory - user's home folder
+ * 2. Home directory - when not in workspace mode
  *
  * @param windowLabel - The window label to check for saved tabs
  * @returns The resolved default folder path

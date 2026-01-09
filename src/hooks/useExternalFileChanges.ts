@@ -11,12 +11,13 @@
 import { useEffect, useRef, useCallback } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { readTextFile } from "@tauri-apps/plugin-fs";
-import { message } from "@tauri-apps/plugin-dialog";
+import { ask, save } from "@tauri-apps/plugin-dialog";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { resolveExternalChangeAction } from "@/utils/openPolicy";
 import { normalizePath } from "@/utils/paths";
+import { saveToPath } from "@/utils/saveToPath";
 
 interface FsChangeEvent {
   watchId: string;
@@ -65,22 +66,73 @@ export function useExternalFileChanges(): void {
     }
   }, []);
 
-  // Handle dirty file change - prompt user
-  const handleDirtyChange = useCallback(async (filePath: string) => {
-    const fileName = filePath.split("/").pop() || "file";
+  // Handle dirty file change - two-step prompt with Save As option
+  // Step 1: Offer to save current version first
+  // Step 2: Ask whether to reload or keep
+  // IMPORTANT: Cancel/dismiss at any step preserves user's changes (safe default)
+  const handleDirtyChange = useCallback(
+    async (tabId: string, filePath: string) => {
+      const fileName = filePath.split("/").pop() || "file";
+      const doc = useDocumentStore.getState().getDocument(tabId);
 
-    // Use a simple message dialog for now
-    // In the future, this could be a custom modal with more options
-    await message(
-      `"${fileName}" has been modified externally.\n\n` +
-        "Your changes have been preserved. Use Save As to keep your version, " +
-        "or close and reopen the file to load the disk version.",
-      { title: "File Changed", kind: "warning" }
-    );
+      // Step 1: Offer Save As first
+      const wantsSaveAs = await ask(
+        `"${fileName}" has been modified externally.\n\n` +
+          "Do you want to save your current version to a different location first?",
+        {
+          title: "File Changed",
+          kind: "warning",
+          okLabel: "Save As...",
+          cancelLabel: "Skip",
+        }
+      );
 
-    // Mark as needing attention but don't auto-reload dirty docs
-    // User keeps their current changes
-  }, []);
+      if (wantsSaveAs && doc) {
+        // Open Save As dialog
+        const savePath = await save({
+          title: "Save your version as...",
+          defaultPath: filePath,
+          filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
+        });
+
+        if (savePath) {
+          const saved = await saveToPath(tabId, savePath, doc.content, "manual");
+          if (saved) {
+            useDocumentStore.getState().clearMissing(tabId);
+            // Save As switches the document to the new path; no reload needed.
+            return;
+          }
+        }
+      }
+
+      // Step 2: Ask whether to reload or keep
+      const reloadFromDisk = await ask(
+        `Reload "${fileName}" from disk?\n\n` +
+          "This will replace your current version with the external changes.",
+        {
+          title: "Reload File?",
+          kind: "warning",
+          okLabel: "Reload from disk",
+          cancelLabel: "Keep my changes",
+        }
+      );
+
+      if (reloadFromDisk) {
+        // User explicitly chose to reload - discard their changes
+        try {
+          const content = await readTextFile(filePath);
+          useDocumentStore.getState().loadContent(tabId, content, filePath);
+          // Clear missing flag in case file was previously deleted and recreated
+          useDocumentStore.getState().clearMissing(tabId);
+        } catch (error) {
+          console.error("[ExternalChange] Failed to reload file:", filePath, error);
+          useDocumentStore.getState().markMissing(tabId);
+        }
+      }
+      // Cancel/dismiss = keep user's changes (safe default, no action needed)
+    },
+    []
+  );
 
   // Handle file deletion
   const handleDeletion = useCallback((targetTabId: string) => {
@@ -96,7 +148,11 @@ export function useExternalFileChanges(): void {
       const unlisten = await listen<FsChangeEvent>("fs:changed", async (event) => {
         if (cancelled) return;
 
-        const { kind, paths } = event.payload;
+        const { kind, paths, watchId } = event.payload;
+
+        // Only process events from this window's watcher (scoped by windowLabel)
+        if (watchId !== windowLabel) return;
+
         const openPaths = getOpenFilePaths();
 
         for (const changedPath of paths) {
@@ -126,7 +182,7 @@ export function useExternalFileChanges(): void {
                 await handleReload(tabId, changedPath);
                 break;
               case "prompt_user":
-                await handleDirtyChange(changedPath);
+                await handleDirtyChange(tabId, changedPath);
                 break;
               case "no_op":
                 // Should not happen for files with paths

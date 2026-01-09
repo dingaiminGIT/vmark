@@ -6,8 +6,8 @@
  *
  * Precedence:
  * 1. Workspace root (if in workspace mode)
- * 2. First saved tab's folder in the window
- * 3. Home directory
+ * 2. Home directory (when not in workspace mode)
+ * 3. Saved tab's folder (edge case: workspace mode but no root)
  *
  * @module utils/defaultSaveFolder
  */
@@ -29,14 +29,14 @@ export interface DefaultSaveFolderInput {
 }
 
 /**
- * Resolve the default save folder using three-tier precedence.
+ * Resolve the default save folder.
  *
  * Pure function - takes all data as input, no side effects.
  *
  * Precedence:
- * 1. Workspace root - if in workspace mode
- * 2. Saved tab folder - folder of first saved file
- * 3. Home directory - user's home folder
+ * 1. Workspace root - if in workspace mode with valid root
+ * 2. Home directory - when not in workspace mode (prevents unexpected folders)
+ * 3. Saved tab folder - edge case fallback when in workspace mode but no root
  *
  * @param input - Pre-gathered workspace and tab data
  * @returns The resolved default folder path
@@ -49,22 +49,37 @@ export interface DefaultSaveFolderInput {
  *   savedFilePaths: [],
  *   homeDirectory: "/Users/test"
  * }); // Returns "/workspace/project"
+ *
+ * @example
+ * // Not in workspace mode - returns home (ignores saved tabs)
+ * resolveDefaultSaveFolder({
+ *   isWorkspaceMode: false,
+ *   workspaceRoot: null,
+ *   savedFilePaths: ["/other/path/file.md"],
+ *   homeDirectory: "/Users/test"
+ * }); // Returns "/Users/test"
  */
 export function resolveDefaultSaveFolder(input: DefaultSaveFolderInput): string {
   const { isWorkspaceMode, workspaceRoot, savedFilePaths, homeDirectory } = input;
 
-  // 1. Workspace root first
+  // 1. Workspace root first (if in workspace mode)
   if (isWorkspaceMode && workspaceRoot) {
     return workspaceRoot;
   }
 
-  // 2. First saved tab's folder
+  // 2. Not in workspace mode → use home directly
+  //    This prevents save dialogs opening in unexpected folders
+  if (!isWorkspaceMode) {
+    return homeDirectory;
+  }
+
+  // 3. In workspace mode but no root (edge case) → try saved tabs
   for (const filePath of savedFilePaths) {
     const dir = getDirectory(filePath);
     if (dir) return dir;
   }
 
-  // 3. Home directory
+  // 4. Final fallback: Home directory
   return homeDirectory;
 }
 

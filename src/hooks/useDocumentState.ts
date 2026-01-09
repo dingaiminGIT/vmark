@@ -25,6 +25,11 @@ export function useDocumentIsDirty(): boolean {
   return useDocumentStore((state) => (tabId ? state.documents[tabId]?.isDirty : false) ?? false);
 }
 
+export function useDocumentIsMissing(): boolean {
+  const tabId = useActiveTabId();
+  return useDocumentStore((state) => (tabId ? state.documents[tabId]?.isMissing : false) ?? false);
+}
+
 export function useDocumentId(): number {
   const tabId = useActiveTabId();
   return useDocumentStore((state) => (tabId ? state.documents[tabId]?.documentId : 0) ?? 0);

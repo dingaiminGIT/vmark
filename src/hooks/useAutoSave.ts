@@ -32,8 +32,8 @@ export function useAutoSave() {
 
       const doc = useDocumentStore.getState().getDocument(tabId);
 
-      // Skip if no document, not dirty, or no file path (untitled)
-      if (!doc || !doc.isDirty || !doc.filePath) return;
+      // Skip if no document, not dirty, no file path (untitled), or file was deleted
+      if (!doc || !doc.isDirty || !doc.filePath || doc.isMissing) return;
 
       // Debounce: Prevent saves within 5 seconds of each other.
       // This guards against rapid successive saves when the interval

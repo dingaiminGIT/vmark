@@ -16,7 +16,9 @@ import { getFileNameWithoutExtension } from "@/utils/pathUtils";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { getActiveDocument } from "@/utils/activeDocument";
-import { resolveOpenTarget } from "@/hooks/commands";
+import { resolveOpenAction } from "@/utils/openPolicy";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { invoke } from "@tauri-apps/api/core";
 
 export function useMenuEvents() {
   const unlistenRefs = useRef<UnlistenFn[]>([]);
@@ -156,7 +158,7 @@ export function useMenuEvents() {
       if (cancelled) { unlistenClearRecent(); return; }
       unlistenRefs.current.push(unlistenClearRecent);
 
-      // Open Recent File from menu - uses command layer for decision logic
+      // Open Recent File from menu - uses workspace boundary policy
       const unlistenOpenRecent = await listen<number>("menu:open-recent-file", async (event) => {
         if (!(await isWindowFocused())) return;
         const windowLabel = getCurrentWebviewWindow().label;
@@ -167,17 +169,20 @@ export function useMenuEvents() {
 
         const file = files[index];
 
-        // Use command to resolve where to open
+        // Get workspace context for boundary checking
+        const { isWorkspaceMode, rootPath } = useWorkspaceStore.getState();
         const existingTab = useTabStore.getState().findTabByPath(windowLabel, file.path);
-        const result = resolveOpenTarget({
+
+        // Use policy to resolve where to open (respects workspace boundaries)
+        const result = resolveOpenAction({
           filePath: file.path,
-          windowLabel,
+          workspaceRoot: rootPath,
+          isWorkspaceMode,
           existingTabId: existingTab?.id ?? null,
-          reuseExistingTab: true, // Activate if already open
         });
 
         await withReentryGuard(windowLabel, "open-recent", async () => {
-          // Execute based on command result
+          // Execute based on policy result
           switch (result.action) {
             case "activate_tab":
               useTabStore.getState().setActiveTab(windowLabel, result.tabId);
@@ -197,6 +202,17 @@ export function useMenuEvents() {
                 if (remove) {
                   useRecentFilesStore.getState().removeFile(file.path);
                 }
+              }
+              break;
+            case "open_workspace_in_new_window":
+              // File is outside current workspace - open in new window
+              try {
+                await invoke("open_workspace_in_new_window", {
+                  workspaceRoot: result.workspaceRoot,
+                  filePath: result.filePath,
+                });
+              } catch (error) {
+                console.error("[Menu] Failed to open workspace in new window:", error);
               }
               break;
             case "no_op":

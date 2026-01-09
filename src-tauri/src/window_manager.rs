@@ -1,7 +1,22 @@
+use std::path::Path;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 static WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+/// Compute workspace root from a file path (parent directory).
+/// Returns None if the file is at root level or path is invalid.
+///
+/// Root-level files (e.g., `/file.md` or `C:\file.md`) return None
+/// to prevent opening the entire filesystem as a workspace.
+pub fn get_workspace_root_for_file(file_path: &str) -> Option<String> {
+    let path = Path::new(file_path);
+    path.parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        // Exclude root paths (/, C:\, etc.) - they have no parent
+        .filter(|p| p.parent().is_some())
+        .map(|p| p.to_string_lossy().to_string())
+}
 
 /// Cascade offset for new windows (logical pixels)
 const CASCADE_OFFSET: f64 = 25.0;

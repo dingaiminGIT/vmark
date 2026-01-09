@@ -41,6 +41,16 @@
   line-height: 1;
 }
 
+.title-bar-filename.missing {
+  color: var(--warning-color, #f59e0b);
+}
+
+.missing-indicator {
+  color: var(--warning-color, #f59e0b);
+  font-size: 12px;
+  line-height: 1;
+}
+
 .title-bar-input {
   font-size: 13px;
   color: var(--text-color);

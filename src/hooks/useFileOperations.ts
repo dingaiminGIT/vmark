@@ -2,18 +2,17 @@ import { useEffect, useCallback, useRef } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
-import { useSettingsStore } from "@/stores/settingsStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
-import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { createSnapshot } from "@/hooks/useHistoryOperations";
+import { useWorkspaceStore, type WorkspaceConfig } from "@/stores/workspaceStore";
 import { isWindowFocused } from "@/hooks/useWindowFocus";
 import { getDefaultSaveFolderWithFallback } from "@/hooks/useDefaultSaveFolder";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { withReentryGuard } from "@/utils/reentryGuard";
+import { saveToPath } from "@/utils/saveToPath";
 import {
   resolveOpenAction,
   resolvePostSaveWorkspaceAction,
@@ -22,43 +21,6 @@ import {
 import { createUntitledTab } from "@/utils/newFile";
 import { getDirectory } from "@/utils/pathUtils";
 import { normalizePath } from "@/utils/paths";
-
-async function saveToPath(
-  tabId: string,
-  path: string,
-  content: string,
-  saveType: "manual" | "auto" = "manual"
-): Promise<boolean> {
-  try {
-    await writeTextFile(path, content);
-    useDocumentStore.getState().setFilePath(tabId, path);
-    useDocumentStore.getState().markSaved(tabId);
-    // Update tab path for title sync
-    useTabStore.getState().updateTabPath(tabId, path);
-
-    // Add to recent files
-    useRecentFilesStore.getState().addFile(path);
-
-    // Create history snapshot if enabled
-    const { general } = useSettingsStore.getState();
-    if (general.historyEnabled) {
-      try {
-        await createSnapshot(path, content, saveType, {
-          maxSnapshots: general.historyMaxSnapshots,
-          maxAgeDays: general.historyMaxAgeDays,
-        });
-      } catch (historyError) {
-        console.warn("[History] Failed to create snapshot:", historyError);
-        // Don't fail the save operation if history fails
-      }
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Failed to save file:", error);
-    return false;
-  }
-}
 
 /**
  * Find an existing tab for a file path in the current window.
@@ -207,7 +169,17 @@ export function useFileOperations() {
 
         if (postSaveAction.action === "open_workspace") {
           try {
-            await useWorkspaceStore.getState().openWorkspace(postSaveAction.workspaceRoot);
+            // Open workspace with default config
+            useWorkspaceStore.getState().openWorkspace(postSaveAction.workspaceRoot);
+
+            // Load real config from disk (if it exists)
+            const config = await invoke<WorkspaceConfig | null>(
+              "read_workspace_config",
+              { rootPath: postSaveAction.workspaceRoot }
+            );
+            if (config) {
+              useWorkspaceStore.getState().bootstrapConfig(config);
+            }
           } catch (error) {
             console.error("[FileOps] Failed to open workspace after save:", error);
           }
@@ -263,48 +235,8 @@ export function useFileOperations() {
     [openFileInNewTab, windowLabel]
   );
 
-  const handleAppOpenFile = useCallback(
-    async (event: { payload: string }) => {
-      const filePath = event.payload;
-      if (!filePath) return;
-
-      // Use policy to decide where to open
-      const { isWorkspaceMode, rootPath } = useWorkspaceStore.getState();
-      const existingTabId = findExistingTabForPath(windowLabel, filePath);
-
-      const decision = resolveOpenAction({
-        filePath,
-        workspaceRoot: rootPath,
-        isWorkspaceMode,
-        existingTabId,
-      });
-
-      switch (decision.action) {
-        case "activate_tab":
-          useTabStore.getState().setActiveTab(windowLabel, decision.tabId);
-          break;
-        case "create_tab":
-          await openFileInNewTab(filePath);
-          break;
-        case "open_workspace_in_new_window":
-          // Only the first window to handle this should open the new window
-          // Other windows will get the same event but should ignore it
-          // This is handled by the Rust side - we just attempt the operation
-          try {
-            await invoke("open_workspace_in_new_window", {
-              workspaceRoot: decision.workspaceRoot,
-              filePath: decision.filePath,
-            });
-          } catch (error) {
-            console.error("[FileOps] Failed to open workspace in new window:", error);
-          }
-          break;
-        case "no_op":
-          break;
-      }
-    },
-    [windowLabel, openFileInNewTab]
-  );
+  // NOTE: app:open-file handler removed - Rust now directly creates windows via
+  // create_document_window instead of broadcasting events
 
   const handleNew = useCallback(async () => {
     // Only respond if this window is focused
@@ -350,12 +282,7 @@ export function useFileOperations() {
       if (cancelled) { unlistenOpenFile(); return; }
       unlistenRefs.current.push(unlistenOpenFile);
 
-      const unlistenAppOpenFile = await listen<string>(
-        "app:open-file",
-        handleAppOpenFile
-      );
-      if (cancelled) { unlistenAppOpenFile(); return; }
-      unlistenRefs.current.push(unlistenAppOpenFile);
+      // NOTE: app:open-file listener removed - Rust now creates windows directly
     };
 
     setupListeners();
@@ -366,5 +293,5 @@ export function useFileOperations() {
       unlistenRefs.current = [];
       fns.forEach((fn) => fn());
     };
-  }, [handleNew, handleOpen, handleSave, handleSaveAs, handleOpenFile, handleAppOpenFile]);
+  }, [handleNew, handleOpen, handleSave, handleSaveAs, handleOpenFile]);
 }

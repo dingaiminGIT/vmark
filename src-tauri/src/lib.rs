@@ -4,15 +4,25 @@ mod watcher;
 mod window_manager;
 mod workspace;
 
+use serde::Serialize;
 use std::sync::Mutex;
-use tauri::{Emitter, Manager};
+use tauri::Manager;
+
+/// Pending file open request with workspace root
+#[derive(Clone, Serialize)]
+pub struct PendingOpen {
+    #[serde(rename = "filePath")]
+    pub file_path: String,
+    #[serde(rename = "workspaceRoot")]
+    pub workspace_root: String,
+}
 
 /// Stores file paths opened via Finder before the main window is ready
-static PENDING_OPEN_FILES: Mutex<Vec<String>> = Mutex::new(Vec::new());
+static PENDING_OPEN_FILES: Mutex<Vec<PendingOpen>> = Mutex::new(Vec::new());
 
 /// Get and clear any pending files that were opened before frontend was ready
 #[tauri::command]
-fn get_pending_open_files() -> Vec<String> {
+fn get_pending_open_files() -> Vec<PendingOpen> {
     let mut pending = PENDING_OPEN_FILES.lock().unwrap();
     std::mem::take(&mut *pending)
 }
@@ -92,22 +102,33 @@ pub fn run() {
                     }
                 }
                 // Handle files opened from Finder (double-click, "Open With", etc.)
+                // Each file opens in a new window with its folder as workspace root
                 tauri::RunEvent::Opened { urls } => {
                     for url in urls {
                         // Convert file:// URL to path
                         if let Ok(path) = url.to_file_path() {
                             if let Some(path_str) = path.to_str() {
-                                // Broadcast to ALL windows - each window decides if it should claim
-                                // based on whether the file is within its workspace root
+                                // Compute workspace root from file's parent directory
+                                // Returns None if file is at root level (no valid parent)
+                                let workspace_root = window_manager::get_workspace_root_for_file(path_str);
+
                                 let windows = app.webview_windows();
                                 if windows.is_empty() {
                                     // App just launched - store for first window to pick up
                                     if let Ok(mut pending) = PENDING_OPEN_FILES.lock() {
-                                        pending.push(path_str.to_string());
+                                        pending.push(PendingOpen {
+                                            file_path: path_str.to_string(),
+                                            // Use empty string if no workspace root (edge case)
+                                            workspace_root: workspace_root.clone().unwrap_or_default(),
+                                        });
                                     }
                                 } else {
-                                    // App is running - emit to all windows
-                                    let _ = app.emit("app:open-file", path_str);
+                                    // App is running - open directly in new window (no broadcast)
+                                    let _ = window_manager::create_document_window(
+                                        app,
+                                        Some(path_str),
+                                        workspace_root.as_deref(),
+                                    );
                                 }
                             }
                         }

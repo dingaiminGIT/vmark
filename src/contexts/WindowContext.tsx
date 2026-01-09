@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useDocumentStore } from "../stores/documentStore";
 import { useTabStore } from "../stores/tabStore";
 import { useRecentFilesStore } from "../stores/recentFilesStore";
-import { useWorkspaceStore } from "../stores/workspaceStore";
+import { useWorkspaceStore, type WorkspaceConfig } from "../stores/workspaceStore";
 import {
   setCurrentWindowLabel,
   migrateWorkspaceStorage,
@@ -14,6 +14,12 @@ import {
 interface WindowContextValue {
   windowLabel: string;
   isDocumentWindow: boolean;
+}
+
+/** Pending file open request from Rust (Finder/Explorer double-click) */
+interface PendingOpen {
+  filePath: string;
+  workspaceRoot: string;
 }
 
 const WindowContext = createContext<WindowContextValue | null>(null);
@@ -62,10 +68,20 @@ export function WindowProvider({ children }: WindowProviderProps) {
             let filePath = urlParams.get("file");
             const workspaceRootParam = urlParams.get("workspaceRoot");
 
-            // If workspace root is provided, open it first
+            // If workspace root is provided, open it first and load config from disk
             if (workspaceRootParam) {
               try {
-                await useWorkspaceStore.getState().openWorkspace(workspaceRootParam);
+                // First open the workspace with default config
+                useWorkspaceStore.getState().openWorkspace(workspaceRootParam);
+
+                // Then load the real config from disk (if it exists)
+                const config = await invoke<WorkspaceConfig | null>(
+                  "read_workspace_config",
+                  { rootPath: workspaceRootParam }
+                );
+                if (config) {
+                  useWorkspaceStore.getState().bootstrapConfig(config);
+                }
               } catch (e) {
                 console.error("[WindowContext] Failed to open workspace from URL param:", e);
               }
@@ -74,12 +90,36 @@ export function WindowProvider({ children }: WindowProviderProps) {
             // For main window, also check pending files from Finder launch
             if (!filePath && label === "main") {
               try {
-                const pendingFiles = await invoke<string[]>("get_pending_open_files");
+                const pendingFiles = await invoke<PendingOpen[]>("get_pending_open_files");
                 if (pendingFiles.length > 0) {
-                  filePath = pendingFiles[0];
-                  // Open remaining files in new windows
+                  const first = pendingFiles[0];
+                  filePath = first.filePath;
+                  // Use first file's workspace root if URL didn't provide one
+                  // (empty string means no workspace root could be determined)
+                  if (!workspaceRootParam && first.workspaceRoot && first.workspaceRoot.length > 0) {
+                    try {
+                      // Open workspace with default config
+                      useWorkspaceStore.getState().openWorkspace(first.workspaceRoot);
+
+                      // Load real config from disk (if it exists)
+                      const config = await invoke<WorkspaceConfig | null>(
+                        "read_workspace_config",
+                        { rootPath: first.workspaceRoot }
+                      );
+                      if (config) {
+                        useWorkspaceStore.getState().bootstrapConfig(config);
+                      }
+                    } catch (e) {
+                      console.error("[WindowContext] Failed to open workspace from pending:", e);
+                    }
+                  }
+                  // Open remaining files in new windows with their own workspace roots
                   for (let i = 1; i < pendingFiles.length; i++) {
-                    invoke("open_file_in_new_window", { path: pendingFiles[i] }).catch((e) =>
+                    const pending = pendingFiles[i];
+                    invoke("open_workspace_in_new_window", {
+                      workspaceRoot: pending.workspaceRoot,
+                      filePath: pending.filePath,
+                    }).catch((e) =>
                       console.error("[WindowContext] Failed to open file in new window:", e)
                     );
                   }
