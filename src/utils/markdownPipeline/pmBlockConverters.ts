@@ -38,9 +38,16 @@ export function convertHeading(context: PmToMdastContext, node: PMNode): Heading
   return { type: "heading", depth: level, children };
 }
 
+/**
+ * Internal sentinel value for math blocks stored as codeBlock.
+ * Must match the value in mdastBlockConverters.ts.
+ */
+const MATH_BLOCK_LANGUAGE = "$$math$$";
+
 export function convertCodeBlock(node: PMNode): Code | Math {
   const lang = (node.attrs.language as string | null) ?? null;
-  if (lang?.toLowerCase() === "latex") {
+  // Check for sentinel value that identifies math blocks
+  if (lang === MATH_BLOCK_LANGUAGE) {
     return {
       type: "math",
       value: node.textContent,
@@ -90,12 +97,14 @@ export function convertAlertBlock(context: PmToMdastContext, node: PMNode): Bloc
 }
 
 export function convertDetailsBlock(context: PmToMdastContext, node: PMNode): Details {
-  const summaryNode = node.firstChild;
-  const summary =
-    summaryNode?.type.name === "detailsSummary" ? summaryNode.textContent : "Details";
+  const firstChild = node.firstChild;
+  const hasSummaryNode = firstChild?.type.name === "detailsSummary";
+  const summary = hasSummaryNode ? firstChild.textContent : "Details";
+  // Start from index 1 only if first child is summary; otherwise start from 0
+  const startIndex = hasSummaryNode ? 1 : 0;
 
   const children: BlockContent[] = [];
-  for (let i = 1; i < node.childCount; i += 1) {
+  for (let i = startIndex; i < node.childCount; i += 1) {
     const child = node.child(i);
     const converted = context.convertNode(child);
     if (converted) {

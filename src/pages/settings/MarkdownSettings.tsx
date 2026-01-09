@@ -10,6 +10,10 @@ export function MarkdownSettings() {
   const markdown = useSettingsStore((state) => state.markdown);
   const updateSetting = useSettingsStore((state) => state.updateMarkdownSetting);
 
+  // Normalize optional settings once to avoid inconsistent behavior
+  const autoPairEnabled = markdown.autoPairEnabled ?? true;
+  const autoPairCJKStyle = markdown.autoPairCJKStyle ?? "auto";
+
   return (
     <div>
       <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
@@ -46,35 +50,35 @@ export function MarkdownSettings() {
           description="Automatically insert closing brackets and quotes"
         >
           <Toggle
-            checked={markdown.autoPairEnabled ?? true}
+            checked={autoPairEnabled}
             onChange={(v) => updateSetting("autoPairEnabled", v)}
           />
         </SettingRow>
         <SettingRow
           label="CJK brackets"
           description="Auto-pair CJK brackets like 「」【】《》"
-          disabled={!markdown.autoPairEnabled}
+          disabled={!autoPairEnabled}
         >
           <Select<AutoPairCJKStyle>
-            value={markdown.autoPairCJKStyle ?? "auto"}
+            value={autoPairCJKStyle}
             options={[
               { value: "off", label: "Off" },
               { value: "auto", label: "Auto" },
             ]}
             onChange={(v) => updateSetting("autoPairCJKStyle", v)}
-            disabled={!markdown.autoPairEnabled}
+            disabled={!autoPairEnabled}
           />
         </SettingRow>
-        {markdown.autoPairCJKStyle !== "off" && (
+        {autoPairCJKStyle !== "off" && (
           <SettingRow
             label="Include curly quotes"
             description={`Auto-pair \u201C\u201D and \u2018\u2019 (may conflict with IME smart quotes)`}
-            disabled={!markdown.autoPairEnabled}
+            disabled={!autoPairEnabled}
           >
             <Toggle
               checked={markdown.autoPairCurlyQuotes ?? false}
               onChange={(v) => updateSetting("autoPairCurlyQuotes", v)}
-              disabled={!markdown.autoPairEnabled}
+              disabled={!autoPairEnabled}
             />
           </SettingRow>
         )}
@@ -114,7 +118,7 @@ export function MarkdownSettings() {
         </SettingRow>
       </SettingsGroup>
 
-      <SettingsGroup title="Whitespace & Line Breaks" className="">
+      <SettingsGroup title="Whitespace & Line Breaks">
         <SettingRow
           label="Preserve consecutive line breaks"
           description="Keep multiple blank lines as-is (don't collapse)"

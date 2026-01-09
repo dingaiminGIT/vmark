@@ -46,10 +46,11 @@ describe("mdastToProseMirror blocks", () => {
     expect(thirdCell?.attrs.alignment).toBe("right");
   });
 
-  it("converts block math to latex code blocks", () => {
+  it("converts block math to code blocks with math sentinel", () => {
     const doc = parseDoc("$$\nx^2 + y^2 = z^2\n$$");
     expect(doc.firstChild?.type.name).toBe("codeBlock");
-    expect(doc.firstChild?.attrs.language).toBe("latex");
+    // Uses sentinel value to distinguish from real latex code fences
+    expect(doc.firstChild?.attrs.language).toBe("$$math$$");
   });
 
   it("converts alert blocks", () => {

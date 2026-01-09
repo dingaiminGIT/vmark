@@ -17,9 +17,17 @@ export const frontmatterExtension = Node.create({
     return [
       {
         tag: 'div[data-type="frontmatter"]',
-        getAttrs: (element) => ({
-          value: (element as HTMLElement).getAttribute("data-value") ?? "",
-        }),
+        getAttrs: (element) => {
+          const el = element as HTMLElement;
+          const dataValue = el.getAttribute("data-value");
+          // Fallback: use textContent if data-value is missing (e.g., after sanitization)
+          // Return false to skip parsing if no value can be recovered
+          if (dataValue !== null) {
+            return { value: dataValue };
+          }
+          const text = el.textContent?.trim() ?? "";
+          return text ? { value: text } : false;
+        },
       },
     ];
   },

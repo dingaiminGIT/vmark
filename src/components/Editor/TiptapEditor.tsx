@@ -253,10 +253,11 @@ export function TiptapEditorInner() {
     if (isInternalChange.current) return;
     if (content === lastExternalContent.current) return;
 
-    lastExternalContent.current = content;
     try {
       const doc = parseMarkdown(editor.schema, content, { useRemark: true });
       editor.commands.setContent(doc, { emitUpdate: false });
+      // Only update lastExternalContent after successful parse to allow retry on failure
+      lastExternalContent.current = content;
     } catch (error) {
       console.error("[TiptapEditor] Failed to parse external markdown:", error);
     }

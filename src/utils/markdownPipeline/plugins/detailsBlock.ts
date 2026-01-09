@@ -99,7 +99,9 @@ function transformDetailsBlocks(children: Content[]): Content[] {
     }
 
     if (!closed) {
-      result.push(node, ...inner);
+      // Unclosed details: push opening tag as-is.
+      // Inner nodes will be processed in subsequent iterations of the outer loop.
+      result.push(node);
       continue;
     }
 
@@ -139,6 +141,17 @@ function parseDetailsHtmlBlock(value: string): Details | null {
   const openIndex = value.search(DETAILS_OPEN_RE);
   const closeIndex = value.search(DETAILS_CLOSE_RE);
   if (openIndex === -1 || closeIndex === -1 || closeIndex <= openIndex) return null;
+
+  // Only parse if <details> wraps the entire block (no prefix/suffix content)
+  // This prevents dropping content that exists outside the details tags
+  const closeTag = closeTagMatch[0];
+  const closeEndIndex = closeIndex + closeTag.length;
+  const prefix = value.slice(0, openIndex).trim();
+  const suffix = value.slice(closeEndIndex).trim();
+  if (prefix || suffix) {
+    // Content exists outside <details> tags - don't parse as single details block
+    return null;
+  }
 
   const openTag = openTagMatch[0];
   const open = /\bopen\b/i.test(openTag);

@@ -14,15 +14,29 @@ const pmToMarkdown = (children: ReturnType<typeof testSchema.node>[]) => {
 };
 
 describe("proseMirrorToMdast blocks", () => {
-  it("serializes block math from latex code blocks", () => {
+  it("serializes block math from code blocks with math sentinel", () => {
+    // Use the $$math$$ sentinel value to identify math blocks
     const md = pmToMarkdown([
-      testSchema.node("codeBlock", { language: "latex" }, [
+      testSchema.node("codeBlock", { language: "$$math$$" }, [
         testSchema.text("x^2 + y^2 = z^2"),
       ]),
     ]);
 
     expect(md).toContain("$$");
     expect(md).toContain("x^2 + y^2 = z^2");
+  });
+
+  it("preserves real latex code fences (not math)", () => {
+    // Real latex code fences should NOT be converted to math blocks
+    const md = pmToMarkdown([
+      testSchema.node("codeBlock", { language: "latex" }, [
+        testSchema.text("\\documentclass{article}"),
+      ]),
+    ]);
+
+    expect(md).toContain("```latex");
+    expect(md).toContain("\\documentclass{article}");
+    expect(md).not.toContain("$$");
   });
 
   it("serializes alert blocks", () => {

@@ -19,9 +19,16 @@ export const htmlInlineExtension = Node.create({
     return [
       {
         tag: 'span[data-type="html"]',
-        getAttrs: (element) => ({
-          value: (element as HTMLElement).getAttribute("data-value") ?? "",
-        }),
+        getAttrs: (element) => {
+          const el = element as HTMLElement;
+          const dataValue = el.getAttribute("data-value");
+          // Fallback: use textContent if data-value is missing (e.g., after sanitization)
+          if (dataValue !== null) {
+            return { value: dataValue };
+          }
+          const text = el.textContent ?? "";
+          return text ? { value: text } : false;
+        },
       },
     ];
   },

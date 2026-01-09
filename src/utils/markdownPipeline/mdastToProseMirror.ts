@@ -242,6 +242,20 @@ class MdastToPMConverter {
 const INLINE_HTML_OPEN_RE = /^<([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*>$/;
 const INLINE_HTML_CLOSE_RE = /^<\/([a-zA-Z][a-zA-Z0-9-]*)\s*>$/;
 
+/**
+ * Check if inner nodes contain only text, html, and break nodes.
+ * If there are formatting nodes (emphasis, strong, link, etc.), we should not merge
+ * as merging would lose their marks.
+ */
+function canSafelyMerge(nodes: Content[]): boolean {
+  for (const node of nodes) {
+    if (node.type !== "text" && node.type !== "html" && node.type !== "break") {
+      return false;
+    }
+  }
+  return true;
+}
+
 function mergeInlineHtmlTags(children: readonly Content[]): Content[] {
   const result: Content[] = [];
 
@@ -285,6 +299,12 @@ function mergeInlineHtmlTags(children: readonly Content[]): Content[] {
     }
 
     if (closeIndex !== -1) {
+      // Only merge if inner nodes don't contain formatting marks
+      // Otherwise, merging would lose emphasis, links, etc.
+      if (!canSafelyMerge(innerNodes)) {
+        result.push(node);
+        continue;
+      }
       const closeNode = children[closeIndex] as Html;
       const mergedValue = `${String(node.value ?? "")}${serializeInlineHtmlNodes(innerNodes)}${String(closeNode.value ?? "")}`;
       result.push({ type: "html", value: mergedValue } as Html);

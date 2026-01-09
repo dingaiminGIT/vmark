@@ -142,11 +142,17 @@ export function convertTable(
   return tableType.create(null, rows);
 }
 
+/**
+ * Internal sentinel value for math blocks stored as codeBlock.
+ * Uses a value that won't collide with real language names.
+ */
+export const MATH_BLOCK_LANGUAGE = "$$math$$";
+
 export function convertMathBlock(context: MdastToPmContext, node: Math): PMNode | null {
   const type = context.schema.nodes.codeBlock;
   if (!type) return null;
   const text = node.value ? context.schema.text(node.value) : null;
-  return type.create({ language: "latex" }, text ? [text] : []);
+  return type.create({ language: MATH_BLOCK_LANGUAGE }, text ? [text] : []);
 }
 
 export function convertDefinition(context: MdastToPmContext, node: Definition): PMNode | null {
