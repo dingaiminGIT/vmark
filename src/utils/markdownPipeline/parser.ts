@@ -13,6 +13,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import remarkFrontmatter from "remark-frontmatter";
 import type { Root } from "mdast";
+import { remarkCustomInline } from "./plugins";
 
 /**
  * Unified processor configured for VMark markdown parsing.
@@ -23,8 +24,8 @@ import type { Root } from "mdast";
  * - remark-math: Inline ($...$) and block ($$...$$) math
  * - remark-frontmatter: YAML frontmatter (---)
  *
- * Note: Custom inline syntax (==highlight==, ~sub~, ^sup^, ++underline++)
- * will be added via custom plugins in later phases.
+ * Custom inline syntax (==highlight==, ~sub~, ^sup^, ++underline++)
+ * is handled via remarkCustomInline plugin.
  */
 const processor = unified()
   .use(remarkParse)
@@ -34,7 +35,8 @@ const processor = unified()
     singleTilde: false,
   })
   .use(remarkMath)
-  .use(remarkFrontmatter, ["yaml"]);
+  .use(remarkFrontmatter, ["yaml"])
+  .use(remarkCustomInline);
 
 /**
  * Parse markdown text into MDAST.

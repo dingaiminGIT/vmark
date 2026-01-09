@@ -13,6 +13,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import remarkFrontmatter from "remark-frontmatter";
 import type { Root } from "mdast";
+import { remarkCustomInline } from "./plugins";
 
 /**
  * Unified processor configured for VMark markdown serialization.
@@ -22,6 +23,7 @@ import type { Root } from "mdast";
  * - remark-gfm: GitHub Flavored Markdown output
  * - remark-math: Math output ($...$ and $$...$$)
  * - remark-frontmatter: YAML frontmatter output
+ * - remarkCustomInline: Custom inline marks (==highlight==, ~sub~, etc.)
  */
 const processor = unified()
   .use(remarkStringify, {
@@ -40,7 +42,8 @@ const processor = unified()
     singleTilde: false, // Match parser config
   })
   .use(remarkMath)
-  .use(remarkFrontmatter, ["yaml"]);
+  .use(remarkFrontmatter, ["yaml"])
+  .use(remarkCustomInline);
 
 /**
  * Serialize MDAST to markdown text.

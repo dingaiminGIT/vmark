@@ -84,6 +84,10 @@ const testSchema = new Schema({
     strike: {},
     code: {},
     link: { attrs: { href: {} } },
+    subscript: {},
+    superscript: {},
+    highlight: {},
+    underline: {},
   },
 });
 
@@ -257,6 +261,57 @@ describe("mdastToProseMirror", () => {
 
       expect(doc.firstChild?.type.name).toBe("footnote_definition");
       expect(doc.firstChild?.attrs.label).toBe("1");
+    });
+  });
+
+  describe("custom inline marks", () => {
+    it("converts subscript", () => {
+      const mdast = parseMarkdownToMdast("H~2~O");
+      const doc = mdastToProseMirror(testSchema, mdast);
+
+      const para = doc.firstChild;
+      // Second child (after "H") should have subscript mark
+      let foundSubscript = false;
+      para?.forEach((child) => {
+        if (child.marks.some((m) => m.type.name === "subscript")) {
+          foundSubscript = true;
+          expect(child.textContent).toBe("2");
+        }
+      });
+      expect(foundSubscript).toBe(true);
+    });
+
+    it("converts superscript", () => {
+      const mdast = parseMarkdownToMdast("x^2^");
+      const doc = mdastToProseMirror(testSchema, mdast);
+
+      const para = doc.firstChild;
+      let foundSuperscript = false;
+      para?.forEach((child) => {
+        if (child.marks.some((m) => m.type.name === "superscript")) {
+          foundSuperscript = true;
+          expect(child.textContent).toBe("2");
+        }
+      });
+      expect(foundSuperscript).toBe(true);
+    });
+
+    it("converts highlight", () => {
+      const mdast = parseMarkdownToMdast("==important==");
+      const doc = mdastToProseMirror(testSchema, mdast);
+
+      const para = doc.firstChild;
+      const textNode = para?.firstChild;
+      expect(textNode?.marks.some((m) => m.type.name === "highlight")).toBe(true);
+    });
+
+    it("converts underline", () => {
+      const mdast = parseMarkdownToMdast("++underlined++");
+      const doc = mdastToProseMirror(testSchema, mdast);
+
+      const para = doc.firstChild;
+      const textNode = para?.firstChild;
+      expect(textNode?.marks.some((m) => m.type.name === "underline")).toBe(true);
     });
   });
 });

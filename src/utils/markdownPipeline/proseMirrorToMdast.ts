@@ -32,6 +32,7 @@ import type {
   FootnoteDefinition,
 } from "mdast";
 import type { InlineMath } from "mdast-util-math";
+import type { Subscript, Superscript, Highlight, Underline } from "./types";
 
 /**
  * Convert ProseMirror document to MDAST root.
@@ -304,6 +305,17 @@ class PMToMdastConverter {
             children: content,
           } as Link,
         ];
+
+      // Custom inline marks
+      case "subscript":
+        return [{ type: "subscript", children: content } as Subscript];
+      case "superscript":
+        return [{ type: "superscript", children: content } as Superscript];
+      case "highlight":
+        return [{ type: "highlight", children: content } as Highlight];
+      case "underline":
+        return [{ type: "underline", children: content } as Underline];
+
       default:
         // Unknown mark - return content as-is
         if (import.meta.env.DEV) {

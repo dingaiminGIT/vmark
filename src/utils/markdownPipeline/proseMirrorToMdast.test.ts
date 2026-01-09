@@ -71,6 +71,10 @@ const testSchema = new Schema({
     strike: {},
     code: {},
     link: { attrs: { href: {} } },
+    subscript: {},
+    superscript: {},
+    highlight: {},
+    underline: {},
   },
 });
 
@@ -296,6 +300,55 @@ describe("proseMirrorToMdast", () => {
 
       expect(md).toContain("[^1]:");
       expect(md).toContain("This is the footnote");
+    });
+  });
+
+  describe("custom inline marks", () => {
+    it("converts subscript", () => {
+      const subscriptMark = testSchema.mark("subscript");
+      const md = pmToMarkdown([
+        testSchema.node("paragraph", null, [
+          testSchema.text("H"),
+          testSchema.text("2", [subscriptMark]),
+          testSchema.text("O"),
+        ]),
+      ]);
+
+      expect(md).toContain("~2~");
+    });
+
+    it("converts superscript", () => {
+      const superscriptMark = testSchema.mark("superscript");
+      const md = pmToMarkdown([
+        testSchema.node("paragraph", null, [
+          testSchema.text("x"),
+          testSchema.text("2", [superscriptMark]),
+        ]),
+      ]);
+
+      expect(md).toContain("^2^");
+    });
+
+    it("converts highlight", () => {
+      const highlightMark = testSchema.mark("highlight");
+      const md = pmToMarkdown([
+        testSchema.node("paragraph", null, [
+          testSchema.text("important", [highlightMark]),
+        ]),
+      ]);
+
+      expect(md).toContain("==important==");
+    });
+
+    it("converts underline", () => {
+      const underlineMark = testSchema.mark("underline");
+      const md = pmToMarkdown([
+        testSchema.node("paragraph", null, [
+          testSchema.text("underlined", [underlineMark]),
+        ]),
+      ]);
+
+      expect(md).toContain("++underlined++");
     });
   });
 });
