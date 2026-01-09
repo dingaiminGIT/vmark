@@ -4,7 +4,7 @@ import { getSchema } from "@tiptap/core";
 import { Table, TableRow } from "@tiptap/extension-table";
 import Image from "@tiptap/extension-image";
 import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
-import { parseMarkdownToTiptapDoc } from "@/utils/tiptapMarkdown";
+import { parseMarkdown } from "@/utils/markdownPipeline";
 import { highlightExtension } from "@/plugins/highlight/tiptap";
 import { subscriptExtension, superscriptExtension } from "@/plugins/subSuperscript/tiptap";
 import { alertBlockExtension } from "@/plugins/alertBlock/tiptap";
@@ -41,7 +41,7 @@ function createSchema() {
 describe("sourcePeek helpers", () => {
   it("builds a top-level block range for the selection", () => {
     const schema = createSchema();
-    const doc = parseMarkdownToTiptapDoc(schema, "Alpha\n\nBeta");
+    const doc = parseMarkdown(schema, "Alpha\n\nBeta", { useRemark: true });
     const selection = TextSelection.create(doc, 1);
     const state = EditorState.create({ doc, selection });
 
@@ -54,7 +54,7 @@ describe("sourcePeek helpers", () => {
 
   it("serializes the selection range to markdown", () => {
     const schema = createSchema();
-    const doc = parseMarkdownToTiptapDoc(schema, "Alpha\n\nBeta");
+    const doc = parseMarkdown(schema, "Alpha\n\nBeta", { useRemark: true });
     const selection = TextSelection.create(doc, 1);
     const state = EditorState.create({ doc, selection });
 

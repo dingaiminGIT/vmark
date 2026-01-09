@@ -1,0 +1,26 @@
+/**
+ * Hidden markdown artifacts (frontmatter, html, definitions).
+ */
+
+.tiptap-editor div[data-type="frontmatter"],
+.tiptap-editor div[data-type="link-definition"] {
+  display: none;
+}
+
+.tiptap-editor span.wiki-link {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.tiptap-editor span.wiki-embed {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.tiptap-editor .html-preview-inline {
+  display: inline;
+}
+
+.tiptap-editor .html-preview-block {
+  display: block;
+}

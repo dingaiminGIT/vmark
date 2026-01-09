@@ -24,6 +24,7 @@ export type {
   Delete,
   InlineCode,
   Link,
+  LinkReference,
   Image,
   Table,
   TableRow,
@@ -106,7 +107,8 @@ export type PhrasingContent =
   | Superscript
   | Highlight
   | Underline
-  | WikiLink;
+  | WikiLink
+  | WikiEmbed;
 
 // Union type for all block content
 // Note: mdast BlockContent already includes Math via mdast-util-math augmentation
@@ -133,5 +135,6 @@ declare module "mdast" {
     highlight: Highlight;
     underline: Underline;
     wikiLink: WikiLink;
+    wikiEmbed: WikiEmbed;
   }
 }

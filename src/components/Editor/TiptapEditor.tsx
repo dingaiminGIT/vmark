@@ -6,7 +6,7 @@ import { Table, TableRow } from "@tiptap/extension-table";
 import { useDocumentActions, useDocumentContent, useDocumentCursorInfo } from "@/hooks/useDocumentState";
 import { useImageContextMenu } from "@/hooks/useImageContextMenu";
 import { useOutlineSync } from "@/hooks/useOutlineSync";
-import { parseMarkdownToTiptapDoc, serializeTiptapDocToMarkdown } from "@/utils/tiptapMarkdown";
+import { parseMarkdown, serializeMarkdown } from "@/utils/markdownPipeline";
 import { registerActiveWysiwygFlusher } from "@/utils/wysiwygFlush";
 import { getCursorInfoFromTiptap, restoreCursorInTiptap } from "@/utils/cursorSync/tiptap";
 import { getTiptapEditorView } from "@/utils/tiptapView";
@@ -31,6 +31,7 @@ import { formatToolbarExtension } from "@/plugins/formatToolbar/tiptap";
 import { editorKeymapExtension } from "@/plugins/editorPlugins.tiptap";
 import { highlightExtension } from "@/plugins/highlight/tiptap";
 import { subscriptExtension, superscriptExtension } from "@/plugins/subSuperscript/tiptap";
+import { underlineExtension } from "@/plugins/underline/tiptap";
 import { alertBlockExtension } from "@/plugins/alertBlock/tiptap";
 import { detailsBlockExtension, detailsSummaryExtension } from "@/plugins/detailsBlock/tiptap";
 import { taskListItemExtension } from "@/plugins/taskToggle/tiptap";
@@ -46,6 +47,15 @@ import { useTiptapTableCommands } from "@/hooks/useTiptapTableCommands";
 import { ImageContextMenu } from "./ImageContextMenu";
 import { SourcePeek } from "./SourcePeek";
 import { AlignedTableCell, AlignedTableHeader } from "./alignedTableNodes";
+import {
+  frontmatterExtension,
+  htmlBlockExtension,
+  htmlInlineExtension,
+  linkDefinitionExtension,
+  linkReferenceExtension,
+  wikiEmbedExtension,
+  wikiLinkExtension,
+} from "@/plugins/markdownArtifacts";
 
 const CURSOR_TRACKING_DELAY_MS = 200;
 
@@ -71,16 +81,25 @@ export function TiptapEditorInner() {
         // We parse/serialize markdown ourselves.
         // Keep Tiptap defaults for schema names and commands.
         listItem: false,
+        underline: false,
       }),
       slashMenuExtension,
       taskListItemExtension,
       highlightExtension,
       subscriptExtension,
       superscriptExtension,
+      underlineExtension,
       mathInlineExtension,
       alertBlockExtension,
       detailsSummaryExtension,
       detailsBlockExtension,
+      wikiLinkExtension,
+      wikiEmbedExtension,
+      linkReferenceExtension,
+      linkDefinitionExtension,
+      frontmatterExtension,
+      htmlInlineExtension,
+      htmlBlockExtension,
       footnoteReferenceExtension,
       footnoteDefinitionExtension,
       Table.configure({ resizable: false }),
@@ -116,7 +135,7 @@ export function TiptapEditorInner() {
         pendingRaf.current = null;
       }
 
-      const markdown = serializeTiptapDocToMarkdown(editor.state.doc);
+      const markdown = serializeMarkdown(editor.schema, editor.state.doc, { useRemark: true });
       isInternalChange.current = true;
       lastExternalContent.current = markdown;
       setContent(markdown);
@@ -153,7 +172,7 @@ export function TiptapEditorInner() {
     },
     onCreate: ({ editor }) => {
       try {
-        const doc = parseMarkdownToTiptapDoc(editor.schema, content);
+        const doc = parseMarkdown(editor.schema, content, { useRemark: true });
         lastExternalContent.current = content;
         editor.commands.setContent(doc, { emitUpdate: false });
       } catch (error) {
@@ -236,7 +255,7 @@ export function TiptapEditorInner() {
 
     lastExternalContent.current = content;
     try {
-      const doc = parseMarkdownToTiptapDoc(editor.schema, content);
+      const doc = parseMarkdown(editor.schema, content, { useRemark: true });
       editor.commands.setContent(doc, { emitUpdate: false });
     } catch (error) {
       console.error("[TiptapEditor] Failed to parse external markdown:", error);

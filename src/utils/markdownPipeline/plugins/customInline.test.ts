@@ -152,4 +152,22 @@ describe("customInline remark plugin", () => {
       expect(md.trim()).toBe("H~2~O and x^2^ and ==highlight==");
     });
   });
+
+  describe("skip protected nodes", () => {
+    it("ignores markers inside inline code", () => {
+      const mdast = parseMarkdownToMdast("`H~2~O`");
+      const para = mdast.children[0];
+      const children = (para as { children?: unknown[] })?.children ?? [];
+      const subNode = children.find((c) => (c as { type?: string }).type === "subscript");
+      expect(subNode).toBeUndefined();
+    });
+
+    it("ignores markers inside inline math", () => {
+      const mdast = parseMarkdownToMdast("$H~2~O$");
+      const para = mdast.children[0];
+      const children = (para as { children?: unknown[] })?.children ?? [];
+      const subNode = children.find((c) => (c as { type?: string }).type === "subscript");
+      expect(subNode).toBeUndefined();
+    });
+  });
 });

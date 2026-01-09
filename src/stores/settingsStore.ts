@@ -107,12 +107,15 @@ export type SpellCheckLanguage = "en" | "de" | "es" | "fr" | "ko";
 
 export type AutoPairCJKStyle = "off" | "auto";
 
+export type HtmlRenderingMode = "hidden" | "sanitized" | "sanitizedWithStyles";
+
 export interface MarkdownSettings {
   preserveLineBreaks: boolean; // Don't collapse blank lines
   showBrTags: boolean; // Display <br> tags visibly
   revealInlineSyntax: boolean; // Show markdown markers when cursor in formatted text
   enableRegexSearch: boolean; // Enable regex in Find & Replace
   mediaBorderStyle: MediaBorderStyle; // Border style for images and diagrams
+  htmlRenderingMode: HtmlRenderingMode; // Rich text display for raw HTML
   // Auto-pair
   autoPairEnabled: boolean; // Auto-insert closing brackets/quotes
   autoPairCJKStyle: AutoPairCJKStyle; // CJK bracket pairing style
@@ -211,6 +214,7 @@ const initialState: SettingsState = {
     revealInlineSyntax: false,
     enableRegexSearch: true,
     mediaBorderStyle: "none",
+    htmlRenderingMode: "hidden",
     autoPairEnabled: true,
     autoPairCJKStyle: "auto",
     autoPairCurlyQuotes: false, // OFF by default (may conflict with IME smart quotes)

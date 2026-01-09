@@ -13,7 +13,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import remarkFrontmatter from "remark-frontmatter";
 import type { Root } from "mdast";
-import { remarkCustomInline } from "./plugins";
+import { remarkCustomInline, remarkDetailsBlock, remarkWikiLinks } from "./plugins";
 
 /**
  * Unified processor configured for VMark markdown parsing.
@@ -36,6 +36,8 @@ const processor = unified()
   })
   .use(remarkMath)
   .use(remarkFrontmatter, ["yaml"])
+  .use(remarkWikiLinks)
+  .use(remarkDetailsBlock)
   .use(remarkCustomInline);
 
 /**

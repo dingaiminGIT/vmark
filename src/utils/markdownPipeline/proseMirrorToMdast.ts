@@ -11,18 +11,31 @@ import type { Schema, Node as PMNode } from "@tiptap/pm/model";
 import type {
   Root,
   Content,
-  Paragraph,
-  Heading,
-  Code,
-  Blockquote,
-  List,
-  ListItem,
-  ThematicBreak,
   PhrasingContent,
   BlockContent,
+  LinkReference,
+  Html,
 } from "mdast";
-import type { FootnoteDefinition } from "./types";
+import type { FootnoteDefinition, WikiEmbed, WikiLink } from "./types";
 import * as inlineConverters from "./pmInlineConverters";
+import {
+  convertAlertBlock,
+  convertBlockImage,
+  convertBlockquote,
+  convertCodeBlock,
+  convertDefinition,
+  convertDetailsBlock,
+  convertFrontmatter,
+  convertHeading,
+  convertHorizontalRule,
+  convertHtmlBlock,
+  convertList,
+  convertListItem,
+  convertParagraph,
+  convertTable,
+  type PmToMdastContext,
+  type PmToMdastNode,
+} from "./pmBlockConverters";
 
 /**
  * Convert ProseMirror document to MDAST root.
@@ -46,8 +59,13 @@ export function proseMirrorToMdast(schema: Schema, doc: PMNode): Root {
  * Schema parameter reserved for future extension (e.g., custom node detection).
  */
 class PMToMdastConverter {
+  private context: PmToMdastContext;
+
   constructor(_schema: Schema) {
-    // Schema reserved for future use (custom node type detection)
+    this.context = {
+      convertNode: this.convertNode.bind(this),
+      convertInlineContent: this.convertInlineContent.bind(this),
+    };
   }
 
   /**
@@ -55,14 +73,19 @@ class PMToMdastConverter {
    */
   convertDoc(doc: PMNode): Root {
     const children: Content[] = [];
+    const pushRootContent = (node: PmToMdastNode) => {
+      if (node.type !== "listItem") {
+        children.push(node);
+      }
+    };
 
     doc.forEach((child) => {
       const converted = this.convertNode(child);
       if (converted) {
         if (Array.isArray(converted)) {
-          children.push(...converted);
+          converted.forEach((node) => pushRootContent(node));
         } else {
-          children.push(converted);
+          pushRootContent(converted);
         }
       }
     });
@@ -73,27 +96,41 @@ class PMToMdastConverter {
   /**
    * Convert a single ProseMirror node to MDAST node(s).
    */
-  private convertNode(node: PMNode): Content | Content[] | null {
+  private convertNode(node: PMNode): PmToMdastNode | PmToMdastNode[] | null {
     const typeName = node.type.name;
 
     switch (typeName) {
       // Block nodes
       case "paragraph":
-        return this.convertParagraph(node);
+        return convertParagraph(this.context, node);
       case "heading":
-        return this.convertHeading(node);
+        return convertHeading(this.context, node);
       case "codeBlock":
-        return this.convertCodeBlock(node);
+        return convertCodeBlock(node);
       case "blockquote":
-        return this.convertBlockquote(node);
+        return convertBlockquote(this.context, node);
+      case "alertBlock":
+        return convertAlertBlock(this.context, node);
+      case "detailsBlock":
+        return convertDetailsBlock(this.context, node);
       case "bulletList":
-        return this.convertList(node, false);
+        return convertList(this.context, node, false);
       case "orderedList":
-        return this.convertList(node, true);
+        return convertList(this.context, node, true);
       case "listItem":
-        return this.convertListItem(node);
+        return convertListItem(this.context, node);
       case "horizontalRule":
-        return this.convertHorizontalRule();
+        return convertHorizontalRule();
+      case "table":
+        return convertTable(this.context, node);
+      case "block_image":
+        return convertBlockImage(node);
+      case "frontmatter":
+        return convertFrontmatter(node);
+      case "link_definition":
+        return convertDefinition(node);
+      case "html_block":
+        return convertHtmlBlock(node);
       case "hardBreak":
         return inlineConverters.convertHardBreak();
       case "image":
@@ -116,93 +153,6 @@ class PMToMdastConverter {
     }
   }
 
-  // Block converters
-
-  private convertParagraph(node: PMNode): Paragraph {
-    const children = this.convertInlineContent(node);
-    return { type: "paragraph", children };
-  }
-
-  private convertHeading(node: PMNode): Heading {
-    const level = (node.attrs.level ?? 1) as 1 | 2 | 3 | 4 | 5 | 6;
-    const children = this.convertInlineContent(node);
-    return { type: "heading", depth: level, children };
-  }
-
-  private convertCodeBlock(node: PMNode): Code {
-    const lang = node.attrs.language as string | null;
-    return {
-      type: "code",
-      lang: lang || undefined,
-      value: node.textContent,
-    };
-  }
-
-  private convertBlockquote(node: PMNode): Blockquote {
-    const children: BlockContent[] = [];
-    node.forEach((child) => {
-      const converted = this.convertNode(child);
-      if (converted) {
-        if (Array.isArray(converted)) {
-          children.push(...(converted as BlockContent[]));
-        } else {
-          children.push(converted as BlockContent);
-        }
-      }
-    });
-    return { type: "blockquote", children };
-  }
-
-  private convertList(node: PMNode, ordered: boolean): List {
-    const children: ListItem[] = [];
-    node.forEach((child) => {
-      const converted = this.convertNode(child);
-      if (converted && !Array.isArray(converted) && converted.type === "listItem") {
-        children.push(converted);
-      }
-    });
-
-    const list: List = {
-      type: "list",
-      ordered,
-      children,
-    };
-
-    if (ordered) {
-      list.start = (node.attrs.start as number) ?? 1;
-    }
-
-    return list;
-  }
-
-  private convertListItem(node: PMNode): ListItem {
-    const children: BlockContent[] = [];
-    node.forEach((child) => {
-      const converted = this.convertNode(child);
-      if (converted) {
-        if (Array.isArray(converted)) {
-          children.push(...(converted as BlockContent[]));
-        } else {
-          children.push(converted as BlockContent);
-        }
-      }
-    });
-
-    const listItem: ListItem = { type: "listItem", children };
-
-    // Handle task list items
-    const checked = node.attrs.checked;
-    if (checked === true || checked === false) {
-      listItem.checked = checked;
-    }
-
-    return listItem;
-  }
-
-  private convertHorizontalRule(): ThematicBreak {
-    return { type: "thematicBreak" };
-  }
-
   // Inline content conversion
 
   /**
@@ -223,6 +173,14 @@ class PMToMdastConverter {
         result.push(inlineConverters.convertMathInline(child));
       } else if (child.type.name === "footnote_reference") {
         result.push(inlineConverters.convertFootnoteReference(child));
+      } else if (child.type.name === "wikiLink") {
+        result.push(this.convertWikiLink(child));
+      } else if (child.type.name === "wikiEmbed") {
+        result.push(this.convertWikiEmbed(child));
+      } else if (child.type.name === "link_reference") {
+        result.push(this.convertLinkReference(child));
+      } else if (child.type.name === "html_inline") {
+        result.push(this.convertHtmlInline(child));
       }
     });
 
@@ -250,5 +208,35 @@ class PMToMdastConverter {
       label: String(node.attrs.label ?? "1"),
       children,
     };
+  }
+
+  private convertLinkReference(node: PMNode): LinkReference {
+    return {
+      type: "linkReference",
+      identifier: String(node.attrs.identifier ?? ""),
+      label: node.attrs.label ? String(node.attrs.label) : undefined,
+      referenceType: (node.attrs.referenceType ?? "full") as "full" | "collapsed" | "shortcut",
+      children: this.convertInlineContent(node),
+    };
+  }
+
+  private convertWikiLink(node: PMNode): WikiLink {
+    return {
+      type: "wikiLink",
+      value: String(node.attrs.value ?? ""),
+      alias: node.attrs.alias ? String(node.attrs.alias) : undefined,
+    };
+  }
+
+  private convertWikiEmbed(node: PMNode): WikiEmbed {
+    return {
+      type: "wikiEmbed",
+      value: String(node.attrs.value ?? ""),
+      alias: node.attrs.alias ? String(node.attrs.alias) : undefined,
+    };
+  }
+
+  private convertHtmlInline(node: PMNode): Html {
+    return { type: "html", value: String(node.attrs.value ?? "") };
   }
 }

@@ -101,4 +101,25 @@ $$`;
       expect(output).toContain("x^2 + y^2 = z^2");
     });
   });
+
+  describe("wiki link round-trip", () => {
+    it("round-trips wiki links and embeds", () => {
+      const input = "See [[Page|Alias]] and ![[embed]]";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast);
+      expect(output).toContain("[[Page|Alias]]");
+      expect(output).toContain("![[embed]]");
+    });
+  });
+
+  describe("details round-trip", () => {
+    it("round-trips details blocks", () => {
+      const input = "<details>\\n<summary>Info</summary>\\n\\nBody\\n</details>";
+      const mdast = parseMarkdownToMdast(input);
+      const output = serializeMdastToMarkdown(mdast);
+      expect(output).toContain("<details");
+      expect(output).toContain("<summary>Info</summary>");
+      expect(output).toContain("Body");
+    });
+  });
 });

@@ -107,6 +107,27 @@ describe("Security: HTML Sanitization", () => {
     expect(result).not.toContain("onerror");
   });
 
+  it("should hide styles when HTML preview styles are disabled", async () => {
+    const { sanitizeHtmlPreview } = await import("@/utils/sanitize");
+
+    const input = '<span style="color: red;">Hello</span>';
+    const result = sanitizeHtmlPreview(input, { allowStyles: false, context: "inline" });
+
+    expect(result).toContain("Hello");
+    expect(result).not.toContain("style=");
+  });
+
+  it("should allow whitelisted styles in HTML preview", async () => {
+    const { sanitizeHtmlPreview } = await import("@/utils/sanitize");
+
+    const input = '<span style="color: red; position: absolute;">Hello</span>';
+    const result = sanitizeHtmlPreview(input, { allowStyles: true, context: "inline" });
+
+    expect(result).toContain("style=");
+    expect(result).toContain("color");
+    expect(result).not.toContain("position");
+  });
+
   it("should allow safe SVG elements for mermaid", async () => {
     const { sanitizeSvg } = await import("@/utils/sanitize");
 

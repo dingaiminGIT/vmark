@@ -1,7 +1,7 @@
 import { NodeSelection, Selection, type EditorState } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { Fragment, Slice, type Schema, type Node as PMNode } from "@tiptap/pm/model";
-import { parseMarkdownToTiptapDoc, serializeTiptapDocToMarkdown } from "@/utils/tiptapMarkdown";
+import { parseMarkdown, serializeMarkdown } from "@/utils/markdownPipeline";
 import { useSourcePeekStore, type SourcePeekAnchorRect, type SourcePeekRange } from "@/stores/sourcePeekStore";
 
 function createDocFromSlice(schema: Schema, slice: Slice): PMNode {
@@ -46,11 +46,11 @@ export function getSourcePeekRange(state: EditorState): SourcePeekRange {
 export function serializeSourcePeekRange(state: EditorState, range: SourcePeekRange): string {
   const slice = state.doc.slice(range.from, range.to);
   const doc = createDocFromSlice(state.schema, slice);
-  return serializeTiptapDocToMarkdown(doc);
+  return serializeMarkdown(state.schema, doc, { useRemark: true });
 }
 
 export function createSourcePeekSlice(schema: Schema, markdown: string): Slice {
-  const parsed = parseMarkdownToTiptapDoc(schema, markdown);
+  const parsed = parseMarkdown(schema, markdown, { useRemark: true });
   const paragraphType = schema.nodes.paragraph;
   let content = parsed.content;
 

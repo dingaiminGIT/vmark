@@ -118,4 +118,23 @@ Content`;
       expect(hasMath).toBe(true);
     });
   });
+
+  describe("wiki links", () => {
+    it("parses wiki links and embeds", () => {
+      const result = parseMarkdownToMdast("See [[Page|Alias]] and ![[embed]]");
+      const para = result.children[0] as Paragraph;
+      const hasWikiLink = para.children.some((c) => c.type === "wikiLink");
+      const hasWikiEmbed = para.children.some((c) => c.type === "wikiEmbed");
+      expect(hasWikiLink).toBe(true);
+      expect(hasWikiEmbed).toBe(true);
+    });
+  });
+
+  describe("details blocks", () => {
+    it("parses details HTML into details nodes", () => {
+      const md = "<details>\\n<summary>Info</summary>\\n\\nBody\\n</details>";
+      const result = parseMarkdownToMdast(md);
+      expect(result.children[0]?.type).toBe("details");
+    });
+  });
 });

@@ -1,12 +1,3 @@
-/**
- * Custom inline syntax remark plugin
- *
- * Parses ~subscript~, ^superscript^, ==highlight==, ++underline++ syntax.
- * Adds corresponding MDAST nodes and serializes them back to markdown.
- *
- * @module utils/markdownPipeline/plugins/customInline
- */
-
 import type { Root, PhrasingContent, Text } from "mdast";
 import type { Plugin } from "unified";
 import type {
@@ -16,8 +7,6 @@ import type {
   Underline,
 } from "../types";
 
-// Internal types for the from/to markdown extensions
-// These are simplified versions since we only use a subset of the API
 interface FromMarkdownExtension {
   transforms?: Array<(tree: Root) => void>;
 }
@@ -33,7 +22,6 @@ interface ToMarkdownExtension {
   }>;
 }
 
-// Handler function type for serializing nodes
 type MarkHandler = (
   node: unknown,
   parent: unknown,
@@ -53,7 +41,6 @@ interface MarkHandlerState {
   ) => string;
 }
 
-// Mark definition type with optional skipDouble
 interface MarkDefinition {
   readonly name: "highlight" | "underline" | "superscript" | "subscript";
   readonly marker: string;
@@ -61,7 +48,8 @@ interface MarkDefinition {
   readonly skipDouble?: boolean;
 }
 
-// Syntax definitions
+const SKIP_NODE_TYPES = new Set(["inlineCode", "code", "math", "inlineMath", "html", "yaml"]);
+
 const MARKS: readonly MarkDefinition[] = [
   { name: "highlight", marker: "==", markerLen: 2 },
   { name: "underline", marker: "++", markerLen: 2 },
@@ -71,9 +59,6 @@ const MARKS: readonly MarkDefinition[] = [
 
 type MarkName = "subscript" | "superscript" | "highlight" | "underline";
 
-/**
- * Remark plugin to parse and serialize custom inline marks.
- */
 export const remarkCustomInline: Plugin<[], Root> = function () {
   const data = this.data() as {
     fromMarkdownExtensions?: FromMarkdownExtension[];
@@ -87,10 +72,6 @@ export const remarkCustomInline: Plugin<[], Root> = function () {
   data.toMarkdownExtensions.push(customInlineToMarkdown());
 };
 
-/**
- * Creates mdast-util-from-markdown extension for custom marks.
- * We handle this manually by walking the tree after initial parse.
- */
 function customInlineFromMarkdown(): FromMarkdownExtension {
   return {
     // We use transforms instead of tokenizers
@@ -98,17 +79,12 @@ function customInlineFromMarkdown(): FromMarkdownExtension {
   };
 }
 
-/**
- * Transform function to find and parse custom mark syntax in text nodes.
- */
 function transformCustomMarks(tree: Root): void {
   walkAndReplace(tree);
 }
 
-/**
- * Walk the tree and replace text nodes containing mark syntax.
- */
 function walkAndReplace(node: Root | PhrasingContent | { children?: unknown[] }): void {
+  if (isSkippableNode(node)) return;
   if (!("children" in node) || !Array.isArray(node.children)) return;
 
   const newChildren: unknown[] = [];
@@ -138,10 +114,12 @@ function isTextNode(node: unknown): node is Text {
   return typeof node === "object" && node !== null && (node as { type?: string }).type === "text";
 }
 
-/**
- * Find a valid mark pair starting from a given position.
- * Returns { start, end } if found, or null if no valid pair exists.
- */
+function isSkippableNode(node: unknown): boolean {
+  if (!node || typeof node !== "object") return false;
+  const type = (node as { type?: string }).type;
+  return typeof type === "string" && SKIP_NODE_TYPES.has(type);
+}
+
 function findMarkPair(
   text: string,
   mark: MarkDefinition,
@@ -185,14 +163,6 @@ function findMarkPair(
   return null;
 }
 
-/**
- * Parse custom marks from a text string.
- * Returns an array of text and mark nodes.
- *
- * Uses a single-pass algorithm: finds the earliest mark across all types,
- * processes it, then continues from where it left off. This avoids O(n²)
- * by not re-scanning already-processed text.
- */
 function parseMarksInText(text: string): PhrasingContent[] {
   const result: PhrasingContent[] = [];
   let position = 0;
@@ -237,9 +207,6 @@ function parseMarksInText(text: string): PhrasingContent[] {
   return result.length > 0 ? result : [{ type: "text", value: text }];
 }
 
-/**
- * Create a mark node with text children.
- */
 function createMarkNode(name: MarkName, content: string): Subscript | Superscript | Highlight | Underline {
   const children: PhrasingContent[] = parseMarksInText(content);
 
@@ -255,9 +222,6 @@ function createMarkNode(name: MarkName, content: string): Subscript | Superscrip
   }
 }
 
-/**
- * Creates mdast-util-to-markdown extension for custom marks.
- */
 function customInlineToMarkdown(): ToMarkdownExtension {
   return {
     handlers: {
@@ -289,10 +253,6 @@ function customInlineToMarkdown(): ToMarkdownExtension {
   };
 }
 
-/**
- * Create a handler for serializing a mark type.
- * Uses state.enter() to register construct for unsafe rule exclusion.
- */
 function createMarkHandler(marker: string, constructName: string): MarkHandler {
   return function (node: unknown, _parent: unknown, state: MarkHandlerState, info: { before: string; after: string }) {
     const tracker = state.createTracker(info);

@@ -1,4 +1,9 @@
-import { useSettingsStore, type MediaBorderStyle, type AutoPairCJKStyle } from "@/stores/settingsStore";
+import {
+  useSettingsStore,
+  type MediaBorderStyle,
+  type AutoPairCJKStyle,
+  type HtmlRenderingMode,
+} from "@/stores/settingsStore";
 import { SettingRow, Toggle, SettingsGroup, Select } from "./components";
 
 export function MarkdownSettings() {
@@ -88,6 +93,23 @@ export function MarkdownSettings() {
               { value: "hover", label: "On hover" },
             ]}
             onChange={(v) => updateSetting("mediaBorderStyle", v)}
+          />
+        </SettingRow>
+      </SettingsGroup>
+
+      <SettingsGroup title="HTML Rendering">
+        <SettingRow
+          label="Raw HTML in rich text"
+          description="Control whether raw HTML is hidden or rendered (sanitized)"
+        >
+          <Select<HtmlRenderingMode>
+            value={markdown.htmlRenderingMode}
+            options={[
+              { value: "hidden", label: "Hidden" },
+              { value: "sanitized", label: "Sanitized" },
+              { value: "sanitizedWithStyles", label: "Sanitized + styles" },
+            ]}
+            onChange={(v) => updateSetting("htmlRenderingMode", v)}
           />
         </SettingRow>
       </SettingsGroup>
