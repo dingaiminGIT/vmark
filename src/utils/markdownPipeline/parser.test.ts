@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from "vitest";
 import { parseMarkdownToMdast } from "./parser";
-import type { Root, Paragraph, Text, Heading, Code } from "mdast";
+import type { Paragraph, Text, Heading, Code } from "mdast";
 
 describe("parseMarkdownToMdast", () => {
   describe("CommonMark basics", () => {

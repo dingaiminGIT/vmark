@@ -96,6 +96,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^16.2.0",
     "jsdom": "^26.1.0",
+    "mdast-util-math": "^3.0.0",
     "tailwindcss": "^4.1.8",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.33.1",

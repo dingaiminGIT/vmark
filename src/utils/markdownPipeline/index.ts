@@ -19,5 +19,9 @@
 export { parseMarkdownToMdast } from "./parser";
 export { serializeMdastToMarkdown } from "./serializer";
 
+// MDAST ↔ ProseMirror conversion
+export { mdastToProseMirror } from "./mdastToProseMirror";
+export { proseMirrorToMdast } from "./proseMirrorToMdast";
+
 // Types
 export * from "./types";

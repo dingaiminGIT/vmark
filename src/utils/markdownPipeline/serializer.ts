@@ -29,8 +29,8 @@ const processor = unified()
     bullet: "-", // Use - for unordered lists
     bulletOther: "*", // Fallback bullet
     bulletOrdered: ".", // Use . for ordered lists
-    emphasis: "*", // Use * for emphasis
-    strong: "**", // Use ** for strong
+    emphasis: "*", // Use * for emphasis (single: *italic*)
+    strong: "*", // Use * for strong (double: **bold**)
     fence: "`", // Use ` for code fences
     fences: true, // Use fenced code blocks
     rule: "-", // Use --- for thematic breaks

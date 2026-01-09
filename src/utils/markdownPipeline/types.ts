@@ -34,17 +34,8 @@ export type {
   FootnoteReference,
 } from "mdast";
 
-// Math types from remark-math
-export interface InlineMath {
-  type: "inlineMath";
-  value: string;
-}
-
-export interface Math {
-  type: "math";
-  value: string;
-  meta?: string | null;
-}
+// Re-export math types from mdast-util-math (added by remark-math)
+export type { Math, InlineMath } from "mdast-util-math";
 
 // Frontmatter type from remark-frontmatter
 export interface Yaml {
@@ -91,9 +82,9 @@ export interface WikiEmbed {
 }
 
 // Union type for all phrasing (inline) content
+// Note: mdast PhrasingContent already includes InlineMath via mdast-util-math augmentation
 export type PhrasingContent =
   | import("mdast").PhrasingContent
-  | InlineMath
   | Subscript
   | Superscript
   | Highlight
@@ -101,22 +92,21 @@ export type PhrasingContent =
   | WikiLink;
 
 // Union type for all block content
+// Note: mdast BlockContent already includes Math via mdast-util-math augmentation
 export type BlockContent =
   | import("mdast").BlockContent
-  | Math
   | Yaml
   | WikiEmbed;
 
-// Augment MDAST module for custom types
+// Augment MDAST module for custom VMark types
+// Note: math and inlineMath are already augmented by mdast-util-math
 declare module "mdast" {
   interface RootContentMap {
     yaml: Yaml;
-    math: Math;
     wikiEmbed: WikiEmbed;
   }
 
   interface PhrasingContentMap {
-    inlineMath: InlineMath;
     subscript: Subscript;
     superscript: Superscript;
     highlight: Highlight;
