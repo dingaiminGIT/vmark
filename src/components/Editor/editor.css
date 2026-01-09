@@ -335,11 +335,6 @@
   color: var(--meta-content-color);
 }
 
-/* HTML Comments - hidden in WYSIWYG mode */
-.tiptap-editor span[data-type="html"] {
-  display: none;
-}
-
 /* Footnotes */
 .tiptap-editor sup[data-type="footnote_reference"] {
   color: var(--primary-color);

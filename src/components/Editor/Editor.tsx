@@ -19,6 +19,8 @@ import "@/plugins/mermaid/mermaid.css";
 import "@/plugins/tableUI/table-ui.css";
 import "@/plugins/subSuperscript/sub-super.css";
 import "@/plugins/highlight/highlight.css";
+import "@/plugins/underline/underline.css";
+import "@/plugins/markdownArtifacts/markdown-artifacts.css";
 import "@/plugins/formatToolbar/format-toolbar.css";
 import "katex/dist/katex.min.css";
 
@@ -26,12 +28,13 @@ export function Editor() {
   const sourceMode = useEditorStore((state) => state.sourceMode);
   const documentId = useDocumentId();
   const mediaBorderStyle = useSettingsStore((s) => s.markdown.mediaBorderStyle);
+  const htmlRenderingMode = useSettingsStore((s) => s.markdown.htmlRenderingMode);
 
   const editorKey = `doc-${documentId}`;
   const containerClass = `editor-container media-border-${mediaBorderStyle}`;
 
   return (
-    <div className={containerClass}>
+    <div className={containerClass} data-html-rendering-mode={htmlRenderingMode}>
       <div className="editor-content">
         {sourceMode ? <SourceEditor key={editorKey} /> : <TiptapEditorInner key={editorKey} />}
       </div>
