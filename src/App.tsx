@@ -67,12 +67,14 @@ import { useDisableContextMenu } from "@/hooks/useDisableContextMenu";
 import { useViewShortcuts } from "@/hooks/useViewShortcuts";
 import { useTabShortcuts } from "@/hooks/useTabShortcuts";
 import { useReloadGuard } from "@/hooks/useReloadGuard";
+import { useDragDropOpen } from "@/hooks/useDragDropOpen";
 
 // Separate component for window lifecycle hooks to avoid conditional hook calls
 function DocumentWindowHooks() {
   useWindowClose();
   useAppQuit();
   useWindowTitle();
+  useDragDropOpen(); // Open dropped markdown files
   return null;
 }
 

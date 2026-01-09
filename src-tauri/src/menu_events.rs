@@ -11,8 +11,9 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         }
     }
 
-    // CRITICAL: Handle "new" and "new-window" the same way - create window directly
-    if id == "new" || id == "new-window" {
+    // "new-window" creates a new window directly in Rust
+    // "new" emits to frontend to create a new tab in the current window
+    if id == "new-window" {
         let _ = crate::window_manager::create_document_window(app, None);
         return;
     }

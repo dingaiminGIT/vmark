@@ -5,6 +5,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { useDocumentStore } from "../stores/documentStore";
 import { useTabStore } from "../stores/tabStore";
 import { useRecentFilesStore } from "../stores/recentFilesStore";
+import { useWorkspaceStore } from "../stores/workspaceStore";
+import {
+  setCurrentWindowLabel,
+  migrateWorkspaceStorage,
+} from "../utils/workspaceStorage";
 
 interface WindowContextValue {
   windowLabel: string;
@@ -28,6 +33,20 @@ export function WindowProvider({ children }: WindowProviderProps) {
       try {
         const window = getCurrentWebviewWindow();
         const label = window.label;
+
+        // For main window, migrate legacy workspace storage first
+        if (label === "main") {
+          migrateWorkspaceStorage();
+        }
+
+        // Set the current window label for workspace storage
+        // This must happen before store rehydration
+        setCurrentWindowLabel(label);
+
+        // Rehydrate workspace store from window-specific storage key
+        // This ensures new windows don't inherit main's workspace
+        useWorkspaceStore.persist.rehydrate();
+
         setWindowLabel(label);
 
         // CRITICAL: Only init documents for document windows (main, doc-*)
@@ -50,7 +69,9 @@ export function WindowProvider({ children }: WindowProviderProps) {
                   filePath = pendingFiles[0];
                   // Open remaining files in new windows
                   for (let i = 1; i < pendingFiles.length; i++) {
-                    invoke("open_file_in_new_window", { path: pendingFiles[i] });
+                    invoke("open_file_in_new_window", { path: pendingFiles[i] }).catch((e) =>
+                      console.error("[WindowContext] Failed to open file in new window:", e)
+                    );
                   }
                 }
               } catch (e) {

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { isPathExcluded as checkPathExcluded } from "@/utils/paths";
 import {
   createWorkspaceIdentity,
@@ -8,6 +8,7 @@ import {
   isTrusted,
   type WorkspaceIdentity,
 } from "@/utils/workspaceIdentity";
+import { windowScopedStorage } from "@/utils/workspaceStorage";
 
 // Workspace configuration stored in .vmark file
 export interface WorkspaceConfig {
@@ -187,7 +188,10 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       },
     }),
     {
+      // Name is ignored by windowScopedStorage (uses window label instead)
       name: "vmark-workspace",
+      // Use window-scoped storage for per-window workspace persistence
+      storage: createJSONStorage(() => windowScopedStorage),
       // Only persist workspace path, not config (config comes from .vmark file)
       partialize: (state) => ({
         rootPath: state.rootPath,

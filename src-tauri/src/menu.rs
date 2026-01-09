@@ -67,6 +67,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         true,
         &[
             &MenuItem::with_id(app, "new", "New", true, Some("CmdOrCtrl+N"))?,
+            &MenuItem::with_id(app, "new-window", "New Window", true, Some("CmdOrCtrl+Shift+N"))?,
             &MenuItem::with_id(app, "open", "Open...", true, Some("CmdOrCtrl+O"))?,
             &MenuItem::with_id(
                 app,
@@ -558,8 +559,14 @@ fn create_menu_with_shortcuts(
     shortcuts: &HashMap<String, String>,
 ) -> tauri::Result<Menu<tauri::Wry>> {
     // Helper to get shortcut for a menu item, falling back to default
+    // Returns None if the resulting shortcut would be empty
     let get_accel = |id: &str, default: &str| -> Option<String> {
-        shortcuts.get(id).cloned().or_else(|| Some(default.to_string()))
+        let accel = shortcuts.get(id).map(|s| s.as_str()).unwrap_or(default);
+        if accel.is_empty() {
+            None
+        } else {
+            Some(accel.to_string())
+        }
     };
 
     // App menu (macOS only)
@@ -621,6 +628,7 @@ fn create_menu_with_shortcuts(
         true,
         &[
             &MenuItem::with_id(app, "new", "New", true, get_accel("new", "CmdOrCtrl+N"))?,
+            &MenuItem::with_id(app, "new-window", "New Window", true, get_accel("new-window", "CmdOrCtrl+Shift+N"))?,
             &MenuItem::with_id(app, "open", "Open...", true, get_accel("open", "CmdOrCtrl+O"))?,
             &MenuItem::with_id(app, "open-folder", "Open Folder...", true, get_accel("open-folder", "CmdOrCtrl+Shift+O"))?,
             &recent_submenu,

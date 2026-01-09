@@ -10,10 +10,12 @@ import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { createSnapshot } from "@/utils/historyUtils";
 import { isWindowFocused } from "@/utils/windowFocus";
-import { getDefaultSaveFolder } from "@/utils/tabUtils";
+import { getDefaultSaveFolderWithFallback } from "@/utils/defaultSaveFolder";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { shouldClaimFile } from "@/utils/fileOwnership";
+import { createUntitledTab } from "@/utils/newFile";
+import { getDirectory } from "@/utils/pathUtils";
 
 async function saveToPath(
   tabId: string,
@@ -131,8 +133,8 @@ export function useFileOperations() {
       if (doc.filePath) {
         await saveToPath(tabId, doc.filePath, doc.content, "manual");
       } else {
-        // Use folder from another saved file in this window as default
-        const defaultFolder = getDefaultSaveFolder(windowLabel);
+        // Use workspace root, another saved file's folder, or home
+        const defaultFolder = await getDefaultSaveFolderWithFallback(windowLabel);
         const path = await save({
           defaultPath: defaultFolder,
           filters: [{ name: "Markdown", extensions: ["md"] }],
@@ -156,10 +158,10 @@ export function useFileOperations() {
       const doc = useDocumentStore.getState().getDocument(tabId);
       if (!doc) return;
 
-      // Use current file's folder or folder from another saved file
+      // Use current file's folder or resolve default folder
       const defaultFolder = doc.filePath
-        ? doc.filePath.substring(0, doc.filePath.lastIndexOf("/"))
-        : getDefaultSaveFolder(windowLabel);
+        ? getDirectory(doc.filePath)
+        : await getDefaultSaveFolderWithFallback(windowLabel);
       const path = await save({
         defaultPath: defaultFolder,
         filters: [{ name: "Markdown", extensions: ["md"] }],
@@ -217,6 +219,12 @@ export function useFileOperations() {
     [openPathInTab]
   );
 
+  const handleNew = useCallback(async () => {
+    // Only respond if this window is focused
+    if (!(await isWindowFocused())) return;
+    createUntitledTab(windowLabel);
+  }, [windowLabel]);
+
   const unlistenRefs = useRef<UnlistenFn[]>([]);
 
   useEffect(() => {
@@ -229,7 +237,11 @@ export function useFileOperations() {
 
       if (cancelled) return;
 
-      // Note: menu:new is now handled directly in Rust (creates new window)
+      // menu:new creates a new tab in this window
+      // menu:new-window (handled in Rust) creates a new window
+      const unlistenNew = await listen("menu:new", handleNew);
+      if (cancelled) { unlistenNew(); return; }
+      unlistenRefs.current.push(unlistenNew);
 
       const unlistenOpen = await listen("menu:open", handleOpen);
       if (cancelled) { unlistenOpen(); return; }
@@ -267,5 +279,5 @@ export function useFileOperations() {
       unlistenRefs.current = [];
       fns.forEach((fn) => fn());
     };
-  }, [handleOpen, handleSave, handleSaveAs, handleOpenFile, handleAppOpenFile]);
+  }, [handleNew, handleOpen, handleSave, handleSaveAs, handleOpenFile, handleAppOpenFile]);
 }

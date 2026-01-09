@@ -8,7 +8,7 @@ import { useWindowLabel } from "../contexts/WindowContext";
 import { useDocumentStore } from "../stores/documentStore";
 import { useTabStore } from "../stores/tabStore";
 import { useRecentFilesStore } from "../stores/recentFilesStore";
-import { getDefaultSaveFolder } from "@/utils/tabUtils";
+import { getDefaultSaveFolderWithFallback } from "@/utils/defaultSaveFolder";
 
 /**
  * Handle window close with save confirmation dialog.
@@ -69,7 +69,7 @@ export function useWindowClose() {
           let path = doc.filePath;
           if (!path) {
             const newPath = await save({
-              defaultPath: getDefaultSaveFolder(windowLabel),
+              defaultPath: await getDefaultSaveFolderWithFallback(windowLabel),
               filters: [{ name: "Markdown", extensions: ["md"] }],
             });
             if (!newPath) {
@@ -81,6 +81,11 @@ export function useWindowClose() {
 
           try {
             await writeTextFile(path, doc.content);
+            // Update document and tab state so if user cancels later,
+            // this tab correctly shows as saved with the new path
+            useDocumentStore.getState().setFilePath(dirtyTab.id, path);
+            useDocumentStore.getState().markSaved(dirtyTab.id);
+            useTabStore.getState().updateTabPath(dirtyTab.id, path);
             useRecentFilesStore.getState().addFile(path);
           } catch (error) {
             await message(`Failed to save file: ${error}`, {

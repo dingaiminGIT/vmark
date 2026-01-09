@@ -11,23 +11,7 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
-import { getDirectory } from "@/utils/pathUtils";
-
-/**
- * Get the folder path from any saved file in the same window.
- * Used as default location for Save dialog on untitled documents.
- */
-export function getDefaultSaveFolder(windowLabel: string): string | undefined {
-  const tabs = useTabStore.getState().tabs[windowLabel] ?? [];
-  for (const tab of tabs) {
-    const doc = useDocumentStore.getState().getDocument(tab.id);
-    if (doc?.filePath) {
-      const dir = getDirectory(doc.filePath);
-      if (dir) return dir;
-    }
-  }
-  return undefined;
-}
+import { getDefaultSaveFolderWithFallback } from "@/utils/defaultSaveFolder";
 
 /**
  * Close a tab with dirty check. If the document has unsaved changes,
@@ -42,7 +26,8 @@ export async function closeTabWithDirtyCheck(
   const doc = useDocumentStore.getState().getDocument(tabId);
   const tab = useTabStore.getState().tabs[windowLabel]?.find((t) => t.id === tabId);
 
-  if (!doc || !tab) return false;
+  // Tab or document doesn't exist - treat as already closed
+  if (!doc || !tab) return true;
 
   // If not dirty, close immediately
   if (!doc.isDirty) {
@@ -77,7 +62,7 @@ export async function closeTabWithDirtyCheck(
   // User chose "Save"
   let path = doc.filePath;
   if (!path) {
-    const defaultFolder = getDefaultSaveFolder(windowLabel);
+    const defaultFolder = await getDefaultSaveFolderWithFallback(windowLabel);
     const newPath = await save({
       defaultPath: defaultFolder,
       filters: [{ name: "Markdown", extensions: ["md"] }],
