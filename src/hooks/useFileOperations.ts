@@ -14,7 +14,11 @@ import { isWindowFocused } from "@/hooks/useWindowFocus";
 import { getDefaultSaveFolderWithFallback } from "@/hooks/useDefaultSaveFolder";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { withReentryGuard } from "@/utils/reentryGuard";
-import { resolveOpenAction, resolvePostSaveWorkspaceAction } from "@/utils/openPolicy";
+import {
+  resolveOpenAction,
+  resolvePostSaveWorkspaceAction,
+  resolveMissingFileSaveAction,
+} from "@/utils/openPolicy";
 import { createUntitledTab } from "@/utils/newFile";
 import { getDirectory } from "@/utils/pathUtils";
 import { normalizePath } from "@/utils/paths";
@@ -158,14 +162,18 @@ export function useFileOperations() {
       const doc = useDocumentStore.getState().getDocument(tabId);
       if (!doc) return;
 
+      // Check missing file policy - block normal save if file was deleted externally
+      const saveAction = resolveMissingFileSaveAction({
+        isMissing: doc.isMissing,
+        hasPath: Boolean(doc.filePath),
+      });
+
       // Track whether file was untitled before save (for auto-workspace logic)
       const hadPathBeforeSave = Boolean(doc.filePath);
       let savedPath: string | null = null;
 
-      if (doc.filePath) {
-        const success = await saveToPath(tabId, doc.filePath, doc.content, "manual");
-        if (success) savedPath = doc.filePath;
-      } else {
+      // If file is missing, force Save As flow instead of normal save
+      if (saveAction === "save_as_required" || !doc.filePath) {
         // Use workspace root, another saved file's folder, or home
         const defaultFolder = await getDefaultSaveFolderWithFallback(windowLabel);
         const path = await save({
@@ -174,8 +182,18 @@ export function useFileOperations() {
         });
         if (path) {
           const success = await saveToPath(tabId, path, doc.content, "manual");
-          if (success) savedPath = path;
+          if (success) {
+            savedPath = path;
+            // Clear missing state if file was missing
+            if (doc.isMissing) {
+              useDocumentStore.getState().clearMissing(tabId);
+            }
+          }
         }
+      } else {
+        // Normal save - file exists
+        const success = await saveToPath(tabId, doc.filePath, doc.content, "manual");
+        if (success) savedPath = doc.filePath;
       }
 
       // Auto-open workspace after first save of untitled file (if not already in workspace)

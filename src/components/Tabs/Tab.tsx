@@ -1,5 +1,5 @@
 import { memo, useCallback, type MouseEvent } from "react";
-import { X, Pin } from "lucide-react";
+import { X, Pin, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tab as TabType } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -19,9 +19,12 @@ export const Tab = memo(function Tab({
   onClose,
   onContextMenu,
 }: TabProps) {
-  // Get dirty state from document store
+  // Get dirty and missing state from document store
   const isDirty = useDocumentStore(
     (state) => state.documents[tab.id]?.isDirty ?? false
+  );
+  const isMissing = useDocumentStore(
+    (state) => state.documents[tab.id]?.isMissing ?? false
   );
 
   const handleClose = useCallback(
@@ -48,19 +51,26 @@ export const Tab = memo(function Tab({
       aria-selected={isActive}
       className={cn(
         "tab-pill group",
-        isActive && "active"
+        isActive && "active",
+        isMissing && "tab-missing"
       )}
       onClick={onActivate}
       onMouseDown={handleMiddleClick}
       onContextMenu={onContextMenu}
+      title={isMissing ? "File deleted from disk" : undefined}
     >
       {/* Pin indicator */}
       {tab.isPinned && (
         <Pin className="w-3 h-3 text-[var(--text-tertiary)] flex-shrink-0" />
       )}
 
+      {/* Missing file indicator (warning icon) */}
+      {isMissing && (
+        <AlertTriangle className="w-3 h-3 text-amber-500 flex-shrink-0" />
+      )}
+
       {/* Dirty indicator (dot before title) */}
-      {isDirty && (
+      {isDirty && !isMissing && (
         <span className="tab-dirty-dot" />
       )}
 

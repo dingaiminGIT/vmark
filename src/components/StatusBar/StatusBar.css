@@ -204,6 +204,20 @@
   color: var(--text-color);
 }
 
+/* Missing file indicator (file deleted from disk) */
+.tab-pill.tab-missing {
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.tab-pill.tab-missing:hover {
+  background-color: rgba(245, 158, 11, 0.15);
+}
+
+.tab-pill.tab-missing.active {
+  background-color: rgba(245, 158, 11, 0.2);
+}
+
 /* New tab button */
 .status-new-tab {
   display: flex;
