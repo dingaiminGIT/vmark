@@ -2,7 +2,7 @@ import { Node } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import type { EditorView, NodeView } from "@tiptap/pm/view";
-import katex from "katex";
+import { loadKatex } from "./katexLoader";
 
 class MathInlineNodeView implements NodeView {
   dom: HTMLElement;
@@ -11,6 +11,7 @@ class MathInlineNodeView implements NodeView {
   private preview: HTMLElement;
   private view: EditorView;
   private getPos: (() => number) | false;
+  private renderToken = 0;
 
   constructor(node: PMNode, view: EditorView, getPos: (() => number) | false) {
     this.view = view;
@@ -48,18 +49,32 @@ class MathInlineNodeView implements NodeView {
     const trimmed = content.trim();
     if (!trimmed) {
       this.preview.textContent = "";
+      this.preview.classList.remove("math-error");
       return;
     }
 
-    try {
-      katex.render(trimmed, this.preview, {
-        throwOnError: false,
-        displayMode: false,
+    const currentToken = ++this.renderToken;
+    this.preview.textContent = trimmed;
+    this.preview.classList.remove("math-error");
+
+    loadKatex()
+      .then((katex) => {
+        if (currentToken !== this.renderToken) return;
+        try {
+          katex.default.render(trimmed, this.preview, {
+            throwOnError: false,
+            displayMode: false,
+          });
+        } catch {
+          this.preview.textContent = trimmed;
+          this.preview.classList.add("math-error");
+        }
+      })
+      .catch(() => {
+        if (currentToken !== this.renderToken) return;
+        this.preview.textContent = trimmed;
+        this.preview.classList.add("math-error");
       });
-    } catch {
-      this.preview.textContent = trimmed;
-      this.preview.classList.add("math-error");
-    }
   }
 
   update(node: PMNode): boolean {

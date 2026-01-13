@@ -14,7 +14,6 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, writeFile } from "@tauri-apps/plugin-fs";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import html2pdf from "html2pdf.js";
 import {
   markdownToHtml,
   generateHtmlDocument,
@@ -124,6 +123,7 @@ export async function savePdf(
     applyPdfStyles(container);
 
     // Generate PDF blob
+    const { default: html2pdf } = await import("html2pdf.js");
     const pdfBlob = await html2pdf()
       .set({
         margin: [15, 15, 15, 15],

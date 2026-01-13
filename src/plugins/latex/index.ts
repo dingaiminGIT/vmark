@@ -8,9 +8,8 @@
  * Uses KaTeX for rendering and remark-math for parsing.
  */
 
-import type { KatexOptions } from "katex";
-import katex from "katex";
 import { escapeHtml } from "@/utils/sanitize";
+import { loadKatex, type KatexOptions } from "./katexLoader";
 
 export interface LatexConfig {
   katexOptions?: KatexOptions;
@@ -19,12 +18,13 @@ export interface LatexConfig {
 /**
  * Render LaTeX content to HTML using KaTeX.
  */
-export function renderLatex(
+export async function renderLatex(
   content: string,
   options?: KatexOptions
-): string {
+): Promise<string> {
   try {
-    return katex.renderToString(content, {
+    const katex = await loadKatex();
+    return katex.default.renderToString(content, {
       ...options,
       throwOnError: false,
       displayMode: true,

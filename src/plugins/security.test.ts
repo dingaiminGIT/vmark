@@ -56,7 +56,7 @@ describe("Security: LaTeX", () => {
 
     // Test with malicious content
     const maliciousInput = '<script>alert("xss")</script>';
-    const result = renderLatex(maliciousInput);
+    const result = await renderLatex(maliciousInput);
 
     // Should NOT contain raw script tag
     expect(result).not.toContain("<script>");

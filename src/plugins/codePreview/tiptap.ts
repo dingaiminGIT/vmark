@@ -10,6 +10,7 @@ const codePreviewPluginKey = new PluginKey("codePreview");
 const PREVIEW_ONLY_LANGUAGES = new Set(["latex", "mermaid"]);
 
 const renderCache = new Map<string, string>();
+const renderPromises = new Map<string, Promise<string>>();
 
 let themeObserverSetup = false;
 
@@ -136,13 +137,40 @@ export const codePreviewExtension = Extension.create({
               }
 
               if (language === "latex") {
-                const rendered = renderLatex(content);
-                renderCache.set(cacheKey, rendered);
+                const placeholder = document.createElement("div");
+                placeholder.className = "code-block-preview latex-preview code-block-preview-placeholder";
+                placeholder.textContent = "Rendering math...";
+
                 const widget = Decoration.widget(
                   nodeEnd,
-                  (view) => createPreviewElement(language, rendered, () => handleSelect(view)),
+                  (view) => {
+                    installSelectHandlers(placeholder, () => handleSelect(view));
+
+                    let promise = renderPromises.get(cacheKey);
+                    if (!promise) {
+                      const renderPromise = Promise.resolve(renderLatex(content));
+                      renderPromises.set(cacheKey, renderPromise);
+                      promise = renderPromise;
+                    }
+
+                    promise
+                      .then((rendered) => {
+                        renderCache.set(cacheKey, rendered);
+                        renderPromises.delete(cacheKey);
+                        placeholder.className = "code-block-preview latex-preview";
+                        placeholder.innerHTML = sanitizeKatex(rendered);
+                      })
+                      .catch(() => {
+                        renderPromises.delete(cacheKey);
+                        placeholder.className = "code-block-preview latex-preview code-block-preview-placeholder";
+                        placeholder.textContent = "Failed to render math";
+                      });
+
+                    return placeholder;
+                  },
                   { side: 1, key: cacheKey }
                 );
+
                 newDecorations.push(widget);
                 return;
               }
