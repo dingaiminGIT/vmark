@@ -40,6 +40,7 @@ import { mathInlineExtension } from "@/plugins/latex/tiptapInlineMath";
 import { footnotePopupExtension } from "@/plugins/footnotePopup/tiptap";
 import { footnoteDefinitionExtension, footnoteReferenceExtension } from "@/plugins/footnotePopup/tiptapNodes";
 import { slashMenuExtension } from "@/plugins/triggerMenu/tiptapSlashMenu";
+import { tabIndentExtension } from "@/plugins/tabIndent/tiptap";
 import { useTiptapCJKFormatCommands } from "@/hooks/useTiptapCJKFormatCommands";
 import { useTiptapFormatCommands } from "@/hooks/useTiptapFormatCommands";
 import { useTiptapParagraphCommands } from "@/hooks/useTiptapParagraphCommands";
@@ -126,6 +127,7 @@ export function TiptapEditorInner() {
       listContinuationExtension,
       formatToolbarExtension,
       editorKeymapExtension,
+      tabIndentExtension,
     ],
     []
   );

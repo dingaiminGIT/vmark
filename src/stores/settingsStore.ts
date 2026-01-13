@@ -133,6 +133,8 @@ export interface GeneralSettings {
   historyEnabled: boolean;
   historyMaxSnapshots: number;
   historyMaxAgeDays: number;
+  // Editor
+  tabSize: number; // Number of spaces for Tab key (2 or 4)
 }
 
 interface SettingsState {
@@ -172,6 +174,7 @@ const initialState: SettingsState = {
     historyEnabled: true,
     historyMaxSnapshots: 50,
     historyMaxAgeDays: 7,
+    tabSize: 2,
   },
   appearance: {
     theme: "paper",

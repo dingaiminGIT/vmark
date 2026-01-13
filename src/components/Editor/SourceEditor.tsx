@@ -37,6 +37,8 @@ import {
   createMarkdownAutoPairPlugin,
   markdownPairBackspace,
   tabEscapeKeymap,
+  tabIndentFallbackKeymap,
+  shiftTabIndentFallbackKeymap,
   listContinuationKeymap,
   createSmartPastePlugin,
   createSourceFocusModePlugin,
@@ -203,6 +205,9 @@ export function SourceEditor() {
           ...closeBracketsKeymap,
           ...defaultKeymap,
           ...historyKeymap,
+          // Fallback Tab handlers: insert spaces if Tab/Shift-Tab not handled above
+          tabIndentFallbackKeymap,
+          shiftTabIndentFallbackKeymap,
         ]),
         // Search extension (programmatic control only, no panel)
         search(),

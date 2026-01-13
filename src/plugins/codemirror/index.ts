@@ -9,6 +9,7 @@ export { createBrHidingPlugin } from "./brHidingPlugin";
 export { createListBlankLinePlugin } from "./listBlankLinePlugin";
 export { createMarkdownAutoPairPlugin, markdownPairBackspace } from "./markdownAutoPair";
 export { tabEscapeKeymap } from "./tabEscape";
+export { tabIndentFallbackKeymap, shiftTabIndentFallbackKeymap } from "./tabIndent";
 export { listContinuationKeymap } from "./listContinuation";
 export { createSmartPastePlugin } from "./smartPaste";
 export { createSourceFocusModePlugin } from "./focusModePlugin";
