@@ -10,6 +10,7 @@ import type { EditorView } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
 import { useSourceFormatStore } from "@/stores/sourceFormatStore";
 import { useSourceCursorContextStore } from "@/stores/sourceCursorContextStore";
+import { triggerSelectionPulse } from "@/utils/selectionPulse";
 import { getSourceTableInfo } from "./tableDetection";
 import { getHeadingInfo } from "./headingDetection";
 import { getCodeFenceInfo } from "./codeFenceDetection";
@@ -194,6 +195,7 @@ export function triggerFormatPopup(view: EditorView): boolean {
     view.dispatch({
       selection: { anchor: fmt.contentFrom, head: fmt.contentTo },
     });
+    triggerSelectionPulse(view.dom as HTMLElement, "cm-selection-pulse");
 
     const rect = getSelectionRect(view, fmt.contentFrom, fmt.contentTo);
     if (!rect) return false;
@@ -224,10 +226,12 @@ export function triggerFormatPopup(view: EditorView): boolean {
     view.dispatch({
       selection: { anchor: fn.contentFrom, head: fn.contentTo },
     });
+    triggerSelectionPulse(view.dom as HTMLElement, "cm-selection-pulse");
 
     store.openFootnotePopup({
       anchorRect: rect,
       editorView: view,
+      footnoteInfo: fn,
     });
     return true;
   }
@@ -241,6 +245,7 @@ export function triggerFormatPopup(view: EditorView): boolean {
     view.dispatch({
       selection: { anchor: lnk.contentFrom, head: lnk.contentTo },
     });
+    triggerSelectionPulse(view.dom as HTMLElement, "cm-selection-pulse");
 
     const selectedText = view.state.doc.sliceString(lnk.contentFrom, lnk.contentTo);
     store.openPopup({
@@ -261,6 +266,7 @@ export function triggerFormatPopup(view: EditorView): boolean {
     view.dispatch({
       selection: { anchor: mth.contentFrom, head: mth.contentTo },
     });
+    triggerSelectionPulse(view.dom as HTMLElement, "cm-selection-pulse");
 
     const selectedText = view.state.doc.sliceString(mth.contentFrom, mth.contentTo);
     store.openPopup({
@@ -317,6 +323,7 @@ export function triggerFormatPopup(view: EditorView): boolean {
     view.dispatch({
       selection: { anchor: ctx.inWord.from, head: ctx.inWord.to },
     });
+    triggerSelectionPulse(view.dom as HTMLElement, "cm-selection-pulse");
 
     const selectedText = view.state.doc.sliceString(ctx.inWord.from, ctx.inWord.to);
     store.openPopup({

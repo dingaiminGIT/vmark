@@ -8,3 +8,5 @@ export { CodeMode } from "./CodeMode";
 export { HeadingMode } from "./HeadingMode";
 export { ListMode } from "./ListMode";
 export { BlockquoteMode } from "./BlockquoteMode";
+export { MathMode } from "./MathMode";
+export { FootnoteMode } from "./FootnoteMode";

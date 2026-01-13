@@ -12,6 +12,7 @@ import type { CodeFenceInfo } from "@/plugins/sourceFormatPopup/codeFenceDetecti
 import type { ListItemInfo } from "@/plugins/sourceFormatPopup/listDetection";
 import type { BlockquoteInfo } from "@/plugins/sourceFormatPopup/blockquoteDetection";
 import type { BlockMathInfo } from "@/plugins/sourceFormatPopup/blockMathDetection";
+import type { FootnoteContext } from "@/types/cursorContext";
 
 export interface AnchorRect {
   top: number;
@@ -54,6 +55,7 @@ interface SourceFormatState {
   listInfo: ListItemInfo | null;
   blockquoteInfo: BlockquoteInfo | null;
   blockMathInfo: BlockMathInfo | null;
+  footnoteInfo: FootnoteContext | null;
   /** Original cursor position before auto-select (for restore on cancel) */
   originalCursorPos: number | null;
 }
@@ -99,6 +101,7 @@ interface SourceFormatActions {
   openFootnotePopup: (data: {
     anchorRect: AnchorRect;
     editorView: EditorView;
+    footnoteInfo: FootnoteContext;
   }) => void;
   closePopup: () => number | null;
   /** Clear original cursor pos after format action (so close won't restore) */
@@ -121,6 +124,7 @@ const initialState: SourceFormatState = {
   listInfo: null,
   blockquoteInfo: null,
   blockMathInfo: null,
+  footnoteInfo: null,
   originalCursorPos: null,
 };
 
@@ -205,6 +209,7 @@ export const useSourceFormatStore = create<SourceFormatStore>((set, get) => ({
       anchorRect: data.anchorRect,
       editorView: data.editorView,
       blockMathInfo: data.blockMathInfo,
+      footnoteInfo: null,
     }),
 
   openFootnotePopup: (data) =>
@@ -214,6 +219,7 @@ export const useSourceFormatStore = create<SourceFormatStore>((set, get) => ({
       mode: "footnote",
       anchorRect: data.anchorRect,
       editorView: data.editorView,
+      footnoteInfo: data.footnoteInfo,
     }),
 
   closePopup: () => {

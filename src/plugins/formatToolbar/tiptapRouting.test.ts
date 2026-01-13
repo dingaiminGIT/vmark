@@ -92,26 +92,26 @@ describe("routeToolbarIntent", () => {
       expect(result.action).toBe("openToolbar");
       expect(result).toHaveProperty("payload.autoSelected", true);
     });
-  });
 
-  describe("link routing", () => {
-    it("routes link intent to openLinkPopup", () => {
+    it("passes linkContext through format payload", () => {
       const intent: ToolbarIntent = {
-        type: "link",
-        info: {
+        type: "format",
+        selection: { from: 5, to: 12, text: "link" },
+        autoSelected: true,
+        linkContext: {
           href: "https://example.com",
-          text: "click here",
-          from: 0,
-          to: 30,
-          contentFrom: 1,
-          contentTo: 10,
+          text: "link",
+          from: 5,
+          to: 12,
+          contentFrom: 5,
+          contentTo: 12,
         },
       };
 
       const result = routeToolbarIntent(intent);
 
-      expect(result.action).toBe("openLinkPopup");
-      expect(result).toHaveProperty("payload.href", "https://example.com");
+      expect(result.action).toBe("openToolbar");
+      expect(result).toHaveProperty("payload.linkContext.href", "https://example.com");
     });
   });
 

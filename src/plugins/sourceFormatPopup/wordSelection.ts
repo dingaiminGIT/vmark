@@ -1,79 +1,33 @@
 /**
  * Word Selection Utility
  *
- * Detects words at cursor position using Intl.Segmenter API.
+ * Detects words at cursor position using the shared word segmentation utility.
  * Matches browser-native word selection behavior (double-click).
  */
 
 import type { EditorView } from "@codemirror/view";
-
-// Intl.Segmenter type declaration (ES2022)
-interface SegmentData {
-  segment: string;
-  index: number;
-  isWordLike?: boolean;
-}
-
-type SegmenterType = { segment: (text: string) => Iterable<SegmentData> };
-
-// Cached segmenter instance (created once, reused)
-let cachedSegmenter: SegmenterType | null = null;
+import { findWordBoundaries } from "@/utils/wordSegmentation";
 
 /**
- * Get or create a cached Intl.Segmenter instance.
- * Returns null if Intl.Segmenter is not available.
- */
-function getWordSegmenter(): SegmenterType | null {
-  if (cachedSegmenter) return cachedSegmenter;
-
-  // Feature detection for Intl.Segmenter
-  if (!("Segmenter" in Intl)) return null;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Segmenter = (Intl as any).Segmenter as new (
-    locale?: string,
-    options?: { granularity: string }
-  ) => SegmenterType;
-
-  cachedSegmenter = new Segmenter(undefined, { granularity: "word" });
-  return cachedSegmenter;
-}
-
-/**
- * Get word range at cursor position using Intl.Segmenter.
- * Matches browser-native word selection behavior (double-click).
- * Returns null if cursor is in whitespace/punctuation or Segmenter unavailable.
+ * Get word range at cursor position using shared word segmentation.
+ * Uses Intl.Segmenter for CJK support, with regex fallback.
+ * Returns null if cursor is in whitespace/punctuation.
  */
 export function getWordAtCursor(
   view: EditorView
 ): { from: number; to: number } | null {
   const { from } = view.state.selection.main;
   const line = view.state.doc.lineAt(from);
-  const lineText = line.text;
   const posInLine = from - line.from;
 
-  const segmenter = getWordSegmenter();
-  if (!segmenter) return null;
+  // Use shared word segmentation utility
+  const result = findWordBoundaries(line.text, posInLine);
+  if (!result) return null;
 
-  const segments = Array.from(segmenter.segment(lineText));
-
-  // Find segment containing cursor
-  for (const segment of segments) {
-    const segStart = segment.index;
-    const segEnd = segStart + segment.segment.length;
-
-    if (posInLine > segStart && posInLine < segEnd) {
-      // Skip non-word segments (punctuation, whitespace)
-      if (!segment.isWordLike) return null;
-
-      return {
-        from: line.from + segStart,
-        to: line.from + segEnd,
-      };
-    }
-  }
-
-  return null;
+  return {
+    from: line.from + result.start,
+    to: line.from + result.end,
+  };
 }
 
 /**

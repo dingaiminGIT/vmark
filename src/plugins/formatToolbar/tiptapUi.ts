@@ -45,13 +45,13 @@ export const tiptapToolbarIcons = {
 } as const;
 
 export const TIPTAP_FORMAT_BUTTONS = [
-  { icon: tiptapToolbarIcons.bold, title: "Bold", markType: "bold" },
-  { icon: tiptapToolbarIcons.italic, title: "Italic", markType: "italic" },
-  { icon: tiptapToolbarIcons.strikethrough, title: "Strikethrough", markType: "strike" },
-  { icon: tiptapToolbarIcons.subscript, title: "Subscript", markType: "subscript" },
-  { icon: tiptapToolbarIcons.superscript, title: "Superscript", markType: "superscript" },
-  { icon: tiptapToolbarIcons.link, title: "Link", markType: "link" },
-  { icon: tiptapToolbarIcons.code, title: "Inline Code", markType: "code" },
+  { icon: tiptapToolbarIcons.bold, title: "Bold", markType: "bold", shortcut: "⌘B", shortcutKey: "b" },
+  { icon: tiptapToolbarIcons.italic, title: "Italic", markType: "italic", shortcut: "⌘I", shortcutKey: "i" },
+  { icon: tiptapToolbarIcons.strikethrough, title: "Strikethrough", markType: "strike", shortcut: "⌘⇧X", shortcutKey: "x" },
+  { icon: tiptapToolbarIcons.subscript, title: "Subscript", markType: "subscript", shortcut: "⌥⌘=", shortcutKey: null },
+  { icon: tiptapToolbarIcons.superscript, title: "Superscript", markType: "superscript", shortcut: "⌥⌘⇧=", shortcutKey: null },
+  { icon: tiptapToolbarIcons.link, title: "Link", markType: "link", shortcut: "⌘K", shortcutKey: "k" },
+  { icon: tiptapToolbarIcons.code, title: "Inline Code", markType: "code", shortcut: "⌘`", shortcutKey: "`" },
 ] as const;
 
 export const TIPTAP_HEADING_BUTTONS = [

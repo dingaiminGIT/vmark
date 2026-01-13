@@ -12,6 +12,7 @@
 import { create } from "zustand";
 import type { AnchorRect } from "@/utils/popupPosition";
 import type { EditorView } from "@tiptap/pm/view";
+import type { LinkInfo } from "@/plugins/toolbarContext/types";
 
 export type ToolbarMode = "format" | "heading" | "code" | "merged";
 export type ContextMode = "format" | "inline-insert" | "block-insert";
@@ -60,6 +61,7 @@ interface FormatToolbarState {
   headingInfo: HeadingInfo | null;
   codeBlockInfo: CodeBlockInfo | null;
   nodeContext: NodeContext;
+  linkContext: LinkInfo | null;
   /** Original cursor position before auto-select (for restore on cancel) */
   originalCursorPos: number | null;
 }
@@ -67,6 +69,7 @@ interface FormatToolbarState {
 interface OpenToolbarOptions {
   contextMode?: ContextMode;
   originalCursorPos?: number;
+  linkContext?: LinkInfo | null;
 }
 
 interface FormatToolbarActions {
@@ -90,6 +93,7 @@ const initialState: FormatToolbarState = {
   headingInfo: null,
   codeBlockInfo: null,
   nodeContext: null,
+  linkContext: null,
   originalCursorPos: null,
 };
 
@@ -103,6 +107,7 @@ export const useFormatToolbarStore = create<FormatToolbarState & FormatToolbarAc
         typeof options === "string" ? { contextMode: options } : options ?? {};
       const contextMode = opts.contextMode ?? "format";
       const originalCursorPos = opts.originalCursorPos ?? null;
+      const linkContext = opts.linkContext ?? null;
 
       set({
         isOpen: true,
@@ -113,6 +118,7 @@ export const useFormatToolbarStore = create<FormatToolbarState & FormatToolbarAc
         headingInfo: null,
         codeBlockInfo: null,
         nodeContext: null,
+        linkContext,
         originalCursorPos,
       });
     },
@@ -126,6 +132,7 @@ export const useFormatToolbarStore = create<FormatToolbarState & FormatToolbarAc
         headingInfo,
         codeBlockInfo: null,
         nodeContext: null,
+        linkContext: null,
       }),
 
     openCodeToolbar: (rect, view, codeBlockInfo) =>
@@ -137,6 +144,7 @@ export const useFormatToolbarStore = create<FormatToolbarState & FormatToolbarAc
         headingInfo: null,
         codeBlockInfo,
         nodeContext: null,
+        linkContext: null,
       }),
 
     openMergedToolbar: (rect, view, nodeContext) =>
@@ -149,6 +157,7 @@ export const useFormatToolbarStore = create<FormatToolbarState & FormatToolbarAc
         headingInfo: null,
         codeBlockInfo: null,
         nodeContext,
+        linkContext: null,
       }),
 
     closeToolbar: () => {

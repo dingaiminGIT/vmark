@@ -53,6 +53,21 @@
   background-color: transparent;
 }
 
+@keyframes selection-pulse {
+  0% {
+    background-color: var(--selection-color, rgba(0, 102, 204, 0.35));
+  }
+  100% {
+    background-color: var(--selection-color, rgba(0, 102, 204, 0.15));
+  }
+}
+
+.tiptap-editor .ProseMirror.pm-selection-pulse .pm-selection-persist,
+.tiptap-editor .ProseMirror.ProseMirror-focused.pm-selection-pulse .pm-selection-persist {
+  background-color: var(--selection-color, rgba(0, 102, 204, 0.35));
+  animation: selection-pulse 180ms ease-out;
+}
+
 .tiptap-editor .editor {
   outline: none;
   margin: 0;
@@ -532,6 +547,11 @@
 .source-editor .cm-editor {
   height: 100%;
   background-color: transparent;
+}
+
+.source-editor .cm-editor.cm-selection-pulse .cm-selectionBackground {
+  background-color: var(--selection-color, rgba(0, 102, 204, 0.35)) !important;
+  animation: selection-pulse 180ms ease-out;
 }
 
 .source-editor .cm-scroller {

@@ -4,11 +4,13 @@ import { keymap } from "@tiptap/pm/keymap";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { EditorView } from "@tiptap/pm/view";
 import { useFormatToolbarStore } from "@/stores/formatToolbarStore";
-import { findWordAtCursor, findAnyMarkRangeAtCursor } from "@/plugins/syntaxReveal/marks";
+import { findWordAtCursor, findAnyMarkRangeAtCursor, findMarkRange } from "@/plugins/syntaxReveal/marks";
+import type { LinkInfo } from "@/plugins/toolbarContext/types";
 import { getNodeContext } from "./nodeActions.tiptap";
 import { getCodeBlockInfo, getHeadingInfo, getContextMode, getCursorRect, isAtParagraphLineStart } from "./nodeDetection.tiptap";
 import { TiptapFormatToolbarView } from "./TiptapFormatToolbarView";
 import { guardProseMirrorCommand } from "@/utils/imeGuard";
+import { triggerSelectionPulse } from "@/utils/selectionPulse";
 
 const formatToolbarPluginKey = new PluginKey("tiptapFormatToolbar");
 
@@ -16,9 +18,35 @@ function refreshToolbarSelection(view: EditorView) {
   view.dispatch(view.state.tr.setMeta(formatToolbarPluginKey, { refreshSelection: true }));
 }
 
+function getLinkContextAtPos(view: EditorView, pos: number): LinkInfo | null {
+  const { state } = view;
+  const linkMarkType = state.schema.marks.link;
+  if (!linkMarkType) return null;
+
+  const $pos = state.doc.resolve(pos);
+  const mark = $pos.marks().find((m) => m.type === linkMarkType);
+  if (!mark) return null;
+
+  const range = findMarkRange(pos, mark, $pos.start(), $pos.parent);
+  if (!range) return null;
+
+  return {
+    href: mark.attrs.href || "",
+    text: state.doc.textBetween(range.from, range.to),
+    from: range.from,
+    to: range.to,
+    contentFrom: range.from,
+    contentTo: range.to,
+  };
+}
+
+function getLinkContextForSelection(view: EditorView, from: number, to: number): LinkInfo | null {
+  return getLinkContextAtPos(view, from) ?? (to > from ? getLinkContextAtPos(view, to - 1) : null);
+}
+
 function toggleContextAwareToolbar(view: EditorView): boolean {
   const store = useFormatToolbarStore.getState();
-  const { empty, from } = view.state.selection;
+  const { empty, from, to } = view.state.selection;
 
   if (store.isOpen) {
     store.closeToolbar();
@@ -35,7 +63,8 @@ function toggleContextAwareToolbar(view: EditorView): boolean {
   }
 
   if (!empty) {
-    store.openToolbar(getCursorRect(view), view as unknown as never, "format");
+    const linkContext = getLinkContextForSelection(view, from, to);
+    store.openToolbar(getCursorRect(view), view as unknown as never, { contextMode: "format", linkContext });
     refreshToolbarSelection(view);
     return true;
   }
@@ -60,7 +89,9 @@ function toggleContextAwareToolbar(view: EditorView): boolean {
   if (inheritedRange) {
     const originalCursorPos = from;
     view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, inheritedRange.from, inheritedRange.to)));
-    store.openToolbar(getCursorRect(view), view as unknown as never, { contextMode: "format", originalCursorPos });
+    const linkContext = inheritedRange.isLink ? getLinkContextAtPos(view, from) : null;
+    store.openToolbar(getCursorRect(view), view as unknown as never, { contextMode: "format", originalCursorPos, linkContext });
+    triggerSelectionPulse(view.dom as HTMLElement, "pm-selection-pulse");
     refreshToolbarSelection(view);
     return true;
   }
@@ -86,6 +117,7 @@ function toggleContextAwareToolbar(view: EditorView): boolean {
     const originalCursorPos = from;
     view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, wordRange.from, wordRange.to)));
     store.openToolbar(getCursorRect(view), view as unknown as never, { contextMode: "format", originalCursorPos });
+    triggerSelectionPulse(view.dom as HTMLElement, "pm-selection-pulse");
     refreshToolbarSelection(view);
     return true;
   }

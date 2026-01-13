@@ -14,6 +14,11 @@ export function installToolbarNavigation(opts: {
     if (!opts.isOpen()) return;
     if (opts.container.style.display === "none") return;
 
+    const activeEl = document.activeElement as HTMLElement | null;
+    if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
+      return;
+    }
+
     if (e.key === "Escape") {
       e.preventDefault();
       opts.onClose();
@@ -21,7 +26,6 @@ export function installToolbarNavigation(opts: {
     }
 
     if (e.key === "Enter") {
-      const activeEl = document.activeElement as HTMLElement | null;
       if (activeEl && opts.container.contains(activeEl) && activeEl instanceof HTMLButtonElement) {
         e.preventDefault();
         activeEl.click();
@@ -29,13 +33,22 @@ export function installToolbarNavigation(opts: {
       return;
     }
 
+    if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.length === 1) {
+      const key = e.key.toLowerCase();
+      const shortcutBtn = opts.container.querySelector<HTMLElement>(`[data-shortcut-key="${key}"]`);
+      if (shortcutBtn) {
+        e.preventDefault();
+        shortcutBtn.click();
+        return;
+      }
+    }
+
     if (e.key !== "Tab") return;
 
     const focusable = getFocusableElements(opts.container);
     if (focusable.length === 0) return;
 
-    const activeEl = document.activeElement as HTMLElement;
-    const currentIndex = focusable.indexOf(activeEl);
+    const currentIndex = focusable.indexOf(activeEl as HTMLElement);
     if (currentIndex === -1) {
       e.preventDefault();
       const activeButton = opts.container.querySelector<HTMLElement>(".format-toolbar-btn.active");

@@ -5,6 +5,7 @@
  */
 
 import type { EditorView } from "@codemirror/view";
+import { findAllReferences, renumberFootnotesDoc } from "./footnoteActions";
 
 export type FormatType =
   | "bold"
@@ -100,115 +101,6 @@ function unwrapOppositeFormat(
   return null;
 }
 
-interface FootnoteRef {
-  label: string;
-  start: number;
-  end: number;
-}
-
-interface FootnoteDef {
-  label: string;
-  start: number;
-  end: number;
-}
-
-/**
- * Find all footnote references [^N] in document order.
- */
-function findAllReferences(doc: string): FootnoteRef[] {
-  const refs: FootnoteRef[] = [];
-  const pattern = /\[\^(\d+)\]/g;
-  let match;
-  while ((match = pattern.exec(doc)) !== null) {
-    refs.push({
-      label: match[1],
-      start: match.index,
-      end: match.index + match[0].length,
-    });
-  }
-  return refs;
-}
-
-/**
- * Find all footnote definitions [^N]: in document.
- */
-function findAllDefinitions(doc: string): FootnoteDef[] {
-  const defs: FootnoteDef[] = [];
-  // Match definition line: [^N]: content (until end of line or next definition)
-  const pattern = /^\[\^(\d+)\]:.*$/gm;
-  let match;
-  while ((match = pattern.exec(doc)) !== null) {
-    defs.push({
-      label: match[1],
-      start: match.index,
-      end: match.index + match[0].length,
-    });
-  }
-  return defs;
-}
-
-/**
- * Renumber all footnotes to be sequential based on reference order.
- * Returns the new document content if changes were made.
- */
-function renumberFootnotes(doc: string): string | null {
-  const refs = findAllReferences(doc);
-  if (refs.length === 0) return null;
-
-  // Build label mapping based on reference order (first occurrence)
-  const labelMap = new Map<string, string>();
-  const seenLabels = new Set<string>();
-  let nextNum = 1;
-
-  for (const ref of refs) {
-    if (!seenLabels.has(ref.label)) {
-      seenLabels.add(ref.label);
-      labelMap.set(ref.label, String(nextNum));
-      nextNum++;
-    }
-  }
-
-  // Check if renumbering is needed
-  let needsRenumber = false;
-  for (const [oldLabel, newLabel] of labelMap) {
-    if (oldLabel !== newLabel) {
-      needsRenumber = true;
-      break;
-    }
-  }
-  if (!needsRenumber) return null;
-
-  // Replace all references and definitions with new labels
-  let result = doc;
-
-  // Replace definitions first (they're usually at the end)
-  const defs = findAllDefinitions(result);
-  // Process in reverse order to maintain positions
-  for (let i = defs.length - 1; i >= 0; i--) {
-    const def = defs[i];
-    const newLabel = labelMap.get(def.label);
-    if (newLabel && newLabel !== def.label) {
-      // Replace just the [^N]: part
-      const defPattern = new RegExp(`\\[\\^${def.label}\\]:`);
-      const lineContent = result.slice(def.start, def.end);
-      const newLineContent = lineContent.replace(defPattern, `[^${newLabel}]:`);
-      result = result.slice(0, def.start) + newLineContent + result.slice(def.end);
-    }
-  }
-
-  // Replace references
-  // Need to re-find refs since positions may have changed
-  const updatedRefs = findAllReferences(result);
-  for (let i = updatedRefs.length - 1; i >= 0; i--) {
-    const ref = updatedRefs[i];
-    const newLabel = labelMap.get(ref.label);
-    if (newLabel && newLabel !== ref.label) {
-      result = result.slice(0, ref.start) + `[^${newLabel}]` + result.slice(ref.end);
-    }
-  }
-
-  return result;
-}
 
 /**
  * Apply footnote formatting with smart numbering.
@@ -241,11 +133,11 @@ function applyFootnote(
 
   // Now renumber all footnotes
   const newDoc = view.state.doc.toString();
-  const renumberedDoc = renumberFootnotes(newDoc);
+  const renumberedDoc = renumberFootnotesDoc(newDoc);
 
   if (renumberedDoc) {
     // Find where our new reference is (count refs before position 'to')
-    const refsBeforeInsert = findAllReferences(doc).filter(r => r.start < to).length;
+    const refsBeforeInsert = findAllReferences(doc).filter((r) => r.start < to).length;
     const newLabel = String(refsBeforeInsert + 1);
     const newRefEnd = to + `[^${newLabel}]`.length;
 

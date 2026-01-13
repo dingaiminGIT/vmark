@@ -12,7 +12,7 @@
  * 5. Blockquote
  * 6. Selection (user-made)
  * 7. Formatted range (auto-select)
- * 8. Link → opens link popup in WYSIWYG, format in source
+ * 8. Link → format toolbar with linkContext (unified)
  * 9. Image → none (has own popup)
  * 10. Inline math
  * 11. Footnote
@@ -79,13 +79,9 @@ export function resolveToolbarIntent(ctx: CursorContext): ToolbarIntent {
     };
   }
 
-  // 8. Link
+  // 8. Link → unified behavior: format toolbar with linkContext
+  // Cmd+E opens format toolbar; Link button in toolbar opens link popup
   if (ctx.inLink) {
-    // WYSIWYG: open link popup
-    if (ctx.surface === "wysiwyg") {
-      return { type: "link", info: ctx.inLink };
-    }
-    // Source: auto-select content and show format toolbar
     return {
       type: "format",
       selection: {
@@ -94,6 +90,7 @@ export function resolveToolbarIntent(ctx: CursorContext): ToolbarIntent {
         text: ctx.inLink.text,
       },
       autoSelected: true,
+      linkContext: ctx.inLink,
     };
   }
 

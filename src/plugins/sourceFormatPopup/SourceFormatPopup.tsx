@@ -16,8 +16,9 @@ import {
   getViewportBounds,
   type PopupPosition,
 } from "@/utils/popupPosition";
-import { hasFormat, type FormatType } from "./formatActions";
-import { FormatMode, TableMode, CodeMode, HeadingMode, ListMode, BlockquoteMode } from "./modes";
+import { applyFormat, hasFormat, type FormatType } from "./formatActions";
+import { resolveSourceFormatShortcut } from "./shortcutUtils";
+import { FormatMode, TableMode, CodeMode, HeadingMode, ListMode, BlockquoteMode, MathMode, FootnoteMode } from "./modes";
 import { ALL_FORMAT_BUTTONS } from "./buttonDefs";
 import "./source-format.css";
 
@@ -39,6 +40,8 @@ export function SourceFormatPopup() {
   const codeFenceInfo = useSourceFormatStore((state) => state.codeFenceInfo);
   const listInfo = useSourceFormatStore((state) => state.listInfo);
   const blockquoteInfo = useSourceFormatStore((state) => state.blockquoteInfo);
+  const blockMathInfo = useSourceFormatStore((state) => state.blockMathInfo);
+  const footnoteInfo = useSourceFormatStore((state) => state.footnoteInfo);
 
   // Calculate position when popup opens or anchor changes
   useEffect(() => {
@@ -133,6 +136,10 @@ export function SourceFormatPopup() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isImeKeyEvent(e)) return;
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
+        return;
+      }
       // Cmd+E (Mod-e): toggle - close popup when already open
       // Skip if just opened (same keypress that opened the popup)
       if (e.key === "e" && (e.metaKey || e.ctrlKey)) {
@@ -149,6 +156,18 @@ export function SourceFormatPopup() {
           }
         }
         return;
+      }
+
+      if (mode === "format" && contextMode === "format" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const shortcut = resolveSourceFormatShortcut(e.key);
+        if (shortcut && editorView) {
+          e.preventDefault();
+          applyFormat(editorView, shortcut);
+          const store = useSourceFormatStore.getState();
+          store.clearOriginalCursor();
+          store.closePopup();
+          return;
+        }
       }
 
       if (e.key === "Escape") {
@@ -196,7 +215,7 @@ export function SourceFormatPopup() {
       document.removeEventListener("mousedown", handleMouseDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, editorView, getFocusableElements]);
+  }, [isOpen, editorView, mode, contextMode, getFocusableElements]);
 
   // Don't render if not open
   if (!isOpen) return null;
@@ -207,11 +226,17 @@ export function SourceFormatPopup() {
 
     switch (mode) {
       case "format":
-      case "math":       // TODO: Add math preview/edit toggle
-      case "footnote":   // TODO: Add footnote navigation (go to definition)
         return (
           <FormatMode editorView={editorView} activeFormats={activeFormats} contextMode={contextMode} />
         );
+      case "math":
+        return blockMathInfo ? (
+          <MathMode editorView={editorView} blockMathInfo={blockMathInfo} />
+        ) : null;
+      case "footnote":
+        return footnoteInfo ? (
+          <FootnoteMode editorView={editorView} footnoteInfo={footnoteInfo} />
+        ) : null;
       case "table":
         return tableInfo ? (
           <TableMode editorView={editorView} tableInfo={tableInfo} />

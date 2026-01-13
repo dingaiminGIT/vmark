@@ -5,7 +5,7 @@
  * Pure function - no side effects, no store access.
  */
 
-import type { ToolbarIntent } from "@/plugins/toolbarContext/types";
+import type { LinkInfo, ToolbarIntent } from "@/plugins/toolbarContext/types";
 
 /**
  * Routing result - describes what action to take.
@@ -37,6 +37,7 @@ interface ToolbarPayload {
   contextMode: "format" | "insert" | "insert-block";
   autoSelected?: boolean;
   selection?: { from: number; to: number; text: string };
+  linkContext?: LinkInfo;
 }
 
 /**
@@ -101,6 +102,7 @@ export function routeToolbarIntent(intent: ToolbarIntent): RoutingResult {
           contextMode: "format",
           autoSelected: intent.autoSelected,
           selection: intent.selection,
+          linkContext: intent.linkContext,
         },
       };
 

@@ -2,16 +2,27 @@ import type { EditorView } from "@tiptap/pm/view";
 import { emit } from "@tauri-apps/api/event";
 import type { AnchorRect } from "@/utils/popupPosition";
 import { useFormatToolbarStore } from "@/stores/formatToolbarStore";
+import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import type { ToolbarMode, ContextMode, NodeContext } from "@/stores/formatToolbarStore";
-import { addRecentLanguage, getQuickLabel, getRecentLanguages, QUICK_LANGUAGES } from "@/plugins/sourceFormatPopup/languages";
+import { addRecentLanguage } from "@/plugins/sourceFormatPopup/languages";
 import { expandedToggleMarkTiptap } from "@/plugins/editorPlugins.tiptap";
 import { handleBlockquoteNest, handleBlockquoteUnnest, handleListIndent, handleListOutdent, handleRemoveBlockquote, handleRemoveList, handleToBulletList, handleToOrderedList } from "./nodeActions.tiptap";
-import { toggleTiptapLanguageMenu } from "./tiptapLanguageMenu";
-import { TIPTAP_FORMAT_BUTTONS, TIPTAP_HEADING_BUTTONS, tiptapToolbarIcons } from "./tiptapUi";
+import { TIPTAP_HEADING_BUTTONS } from "./tiptapUi";
 import { createToolbarButton, createToolbarRow } from "./tiptapToolbarDom";
 import { getFocusableElements, installToolbarNavigation } from "./tiptapToolbarNavigation";
 import { positionTiptapToolbar } from "./tiptapToolbarPosition";
 import { appendTiptapTableRows } from "./tiptapTableRows";
+import { resolveLinkPopupPayload } from "./linkPopupUtils";
+import {
+  buildBlockquoteRow,
+  buildCodeRow,
+  buildFormatRow,
+  buildInsertRow,
+  buildListRow,
+  type InsertAction,
+  type ListAction,
+  type QuoteAction,
+} from "./tiptapToolbarRows";
 
 export class TiptapFormatToolbarView {
   private container: HTMLElement;
@@ -84,125 +95,32 @@ export class TiptapFormatToolbarView {
     }
 
     if (mode === "code") {
-      this.container.appendChild(this.buildCodeRow());
+      const store = useFormatToolbarStore.getState();
+      const currentLang = store.codeBlockInfo?.language || "";
+      this.container.appendChild(buildCodeRow(currentLang, (lang) => this.handleLanguageChange(lang)));
       return;
     }
 
     // mode === "format" or "merged"
     if (mode === "format") {
       if (contextMode === "format") {
-        this.container.appendChild(this.buildFormatRow());
+        this.container.appendChild(buildFormatRow(this.editorView, (mark) => this.handleFormat(mark)));
       } else {
-        this.container.appendChild(this.buildInsertRow(contextMode));
+        this.container.appendChild(buildInsertRow(contextMode, (action) => this.handleInsertAction(action)));
       }
     } else if (mode === "merged") {
-      this.container.appendChild(this.buildFormatRow());
+      this.container.appendChild(buildFormatRow(this.editorView, (mark) => this.handleFormat(mark)));
     }
 
     if (mode === "merged" && nodeContext) {
       if (nodeContext.type === "table") {
         appendTiptapTableRows(this.container, this.editorView);
       } else if (nodeContext.type === "list") {
-        this.container.appendChild(this.buildListRow());
+        this.container.appendChild(buildListRow((action) => this.handleListAction(action)));
       } else if (nodeContext.type === "blockquote") {
-        this.container.appendChild(this.buildBlockquoteRow());
+        this.container.appendChild(buildBlockquoteRow((action) => this.handleQuoteAction(action)));
       }
     }
-  }
-
-  private buildFormatRow(): HTMLElement {
-    const row = createToolbarRow();
-    for (const btn of TIPTAP_FORMAT_BUTTONS) {
-      if (!this.editorView.state.schema.marks[btn.markType]) continue;
-      row.appendChild(
-        createToolbarButton({
-          icon: btn.icon,
-          title: btn.title,
-          onClick: () => this.handleFormat(btn.markType),
-        })
-      );
-    }
-    return row;
-  }
-
-  private buildListRow(): HTMLElement {
-    const row = createToolbarRow();
-    row.appendChild(createToolbarButton({ icon: tiptapToolbarIcons.indent, title: "Indent", onClick: () => this.handleListAction("indent") }));
-    row.appendChild(createToolbarButton({ icon: tiptapToolbarIcons.outdent, title: "Outdent", onClick: () => this.handleListAction("outdent") }));
-    row.appendChild(createToolbarButton({ icon: tiptapToolbarIcons.bulletList, title: "Bullet List", onClick: () => this.handleListAction("bullet") }));
-    row.appendChild(createToolbarButton({ icon: tiptapToolbarIcons.orderedList, title: "Ordered List", onClick: () => this.handleListAction("ordered") }));
-    row.appendChild(createToolbarButton({ icon: tiptapToolbarIcons.removeList, title: "Remove List", onClick: () => this.handleListAction("remove") }));
-    return row;
-  }
-
-  private buildInsertRow(contextMode: ContextMode): HTMLElement {
-    const row = createToolbarRow();
-    const addButton = (icon: string, title: string, onClick: () => void) => {
-      row.appendChild(createToolbarButton({ icon, title, onClick }));
-    };
-
-    addButton(tiptapToolbarIcons.image, "Insert Image", () => this.handleInsertAction("image"));
-    addButton(tiptapToolbarIcons.table, "Insert Table", () => this.handleInsertAction("table"));
-    addButton(tiptapToolbarIcons.bulletList, "Bullet List", () => this.handleInsertAction("unordered-list"));
-    addButton(tiptapToolbarIcons.orderedList, "Ordered List", () => this.handleInsertAction("ordered-list"));
-    addButton(tiptapToolbarIcons.blockquote, "Blockquote", () => this.handleInsertAction("blockquote"));
-    if (contextMode === "block-insert") {
-      addButton(tiptapToolbarIcons.divider, "Divider", () => this.handleInsertAction("divider"));
-    }
-
-    return row;
-  }
-
-  private buildBlockquoteRow(): HTMLElement {
-    const row = createToolbarRow();
-    row.appendChild(createToolbarButton({ icon: tiptapToolbarIcons.nestQuote, title: "Nest", onClick: () => this.handleQuoteAction("nest") }));
-    row.appendChild(createToolbarButton({ icon: tiptapToolbarIcons.unnestQuote, title: "Unnest", onClick: () => this.handleQuoteAction("unnest") }));
-    row.appendChild(createToolbarButton({ icon: tiptapToolbarIcons.removeQuote, title: "Remove", onClick: () => this.handleQuoteAction("remove") }));
-    return row;
-  }
-
-  private buildCodeRow(): HTMLElement {
-    const row = createToolbarRow();
-    row.classList.add("format-toolbar-quick-langs");
-
-    const store = useFormatToolbarStore.getState();
-    const currentLang = store.codeBlockInfo?.language || "";
-
-    const quick = QUICK_LANGUAGES.map((l) => l.name);
-    const recent = getRecentLanguages().filter((l) => !quick.includes(l));
-    const merged = [...quick, ...recent].slice(0, 8);
-
-    for (const lang of merged) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = `format-toolbar-quick-btn${lang === currentLang ? " active" : ""}`;
-      btn.textContent = getQuickLabel(lang);
-      btn.title = lang;
-      btn.addEventListener("mousedown", (e) => e.preventDefault());
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.handleLanguageChange(lang);
-      });
-      row.appendChild(btn);
-    }
-
-    const dropdown = document.createElement("div");
-    dropdown.className = "format-toolbar-dropdown";
-    const trigger = document.createElement("button");
-    trigger.type = "button";
-    trigger.className = "format-toolbar-btn format-toolbar-dropdown-trigger";
-    trigger.innerHTML = `<span class="format-toolbar-lang-label">${currentLang || "lang"}</span>${tiptapToolbarIcons.chevronDown}`;
-    trigger.addEventListener("mousedown", (e) => e.preventDefault());
-    trigger.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleTiptapLanguageMenu({ dropdown, onSelect: (lang) => this.handleLanguageChange(lang) });
-    });
-    dropdown.appendChild(trigger);
-    row.appendChild(dropdown);
-
-    return row;
   }
 
   private updateHeadingActiveState(level: number) {
@@ -218,8 +136,34 @@ export class TiptapFormatToolbarView {
 
   private handleFormat(markType: string) {
     this.editorView.focus();
-    expandedToggleMarkTiptap(this.editorView, markType);
     const store = useFormatToolbarStore.getState();
+    if (markType === "link") {
+      const selection = this.editorView.state.selection;
+      const payload = resolveLinkPopupPayload(
+        { from: selection.from, to: selection.to },
+        store.linkContext
+      );
+      if (payload) {
+        const startCoords = this.editorView.coordsAtPos(payload.linkFrom);
+        const endCoords = this.editorView.coordsAtPos(payload.linkTo);
+        useLinkPopupStore.getState().openPopup({
+          href: payload.href,
+          linkFrom: payload.linkFrom,
+          linkTo: payload.linkTo,
+          anchorRect: {
+            top: startCoords.top,
+            left: startCoords.left,
+            bottom: startCoords.bottom,
+            right: endCoords.right,
+          },
+        });
+        store.clearOriginalCursor();
+        store.closeToolbar();
+        return;
+      }
+    }
+
+    expandedToggleMarkTiptap(this.editorView, markType);
     store.clearOriginalCursor();
     store.closeToolbar();
   }
@@ -266,7 +210,7 @@ export class TiptapFormatToolbarView {
     store.closeToolbar();
   }
 
-  private handleListAction(action: "indent" | "outdent" | "bullet" | "ordered" | "remove") {
+  private handleListAction(action: ListAction) {
     if (action === "indent") handleListIndent(this.editorView);
     if (action === "outdent") handleListOutdent(this.editorView);
     if (action === "bullet") handleToBulletList(this.editorView);
@@ -277,7 +221,7 @@ export class TiptapFormatToolbarView {
     store.closeToolbar();
   }
 
-  private handleInsertAction(action: "image" | "table" | "unordered-list" | "ordered-list" | "blockquote" | "divider") {
+  private handleInsertAction(action: InsertAction) {
     if (action === "image") void emit("menu:image");
     if (action === "table") void emit("menu:insert-table");
     if (action === "unordered-list") void emit("menu:unordered-list");
@@ -289,7 +233,7 @@ export class TiptapFormatToolbarView {
     store.closeToolbar();
   }
 
-  private handleQuoteAction(action: "nest" | "unnest" | "remove") {
+  private handleQuoteAction(action: QuoteAction) {
     if (action === "nest") handleBlockquoteNest(this.editorView);
     if (action === "unnest") handleBlockquoteUnnest(this.editorView);
     if (action === "remove") handleRemoveBlockquote(this.editorView);

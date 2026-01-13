@@ -10,7 +10,7 @@
  * 5. Blockquote
  * 6. Selection (user-made)
  * 7. Formatted range (auto-select)
- * 8. Link → opens link popup in WYSIWYG, format in source
+ * 8. Link → format toolbar (unified)
  * 9. Image → none in WYSIWYG (has own popup), skip in source
  * 10. Inline math
  * 11. Footnote
@@ -137,7 +137,7 @@ describe("resolveToolbarIntent", () => {
   });
 
   describe("link handling", () => {
-    it("returns link intent in WYSIWYG for opening link popup", () => {
+    it("returns format intent in WYSIWYG with link context (unified behavior)", () => {
       const ctx = createContext({
         surface: "wysiwyg",
         inLink: {
@@ -151,7 +151,13 @@ describe("resolveToolbarIntent", () => {
       });
 
       const intent = resolveToolbarIntent(ctx);
-      expect(intent.type).toBe("link");
+      // Unified: Cmd+E in link opens format toolbar, Link button opens popup
+      expect(intent.type).toBe("format");
+      if (intent.type === "format") {
+        expect(intent.autoSelected).toBe(true);
+        expect(intent.linkContext).toBeDefined();
+        expect(intent.linkContext?.href).toBe("https://example.com");
+      }
     });
 
     it("returns format intent in source mode for link (auto-select)", () => {
@@ -171,6 +177,28 @@ describe("resolveToolbarIntent", () => {
       expect(intent.type).toBe("format");
       if (intent.type === "format") {
         expect(intent.autoSelected).toBe(true);
+        expect(intent.linkContext).toBeDefined();
+      }
+    });
+
+    it("link context includes all needed info for toolbar Link button", () => {
+      const ctx = createContext({
+        surface: "wysiwyg",
+        inLink: {
+          href: "https://example.com",
+          text: "link text",
+          from: 0,
+          to: 30,
+          contentFrom: 1,
+          contentTo: 10,
+        },
+      });
+
+      const intent = resolveToolbarIntent(ctx);
+      if (intent.type === "format" && intent.linkContext) {
+        expect(intent.linkContext.href).toBe("https://example.com");
+        expect(intent.linkContext.from).toBe(0);
+        expect(intent.linkContext.to).toBe(30);
       }
     });
   });

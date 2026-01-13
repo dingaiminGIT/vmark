@@ -15,7 +15,7 @@ export type ToolbarIntent =
   | { type: "table"; info: TableInfo }
   | { type: "list"; info: ListInfo }
   | { type: "blockquote"; info: BlockquoteInfo }
-  | { type: "format"; selection: SelectionInfo; autoSelected?: boolean }
+  | { type: "format"; selection: SelectionInfo; autoSelected?: boolean; linkContext?: LinkInfo }
   | { type: "link"; info: LinkInfo }
   | { type: "image"; info: ImageInfo }
   | { type: "inlineMath"; info: InlineMathInfo }

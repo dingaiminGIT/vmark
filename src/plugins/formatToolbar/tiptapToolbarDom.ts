@@ -3,11 +3,17 @@ export function createToolbarButton(opts: {
   title: string;
   onClick: () => void;
   active?: boolean;
+  shortcut?: string;
+  shortcutKey?: string | null;
 }) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = `format-toolbar-btn${opts.active ? " active" : ""}`;
-  btn.title = opts.title;
+  const shortcut = opts.shortcut ? ` (${opts.shortcut})` : "";
+  btn.title = `${opts.title}${shortcut}`;
+  if (opts.shortcutKey) {
+    btn.dataset.shortcutKey = opts.shortcutKey;
+  }
   btn.innerHTML = opts.icon;
   btn.addEventListener("mousedown", (e) => e.preventDefault());
   btn.addEventListener("click", (e) => {
