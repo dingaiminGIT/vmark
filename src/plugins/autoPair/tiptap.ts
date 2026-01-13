@@ -33,12 +33,14 @@ export const autoPairExtension = Extension.create({
               getConfig()
             );
           },
-          handleKeyDown(view, event) {
-            if (isComposing) return false;
-            const handler = createKeyHandler(getConfig());
-            return handler(view as unknown as Parameters<typeof handler>[0], event);
-          },
+          // Use handleDOMEvents.keydown instead of handleKeyDown to intercept
+          // Tab/Backspace before Tiptap's keyboard shortcuts (list indent, etc.)
           handleDOMEvents: {
+            keydown(view, event) {
+              if (isComposing) return false;
+              const handler = createKeyHandler(getConfig());
+              return handler(view as unknown as Parameters<typeof handler>[0], event);
+            },
             compositionstart() {
               isComposing = true;
               return false;

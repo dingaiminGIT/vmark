@@ -7,6 +7,8 @@ const slashMenuPluginKey = new PluginKey("slashMenuTiptap");
 
 export const slashMenuExtension = Extension.create({
   name: "slashMenu",
+  // High priority to handle Enter before other keymaps
+  priority: 1100,
   addProseMirrorPlugins() {
     let menuView: SlashMenuView | null = null;
 
@@ -21,7 +23,11 @@ export const slashMenuExtension = Extension.create({
           };
         },
         props: {
-          handleKeyDown: (_view, event) => menuView?.onKeyDown(event) ?? false,
+          // Use handleDOMEvents.keydown instead of handleKeyDown
+          // to intercept keys before Tiptap's keyboard shortcuts system
+          handleDOMEvents: {
+            keydown: (_view, event) => menuView?.onKeyDown(event) ?? false,
+          },
         },
       }),
     ];
