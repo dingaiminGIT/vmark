@@ -1,7 +1,7 @@
 /**
  * General Settings Section
  *
- * Auto-save and document history configuration.
+ * Auto-save, document history, and editor configuration.
  */
 
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -88,6 +88,23 @@ export function GeneralSettings() {
             ]}
             onChange={(v) => updateSetting("historyMaxAgeDays", Number(v))}
             disabled={!general.historyEnabled}
+          />
+        </SettingRow>
+      </SettingsGroup>
+
+      {/* Editor Section */}
+      <SettingsGroup title="Editor">
+        <SettingRow
+          label="Tab size"
+          description="Number of spaces inserted when pressing Tab"
+        >
+          <Select
+            value={String(general.tabSize)}
+            options={[
+              { value: "2", label: "2 spaces" },
+              { value: "4", label: "4 spaces" },
+            ]}
+            onChange={(v) => updateSetting("tabSize", Number(v))}
           />
         </SettingRow>
       </SettingsGroup>
