@@ -147,8 +147,16 @@ pub fn open_workspace_in_new_window(
 /// Close a specific window by label
 #[tauri::command]
 pub fn close_window(app: AppHandle, label: String) -> Result<(), String> {
+    #[cfg(debug_assertions)]
+    eprintln!("[Tauri] close_window called for '{}'", label);
+
     if let Some(window) = app.get_webview_window(&label) {
-        window.destroy().map_err(|e| e.to_string())
+        #[cfg(debug_assertions)]
+        eprintln!("[Tauri] destroying window '{}'", label);
+        let result = window.destroy().map_err(|e| e.to_string());
+        #[cfg(debug_assertions)]
+        eprintln!("[Tauri] window '{}' destroy result: {:?}", label, result);
+        result
     } else {
         Err(format!("Window '{}' not found", label))
     }

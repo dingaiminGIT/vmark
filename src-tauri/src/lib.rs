@@ -27,6 +27,13 @@ fn get_pending_open_files() -> Vec<PendingOpen> {
     std::mem::take(&mut *pending)
 }
 
+/// Debug logging from frontend (logs to terminal)
+#[cfg(debug_assertions)]
+#[tauri::command]
+fn debug_log(message: String) {
+    eprintln!("[Frontend] {}", message);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[allow(unused_mut)]
@@ -53,6 +60,8 @@ pub fn run() {
             workspace::write_workspace_config,
             workspace::has_workspace_config,
             get_pending_open_files,
+            #[cfg(debug_assertions)]
+            debug_log,
         ])
         .setup(|app| {
             let menu = menu::create_menu(app.handle())?;
@@ -66,10 +75,15 @@ pub fn run() {
             use tauri::Emitter;
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let label = window.label();
+                #[cfg(debug_assertions)]
+                eprintln!("[Tauri] WindowEvent::CloseRequested for window '{}'", label);
                 // Only intercept close for document windows
                 if label == "main" || label.starts_with("doc-") {
                     api.prevent_close();
-                    let _ = window.emit("window:close-requested", ());
+                    // Include target label in payload so frontend can filter
+                    let _ = window.emit("window:close-requested", label);
+                    #[cfg(debug_assertions)]
+                    eprintln!("[Tauri] Emitted window:close-requested to '{}'", label);
                 }
                 // Settings, print-preview, etc. close normally without interception
             }
@@ -88,8 +102,12 @@ pub fn run() {
             match event {
                 // CRITICAL: Prevent quit on last window close (macOS behavior)
                 // App should only quit via Cmd+Q or menu Quit
-                tauri::RunEvent::ExitRequested { api, .. } => {
+                tauri::RunEvent::ExitRequested { api, code, .. } => {
+                    #[cfg(debug_assertions)]
+                    eprintln!("[Tauri] ExitRequested received, code={:?}", code);
                     api.prevent_exit();
+                    #[cfg(debug_assertions)]
+                    eprintln!("[Tauri] ExitRequested: prevent_exit() called");
                 }
                 // macOS: Clicking dock icon when no windows visible -> create new window
                 #[cfg(target_os = "macos")]

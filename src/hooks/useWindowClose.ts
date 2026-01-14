@@ -1,6 +1,5 @@
 import { useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
@@ -10,10 +9,21 @@ import { useTabStore } from "../stores/tabStore";
 import { useRecentFilesStore } from "../stores/recentFilesStore";
 import { getDefaultSaveFolderWithFallback } from "@/hooks/useDefaultSaveFolder";
 
+// Dev-only logging for debugging window close issues
+// Logs to terminal via Rust command
+const closeLog = import.meta.env.DEV
+  ? (label: string, ...args: unknown[]) => {
+      const msg = `[WindowClose:${label}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`;
+      console.log(msg);
+      // Log to terminal via Rust (fire-and-forget)
+      invoke("debug_log", { message: msg }).catch(() => {});
+    }
+  : () => {};
+
 /**
  * Handle window close with save confirmation dialog.
  * Listens to both:
- * - menu:close (Cmd+W) - global event, checks if this window is focused
+ * - menu:close (Cmd+W) - emitted only to focused window by Rust
  * - window:close-requested (traffic light) - window-specific from Rust
  */
 export function useWindowClose() {
@@ -22,13 +32,28 @@ export function useWindowClose() {
   const isClosingRef = useRef(false);
 
   const handleCloseRequest = useCallback(async () => {
+    closeLog(windowLabel, "handleCloseRequest called");
+    // Debug: capture stack trace to find what's triggering the close
+    if (import.meta.env.DEV) {
+      console.trace(`[WindowClose:${windowLabel}] call stack`);
+    }
     // Guard against duplicate close requests
-    if (isClosingRef.current) return;
+    if (isClosingRef.current) {
+      closeLog(windowLabel, "already closing, ignoring");
+      return;
+    }
     isClosingRef.current = true;
 
     try {
       // Get all tabs for this window
-      const tabs = useTabStore.getState().tabs[windowLabel] ?? [];
+      const allTabs = useTabStore.getState().tabs;
+      const tabs = allTabs[windowLabel] ?? [];
+      closeLog(windowLabel, "tabs state:", {
+        windowLabel,
+        allWindowLabels: Object.keys(allTabs),
+        tabCount: tabs.length,
+        tabIds: tabs.map(t => t.id)
+      });
 
       // Check if any tabs have unsaved changes
       const dirtyTabs = tabs.filter((tab) => {
@@ -38,8 +63,11 @@ export function useWindowClose() {
 
       // If no dirty tabs, just close
       if (dirtyTabs.length === 0) {
+        closeLog(windowLabel, "no dirty tabs, closing window");
         tabs.forEach((tab) => useDocumentStore.getState().removeDocument(tab.id));
+        closeLog(windowLabel, "invoking close_window with label:", windowLabel);
         await invoke("close_window", { label: windowLabel });
+        closeLog(windowLabel, "close_window returned");
         return;
       }
 
@@ -113,22 +141,35 @@ export function useWindowClose() {
     const unlisteners: (() => void)[] = [];
 
     const setup = async () => {
-      // Listen to menu:close (Cmd+W) - only handle if this window is focused
-      const unlistenMenu = await listen("menu:close", async () => {
-        const isFocused = await currentWindow.isFocused();
-        if (isFocused) {
+      closeLog(windowLabel, "setting up event listeners");
+
+      // Listen to menu:close (Cmd+W)
+      // Note: Tauri's window.emit() broadcasts to all windows, so we filter by target label
+      const unlistenMenu = await currentWindow.listen<string>("menu:close", (event) => {
+        const targetLabel = event.payload;
+        closeLog(windowLabel, "menu:close received, target:", targetLabel);
+        if (targetLabel === windowLabel) {
           handleCloseRequest();
         }
       });
       unlisteners.push(unlistenMenu);
 
       // Listen to window:close-requested (traffic light button)
-      // CRITICAL: Use window-specific listener
-      const unlistenClose = await currentWindow.listen(
+      // Note: Tauri's window.emit() broadcasts to all windows, so we filter by target label
+      const unlistenClose = await currentWindow.listen<string>(
         "window:close-requested",
-        handleCloseRequest
+        (event) => {
+          const targetLabel = event.payload;
+          closeLog(windowLabel, "window:close-requested received, target:", targetLabel);
+          // Only handle if this event is for our window
+          if (targetLabel === windowLabel) {
+            handleCloseRequest();
+          }
+        }
       );
       unlisteners.push(unlistenClose);
+
+      closeLog(windowLabel, "event listeners set up");
     };
 
     setup();
