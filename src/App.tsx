@@ -1,4 +1,4 @@
-import { Component, type ReactNode, useCallback, useRef } from "react";
+import { Component, type ReactNode } from "react";
 import { Routes, Route } from "react-router-dom";
 import { Editor } from "@/components/Editor";
 import { Sidebar } from "@/components/Sidebar";
@@ -69,6 +69,10 @@ import { useTabShortcuts } from "@/hooks/useTabShortcuts";
 import { useReloadGuard } from "@/hooks/useReloadGuard";
 import { useDragDropOpen } from "@/hooks/useDragDropOpen";
 import { useExternalFileChanges } from "@/hooks/useExternalFileChanges";
+import { useSidebarResize } from "@/hooks/useSidebarResize";
+
+/** Height of the title bar area in pixels */
+const TITLEBAR_HEIGHT = 40;
 
 // Separate component for window lifecycle hooks to avoid conditional hook calls
 function DocumentWindowHooks() {
@@ -88,37 +92,7 @@ function MainLayout() {
   const sidebarVisible = useUIStore((state) => state.sidebarVisible);
   const sidebarWidth = useUIStore((state) => state.sidebarWidth);
   const isDocumentWindow = useIsDocumentWindow();
-
-  // Resize handle state
-  const isResizing = useRef(false);
-  const startX = useRef(0);
-  const startWidth = useRef(0);
-
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizing.current = true;
-    startX.current = e.clientX;
-    startWidth.current = useUIStore.getState().sidebarWidth;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing.current) return;
-      const delta = e.clientX - startX.current;
-      useUIStore.getState().setSidebarWidth(startWidth.current + delta);
-    };
-
-    const handleMouseUp = () => {
-      isResizing.current = false;
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, []);
+  const handleResizeStart = useSidebarResize();
 
   // Initialize hooks
   useWorkspaceBootstrap(); // Load config from disk on startup (must be first)
@@ -184,11 +158,12 @@ function MainLayout() {
           display: "flex",
           flexDirection: "column",
           overflow: "clip",
+          minWidth: 0, // Prevent flex child from expanding beyond parent
         }}
       >
         {/* Spacer for title bar area */}
-        <div style={{ height: 40, flexShrink: 0 }} />
-        <div style={{ flex: 1, minHeight: 0, marginBottom: 40 }}>
+        <div style={{ height: TITLEBAR_HEIGHT, flexShrink: 0 }} />
+        <div style={{ flex: 1, minHeight: 0, minWidth: 0, marginBottom: TITLEBAR_HEIGHT }}>
           <Editor />
         </div>
         <FindBar />
