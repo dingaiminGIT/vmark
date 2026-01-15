@@ -77,16 +77,8 @@ pub fn create_document_window(
     // Build URL with optional query params
     let url = build_window_url(file_path, workspace_root);
 
-    let title = match file_path {
-        Some(path) => {
-            let filename = std::path::Path::new(path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("Untitled");
-            format!("{} - VMark", filename)
-        }
-        None => "Untitled - VMark".to_string(),
-    };
+    // Empty initial title - React will update based on settings
+    let title = String::new();
 
     // Get cascaded position (always use minimum size for new windows)
     let (x, y) = get_cascaded_position(count);

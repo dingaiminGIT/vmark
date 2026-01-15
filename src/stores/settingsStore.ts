@@ -102,6 +102,8 @@ export interface AppearanceSettings {
   lineHeight: number;
   paragraphSpacing: number;
   editorWidth: number; // Max content width in em (0 = unlimited)
+  showFilenameInTitlebar: boolean; // Show filename in window titlebar
+  autoHideStatusBar: boolean; // Auto-hide status bar when not interacting
 }
 
 export interface CJKFormattingSettings {
@@ -215,6 +217,8 @@ const initialState: SettingsState = {
     lineHeight: 1.6,
     paragraphSpacing: 1,
     editorWidth: 50, // em units, 0 = unlimited (50em ≈ 900px at 18px font)
+    showFilenameInTitlebar: false,
+    autoHideStatusBar: false,
   },
   cjkFormatting: {
     // Group 1: Universal

@@ -10,7 +10,7 @@ import {
   type ThemeId,
   type AppearanceSettings as AppearanceSettingsType,
 } from "@/stores/settingsStore";
-import { SettingRow, SettingsGroup, Select } from "./components";
+import { SettingRow, SettingsGroup, Select, Toggle } from "./components";
 
 const themeLabels: Record<ThemeId, string> = {
   white: "White",
@@ -154,6 +154,22 @@ export function AppearanceSettings() {
             />
           </SettingRow>
         ))}
+      </SettingsGroup>
+
+      {/* Window */}
+      <SettingsGroup title="Window">
+        <SettingRow label="Show Filename in Titlebar">
+          <Toggle
+            checked={appearance.showFilenameInTitlebar ?? false}
+            onChange={(v) => updateSetting("showFilenameInTitlebar", v)}
+          />
+        </SettingRow>
+        <SettingRow label="Auto-hide Status Bar">
+          <Toggle
+            checked={appearance.autoHideStatusBar ?? false}
+            onChange={(v) => updateSetting("autoHideStatusBar", v)}
+          />
+        </SettingRow>
       </SettingsGroup>
     </div>
   );

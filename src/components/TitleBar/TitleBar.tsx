@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { emit } from "@tauri-apps/api/event";
 import { useDocumentFilePath, useDocumentIsDirty, useDocumentIsMissing, useActiveTabId } from "@/hooks/useDocumentState";
 import { useTabStore } from "@/stores/tabStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useTitleBarRename } from "./useTitleBarRename";
 import { getFileNameWithoutExtension } from "@/utils/pathUtils";
 import "./title-bar.css";
@@ -14,6 +15,7 @@ export function TitleBar() {
   const isMissing = useDocumentIsMissing();
   const activeTabId = useActiveTabId();
   const { renameFile, isRenaming } = useTitleBarRename();
+  const showFilename = useSettingsStore((state) => state.appearance.showFilenameInTitlebar ?? false);
 
   // Get active tab's title for unsaved documents
   const tabTitle = useTabStore((state) => {
@@ -97,6 +99,15 @@ export function TitleBar() {
     // Cancel on blur for simplicity
     setIsEditing(false);
   }, []);
+
+  // Don't show filename when setting is off
+  if (!showFilename) {
+    return (
+      <div className="title-bar" data-tauri-drag-region>
+        <div className="title-bar-content" data-tauri-drag-region />
+      </div>
+    );
+  }
 
   return (
     <div className="title-bar" data-tauri-drag-region>

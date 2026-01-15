@@ -133,7 +133,7 @@ export const formatToolbarExtension = Extension.create({
   addProseMirrorPlugins() {
     return [
       keymap({
-        "Mod-e": guardProseMirrorCommand((_state, _dispatch, view) => {
+        "Ctrl-e": guardProseMirrorCommand((_state, _dispatch, view) => {
           if (!view) return false;
           return toggleContextAwareToolbar(view as unknown as EditorView);
         }),

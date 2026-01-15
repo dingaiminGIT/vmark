@@ -11,7 +11,7 @@ import { useEffect } from "react";
 import { useWindowLabel, useIsDocumentWindow } from "@/contexts/WindowContext";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
-import { useUIStore } from "@/stores/uiStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 
@@ -48,10 +48,11 @@ export function useTabShortcuts() {
         return;
       }
 
-      // Cmd+J: Toggle status bar visibility
+      // Cmd+J: Toggle auto-hide status bar setting
       if (isMeta && e.key === "j") {
         e.preventDefault();
-        useUIStore.getState().toggleStatusBar();
+        const current = useSettingsStore.getState().appearance.autoHideStatusBar ?? false;
+        useSettingsStore.getState().updateAppearanceSetting("autoHideStatusBar", !current);
         return;
       }
     };

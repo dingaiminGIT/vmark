@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback, useRef, type MouseEvent } from "react";
+import { useMemo, useState, useEffect, useCallback, type MouseEvent } from "react";
 
 // Stable empty array to avoid creating new reference on each render
 const EMPTY_TABS: never[] = [];
@@ -6,6 +6,7 @@ import { Code2, Type, PanelLeftOpen, PanelRightOpen, Save, Plus } from "lucide-r
 import { countWords as alfaazCount } from "alfaaz";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useWindowLabel, useIsDocumentWindow } from "@/contexts/WindowContext";
 import { useTabStore, type Tab as TabType } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -13,7 +14,6 @@ import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import {
   useDocumentContent,
-  useDocumentIsDirty,
   useDocumentLastAutoSave,
 } from "@/hooks/useDocumentState";
 import { formatRelativeTime, formatExactTime } from "@/utils/dateUtils";
@@ -57,11 +57,10 @@ export function StatusBar() {
   const isDocumentWindow = useIsDocumentWindow();
   const windowLabel = useWindowLabel();
   const content = useDocumentContent();
-  const isDirty = useDocumentIsDirty();
   const lastAutoSave = useDocumentLastAutoSave();
   const sourceMode = useEditorStore((state) => state.sourceMode);
   const sidebarVisible = useUIStore((state) => state.sidebarVisible);
-  const statusBarPinned = useUIStore((state) => state.statusBarPinned);
+  const autoHideStatusBar = useSettingsStore((state) => state.appearance.autoHideStatusBar);
 
   // Tab state - only for document windows
   // Use stable EMPTY_TABS to avoid infinite loop from new array reference
@@ -72,23 +71,10 @@ export function StatusBar() {
     isDocumentWindow ? state.activeTabId[windowLabel] : null
   );
 
-  // Track previous tab count to detect transitions
-  const hasMultipleTabs = tabs.length > 1;
-  const prevHadMultipleTabs = useRef(hasMultipleTabs);
-
-  // Auto-pin status bar only when transitioning from 1 tab to 2+ tabs
-  useEffect(() => {
-    const wasMultiple = prevHadMultipleTabs.current;
-    prevHadMultipleTabs.current = hasMultipleTabs;
-
-    // Only auto-pin on transition from single to multiple tabs
-    if (hasMultipleTabs && !wasMultiple) {
-      useUIStore.getState().setStatusBarPinned(true);
-    }
-  }, [hasMultipleTabs]);
-
-  // Status bar visibility controlled by pinned state (Cmd+J toggles)
-  const statusBarVisible = statusBarPinned;
+  // Status bar visibility:
+  // - When autoHideStatusBar is OFF (default): always visible
+  // - When autoHideStatusBar is ON: only show on hover (no visible class, relies on CSS :hover)
+  const statusBarVisible = !(autoHideStatusBar ?? false);
 
   const [contextMenu, setContextMenu] = useState<{
     position: ContextMenuPosition;
@@ -157,8 +143,8 @@ export function StatusBar() {
   const wordCount = useMemo(() => countWords(content), [content]);
   const charCount = useMemo(() => countCharacters(content), [content]);
 
-  // Show tabs when there are multiple tabs, but always show the new tab button
-  const showTabs = isDocumentWindow && tabs.length > 1;
+  // Always show tabs when there's at least one tab
+  const showTabs = isDocumentWindow && tabs.length >= 1;
   const showNewTabButton = isDocumentWindow;
 
   return (
@@ -204,12 +190,6 @@ export function StatusBar() {
               </div>
             )}
 
-            {/* Show dirty indicator + title when single tab */}
-            {!showTabs && (
-              <span className="status-file">
-                {isDirty && <span className="status-dirty-indicator" />}
-              </span>
-            )}
           </div>
 
           {/* Right section: stats + mode */}

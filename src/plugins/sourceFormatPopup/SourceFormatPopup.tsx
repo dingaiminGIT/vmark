@@ -140,9 +140,9 @@ export function SourceFormatPopup() {
       if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
         return;
       }
-      // Cmd+E (Mod-e): toggle - close popup when already open
+      // Ctrl+E: toggle - close popup when already open
       // Skip if just opened (same keypress that opened the popup)
-      if (e.key === "e" && (e.metaKey || e.ctrlKey)) {
+      if (e.key === "e" && e.ctrlKey) {
         if (justOpenedRef.current) return;
         e.preventDefault();
         const originalCursorPos = useSourceFormatStore.getState().closePopup();

@@ -185,9 +185,9 @@ export function SourceEditor() {
             run: (view) => toggleTablePopup(view),
             preventDefault: true,
           }),
-          // Cmd+E: trigger format popup at cursor (context-aware)
+          // Ctrl+E: trigger format popup at cursor (context-aware)
           guardCodeMirrorKeyBinding({
-            key: "Mod-e",
+            key: "Ctrl-e",
             run: (view) => triggerFormatPopup(view),
             preventDefault: true,
           }),
@@ -200,10 +200,13 @@ export function SourceEditor() {
             },
             preventDefault: true,
           }),
-          // Cmd+/: override to prevent default toggle comment (used for source mode toggle)
+          // Cmd+/: toggle source mode (same as F7)
           guardCodeMirrorKeyBinding({
             key: "Mod-/",
-            run: () => true, // Consume the key, let menu handle source mode toggle
+            run: () => {
+              useEditorStore.getState().toggleSourceMode();
+              return true;
+            },
             preventDefault: true,
           }),
           // Cmd+Shift+\: toggle HTML comment <!-- -->
