@@ -1,7 +1,7 @@
 .status-bar-container {
   position: fixed;
   bottom: 0;
-  left: 0;
+  left: var(--sidebar-offset, 0px);
   right: 0;
   z-index: 100;
   opacity: 0;
@@ -31,7 +31,7 @@
   align-items: center;
   height: 40px;
   padding: 6px 12px;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-color);
   border-top: 1px solid var(--border-color);
   font-size: 13px;
   color: var(--text-secondary);

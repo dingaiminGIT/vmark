@@ -98,6 +98,7 @@ function MainLayout() {
   const findBarOpen = useSearchStore((state) => state.isOpen);
   const isDocumentWindow = useIsDocumentWindow();
   const handleResizeStart = useSidebarResize();
+  const sidebarOffset = sidebarVisible ? `${sidebarWidth}px` : "0px";
 
   // Initialize hooks
   useWorkspaceBootstrap(); // Load config from disk on startup (must be first)
@@ -133,6 +134,7 @@ function MainLayout() {
         height: "100vh",
         overflow: "clip",
         position: "relative",
+        ["--sidebar-offset" as string]: sidebarOffset,
       }}
     >
       {/* Window lifecycle hooks for document windows */}
