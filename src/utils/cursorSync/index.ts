@@ -1,21 +1,28 @@
 // Re-export all cursor sync utilities
 
 // Types
-export type { LineInfo, WordPosition, CursorContext } from "./types";
+export type { CursorContext } from "./types";
 
 // Markdown utilities
 export {
   detectNodeType,
   stripMarkdownSyntax,
   stripInlineFormatting,
-  isContentLine,
   isInsideCodeBlock,
-  getContentLineIndex,
-  getLineFromContentIndex,
 } from "./markdown";
 
 // Matching utilities
-export { extractCursorContext, findBestPosition } from "./matching";
+export { extractCursorContext } from "./matching";
+
+// Shared ProseMirror helpers
+export {
+  getSourceLineFromPos,
+  estimateSourceLine,
+  findClosestSourceLine,
+  findColumnInLine,
+  END_OF_LINE_THRESHOLD,
+  MIN_CONTEXT_PATTERN_LENGTH,
+} from "./pmHelpers";
 
 // CodeMirror functions
 export {

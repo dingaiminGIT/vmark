@@ -2,8 +2,18 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
-import { Table, TableRow } from "@tiptap/extension-table";
 import { useDocumentActions, useDocumentContent, useDocumentCursorInfo } from "@/hooks/useDocumentState";
+import {
+  HeadingWithSourceLine,
+  ParagraphWithSourceLine,
+  CodeBlockWithSourceLine,
+  BlockquoteWithSourceLine,
+  BulletListWithSourceLine,
+  OrderedListWithSourceLine,
+  HorizontalRuleWithSourceLine,
+  TableWithSourceLine,
+  TableRowWithSourceLine,
+} from "@/plugins/shared/sourceLineNodes";
 import { useImageContextMenu } from "@/hooks/useImageContextMenu";
 import { useOutlineSync } from "@/hooks/useOutlineSync";
 import { parseMarkdown, serializeMarkdown } from "@/utils/markdownPipeline";
@@ -59,6 +69,10 @@ import {
   wikiLinkExtension,
 } from "@/plugins/markdownArtifacts";
 
+/**
+ * Delay before enabling cursor tracking after editor creation.
+ * Prevents spurious cursor sync during initial render/focus.
+ */
 const CURSOR_TRACKING_DELAY_MS = 200;
 
 
@@ -71,6 +85,7 @@ export function TiptapEditorInner() {
   const lastExternalContent = useRef<string>("");
   const pendingRaf = useRef<number | null>(null);
   const pendingCursorRaf = useRef<number | null>(null);
+  const internalChangeRaf = useRef<number | null>(null);
   const pendingCursorInfo = useRef<CursorInfo | null>(null);
   const cursorTrackingEnabled = useRef(false);
   const trackingTimeoutId = useRef<number | null>(null);
@@ -84,6 +99,14 @@ export function TiptapEditorInner() {
         // Keep Tiptap defaults for schema names and commands.
         listItem: false,
         underline: false,
+        // Disable nodes replaced with sourceLine-enabled versions
+        heading: false,
+        paragraph: false,
+        codeBlock: false,
+        blockquote: false,
+        bulletList: false,
+        orderedList: false,
+        horizontalRule: false,
         // Disable default link click behavior - we handle it via linkPopupExtension
         link: {
           openOnClick: false,
@@ -94,6 +117,14 @@ export function TiptapEditorInner() {
           },
         },
       }),
+      // Extended nodes with sourceLine attribute for cursor sync
+      HeadingWithSourceLine,
+      ParagraphWithSourceLine,
+      CodeBlockWithSourceLine,
+      BlockquoteWithSourceLine,
+      BulletListWithSourceLine,
+      OrderedListWithSourceLine,
+      HorizontalRuleWithSourceLine,
       slashMenuExtension,
       taskListItemExtension,
       highlightExtension,
@@ -113,8 +144,8 @@ export function TiptapEditorInner() {
       htmlBlockExtension,
       footnoteReferenceExtension,
       footnoteDefinitionExtension,
-      Table.configure({ resizable: false }),
-      TableRow,
+      TableWithSourceLine.configure({ resizable: false }),
+      TableRowWithSourceLine,
       AlignedTableHeader,
       AlignedTableCell,
       tableUIExtension,
@@ -152,7 +183,13 @@ export function TiptapEditorInner() {
       isInternalChange.current = true;
       lastExternalContent.current = markdown;
       setContent(markdown);
-      requestAnimationFrame(() => {
+
+      // Cancel previous RAF if pending, then schedule reset
+      if (internalChangeRaf.current) {
+        cancelAnimationFrame(internalChangeRaf.current);
+      }
+      internalChangeRaf.current = requestAnimationFrame(() => {
+        internalChangeRaf.current = null;
         isInternalChange.current = false;
       });
     },
@@ -190,7 +227,7 @@ export function TiptapEditorInner() {
         editor.commands.setContent(doc, { emitUpdate: false });
       } catch (error) {
         console.error("[TiptapEditor] Failed to parse initial markdown:", error);
-        lastExternalContent.current = content;
+        // Don't update lastExternalContent on parse error - allows retry on next sync
       }
 
       cursorTrackingEnabled.current = false;
@@ -233,7 +270,7 @@ export function TiptapEditorInner() {
   useTiptapSelectionCommands(editor);
   useTiptapCJKFormatCommands(editor);
 
-  // Cleanup pendingRaf on unmount to prevent memory leaks
+  // Cleanup all pending timers/RAFs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       if (pendingRaf.current) {
@@ -243,6 +280,10 @@ export function TiptapEditorInner() {
       if (pendingCursorRaf.current) {
         cancelAnimationFrame(pendingCursorRaf.current);
         pendingCursorRaf.current = null;
+      }
+      if (internalChangeRaf.current) {
+        cancelAnimationFrame(internalChangeRaf.current);
+        internalChangeRaf.current = null;
       }
       if (trackingTimeoutId.current !== null) {
         window.clearTimeout(trackingTimeoutId.current);

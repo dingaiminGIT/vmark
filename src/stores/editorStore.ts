@@ -1,24 +1,8 @@
 import { create } from "zustand";
+import type { CursorInfo } from "@/types/cursorSync";
 
-// Node types for cursor sync
-export type NodeType =
-  | "paragraph"
-  | "heading"
-  | "list_item"
-  | "code_block"
-  | "table_cell"
-  | "blockquote";
-
-// Cursor position info for syncing between editors
-export interface CursorInfo {
-  contentLineIndex: number; // Line index excluding blank lines (0-based)
-  wordAtCursor: string; // Word at or near cursor for fine positioning
-  offsetInWord: number; // Character offset within the word
-  nodeType: NodeType; // Type of block the cursor is in
-  percentInLine: number; // Cursor position as percentage (0-1) for fallback
-  contextBefore: string; // Few chars before cursor for disambiguation
-  contextAfter: string; // Few chars after cursor for disambiguation
-}
+// Re-export for backwards compatibility
+export type { NodeType, CursorInfo } from "@/types/cursorSync";
 
 interface EditorState {
   content: string;

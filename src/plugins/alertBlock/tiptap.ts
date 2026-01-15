@@ -1,9 +1,21 @@
 import { Node } from "@tiptap/core";
 import type { EditorState } from "@tiptap/pm/state";
 import { TextSelection } from "@tiptap/pm/state";
+import { sourceLineAttr } from "../shared/sourceLineAttr";
 
 export const ALERT_TYPES = ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"] as const;
 export type AlertType = (typeof ALERT_TYPES)[number];
+export const DEFAULT_ALERT_TYPE: AlertType = "NOTE";
+
+/**
+ * Validate and normalize an alertType value.
+ * Returns a valid AlertType or the default if invalid.
+ */
+function normalizeAlertType(value: unknown): AlertType {
+  if (typeof value !== "string") return DEFAULT_ALERT_TYPE;
+  const upper = value.toUpperCase();
+  return ALERT_TYPES.includes(upper as AlertType) ? (upper as AlertType) : DEFAULT_ALERT_TYPE;
+}
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -28,15 +40,15 @@ export const alertBlockExtension = Node.create({
 
   addAttributes() {
     return {
+      ...sourceLineAttr,
       alertType: {
-        default: "NOTE",
+        default: DEFAULT_ALERT_TYPE,
         parseHTML: (element) => {
-          const value = (element as HTMLElement).getAttribute("data-alert-type")?.toUpperCase() ?? "NOTE";
-          return ALERT_TYPES.includes(value as AlertType) ? value : "NOTE";
+          const value = (element as HTMLElement).getAttribute("data-alert-type");
+          return normalizeAlertType(value);
         },
         renderHTML: (attributes) => {
-          const value = (attributes.alertType as string | undefined) ?? "NOTE";
-          return { "data-alert-type": value };
+          return { "data-alert-type": normalizeAlertType(attributes.alertType) };
         },
       },
     };
@@ -47,14 +59,14 @@ export const alertBlockExtension = Node.create({
   },
 
   renderHTML({ node, HTMLAttributes }) {
-    const alertType = ((node.attrs.alertType as string | undefined) ?? "NOTE").toLowerCase();
+    const alertType = normalizeAlertType(node.attrs.alertType);
     return [
       "div",
       {
         ...HTMLAttributes,
-        class: `alert-block alert-${alertType}`,
+        class: `alert-block alert-${alertType.toLowerCase()}`,
       },
-      ["div", { class: "alert-title", contenteditable: "false" }, String(node.attrs.alertType ?? "NOTE")],
+      ["div", { class: "alert-title", contenteditable: "false" }, alertType],
       ["div", { class: "alert-content" }, 0],
     ];
   },
@@ -62,7 +74,7 @@ export const alertBlockExtension = Node.create({
   addCommands() {
     return {
       insertAlertBlock:
-        (alertType = "NOTE") =>
+        (alertType = DEFAULT_ALERT_TYPE) =>
         ({ state, dispatch }) => {
           const alertNode = createAlertBlockNode(state, alertType);
           if (!alertNode) return false;

@@ -1,24 +1,8 @@
 import { create } from "zustand";
+import type { CursorInfo } from "@/types/cursorSync";
 
-// Node types for cursor sync
-export type NodeType =
-  | "paragraph"
-  | "heading"
-  | "list_item"
-  | "code_block"
-  | "table_cell"
-  | "blockquote";
-
-// Cursor position info for syncing between editors
-export interface CursorInfo {
-  contentLineIndex: number;
-  wordAtCursor: string;
-  offsetInWord: number;
-  nodeType: NodeType;
-  percentInLine: number;
-  contextBefore: string;
-  contextAfter: string;
-}
+// Re-export for backwards compatibility
+export type { NodeType, CursorInfo } from "@/types/cursorSync";
 
 // Per-tab document state
 export interface DocumentState {
@@ -65,6 +49,25 @@ const createInitialDocument = (content = "", filePath: string | null = null): Do
   isMissing: false,
 });
 
+/**
+ * Helper to update a document by tabId.
+ * Returns unchanged state if document doesn't exist.
+ */
+function updateDoc(
+  state: { documents: Record<string, DocumentState> },
+  tabId: string,
+  updater: (doc: DocumentState) => Partial<DocumentState>
+): { documents: Record<string, DocumentState> } {
+  const doc = state.documents[tabId];
+  if (!doc) return state;
+  return {
+    documents: {
+      ...state.documents,
+      [tabId]: { ...doc, ...updater(doc) },
+    },
+  };
+}
+
 export const useDocumentStore = create<DocumentStore>((set, get) => ({
   documents: {},
 
@@ -77,120 +80,52 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
     })),
 
   setContent: (tabId, content) =>
-    set((state) => {
-      const doc = state.documents[tabId];
-      if (!doc) return state;
-      return {
-        documents: {
-          ...state.documents,
-          [tabId]: {
-            ...doc,
-            content,
-            isDirty: doc.savedContent !== content,
-          },
-        },
-      };
-    }),
+    set((state) =>
+      updateDoc(state, tabId, (doc) => ({
+        content,
+        isDirty: doc.savedContent !== content,
+      }))
+    ),
 
   loadContent: (tabId, content, filePath) =>
-    set((state) => {
-      const doc = state.documents[tabId];
-      if (!doc) return state;
-      return {
-        documents: {
-          ...state.documents,
-          [tabId]: {
-            ...doc,
-            content,
-            savedContent: content,
-            filePath: filePath ?? null,
-            isDirty: false,
-            documentId: doc.documentId + 1,
-          },
-        },
-      };
-    }),
+    set((state) =>
+      updateDoc(state, tabId, (doc) => ({
+        content,
+        savedContent: content,
+        filePath: filePath ?? null,
+        isDirty: false,
+        documentId: doc.documentId + 1,
+      }))
+    ),
 
   setFilePath: (tabId, path) =>
-    set((state) => {
-      const doc = state.documents[tabId];
-      if (!doc) return state;
-      return {
-        documents: {
-          ...state.documents,
-          [tabId]: { ...doc, filePath: path },
-        },
-      };
-    }),
+    set((state) => updateDoc(state, tabId, () => ({ filePath: path }))),
 
   markMissing: (tabId) =>
-    set((state) => {
-      const doc = state.documents[tabId];
-      if (!doc) return state;
-      return {
-        documents: {
-          ...state.documents,
-          [tabId]: { ...doc, isMissing: true },
-        },
-      };
-    }),
+    set((state) => updateDoc(state, tabId, () => ({ isMissing: true }))),
 
   clearMissing: (tabId) =>
-    set((state) => {
-      const doc = state.documents[tabId];
-      if (!doc) return state;
-      return {
-        documents: {
-          ...state.documents,
-          [tabId]: { ...doc, isMissing: false },
-        },
-      };
-    }),
+    set((state) => updateDoc(state, tabId, () => ({ isMissing: false }))),
 
   markSaved: (tabId) =>
-    set((state) => {
-      const doc = state.documents[tabId];
-      if (!doc) return state;
-      return {
-        documents: {
-          ...state.documents,
-          [tabId]: {
-            ...doc,
-            savedContent: doc.content,
-            isDirty: false,
-          },
-        },
-      };
-    }),
+    set((state) =>
+      updateDoc(state, tabId, (doc) => ({
+        savedContent: doc.content,
+        isDirty: false,
+      }))
+    ),
 
   markAutoSaved: (tabId) =>
-    set((state) => {
-      const doc = state.documents[tabId];
-      if (!doc) return state;
-      return {
-        documents: {
-          ...state.documents,
-          [tabId]: {
-            ...doc,
-            savedContent: doc.content,
-            isDirty: false,
-            lastAutoSave: Date.now(),
-          },
-        },
-      };
-    }),
+    set((state) =>
+      updateDoc(state, tabId, (doc) => ({
+        savedContent: doc.content,
+        isDirty: false,
+        lastAutoSave: Date.now(),
+      }))
+    ),
 
   setCursorInfo: (tabId, info) =>
-    set((state) => {
-      const doc = state.documents[tabId];
-      if (!doc) return state;
-      return {
-        documents: {
-          ...state.documents,
-          [tabId]: { ...doc, cursorInfo: info },
-        },
-      };
-    }),
+    set((state) => updateDoc(state, tabId, () => ({ cursorInfo: info }))),
 
   removeDocument: (tabId) =>
     set((state) => {

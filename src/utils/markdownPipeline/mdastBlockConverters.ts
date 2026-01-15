@@ -10,6 +10,7 @@ import type {
   ListItem,
   Paragraph,
   Table,
+  ThematicBreak,
 } from "mdast";
 import type { Math } from "mdast-util-math";
 import type { Alert, Details, WikiEmbed, WikiLink, Yaml } from "./types";
@@ -20,6 +21,25 @@ export interface MdastToPmContext {
   schema: Schema;
   convertChildren: (children: readonly Content[], marks: Mark[], context: ContentContext) => PMNode[];
 }
+
+/**
+ * Extract source line number from MDAST node position.
+ * Returns null if position is not available.
+ */
+function getSourceLine(node: { position?: { start?: { line?: number } } }): number | null {
+  return node.position?.start?.line ?? null;
+}
+
+/**
+ * Ensure block content is non-empty by adding an empty paragraph if needed.
+ * Many block elements (alerts, details) require at least one child.
+ */
+function ensureNonEmptyBlocks(children: PMNode[], schema: Schema): PMNode[] {
+  if (children.length === 0 && schema.nodes.paragraph) {
+    return [schema.nodes.paragraph.create()];
+  }
+  return children;
+}
 const ALERT_TYPES = ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"] as const;
 
 export function convertParagraph(
@@ -29,6 +49,7 @@ export function convertParagraph(
 ): PMNode | null {
   const type = context.schema.nodes.paragraph;
   if (!type) return null;
+  const sourceLine = getSourceLine(node);
   const blockImageType = context.schema.nodes.block_image;
   if (blockImageType && node.children.length === 1 && node.children[0]?.type === "image") {
     const imageNode = inlineConverters.convertImage(
@@ -40,11 +61,12 @@ export function convertParagraph(
         src: imageNode.attrs.src ?? "",
         alt: imageNode.attrs.alt ?? "",
         title: imageNode.attrs.title ?? "",
+        sourceLine,
       });
     }
   }
   const children = context.convertChildren(node.children as Content[], marks, "inline");
-  return type.create(null, children);
+  return type.create({ sourceLine }, children);
 }
 
 export function convertHeading(
@@ -55,7 +77,7 @@ export function convertHeading(
   const type = context.schema.nodes.heading;
   if (!type) return null;
   const children = context.convertChildren(node.children as Content[], marks, "inline");
-  return type.create({ level: node.depth }, children);
+  return type.create({ level: node.depth, sourceLine: getSourceLine(node) }, children);
 }
 
 export function convertCode(context: MdastToPmContext, node: Code): PMNode | null {
@@ -63,7 +85,7 @@ export function convertCode(context: MdastToPmContext, node: Code): PMNode | nul
   if (!type) return null;
 
   const text = node.value ? context.schema.text(node.value) : null;
-  return type.create({ language: node.lang || null }, text ? [text] : []);
+  return type.create({ language: node.lang || null, sourceLine: getSourceLine(node) }, text ? [text] : []);
 }
 
 export function convertBlockquote(
@@ -78,7 +100,7 @@ export function convertBlockquote(
   if (!type) return null;
 
   const children = context.convertChildren(node.children, marks, "block");
-  return type.create(null, children);
+  return type.create({ sourceLine: getSourceLine(node) }, children);
 }
 
 export function convertList(context: MdastToPmContext, node: List, marks: Mark[]): PMNode | null {
@@ -88,7 +110,8 @@ export function convertList(context: MdastToPmContext, node: List, marks: Mark[]
   if (!type) return null;
 
   const children = context.convertChildren(node.children, marks, "block");
-  const attrs = isOrdered ? { start: node.start ?? 1 } : null;
+  const sourceLine = getSourceLine(node);
+  const attrs = isOrdered ? { start: node.start ?? 1, sourceLine } : { sourceLine };
   return type.create(attrs, children);
 }
 
@@ -101,16 +124,17 @@ export function convertListItem(
   if (!type) return null;
 
   const checked = node.checked;
-  const attrs = checked !== null && checked !== undefined ? { checked } : null;
+  const sourceLine = getSourceLine(node);
+  const attrs = checked !== null && checked !== undefined ? { checked, sourceLine } : { sourceLine };
 
   const children = context.convertChildren(node.children, marks, "block");
   return type.create(attrs, children);
 }
 
-export function convertThematicBreak(context: MdastToPmContext): PMNode | null {
+export function convertThematicBreak(context: MdastToPmContext, node: ThematicBreak): PMNode | null {
   const type = context.schema.nodes.horizontalRule;
   if (!type) return null;
-  return type.create();
+  return type.create({ sourceLine: getSourceLine(node) });
 }
 
 export function convertTable(
@@ -126,20 +150,26 @@ export function convertTable(
   const headerType = context.schema.nodes.tableHeader ?? cellType;
   const paragraphType = context.schema.nodes.paragraph;
   const alignments = node.align ?? [];
+  const tableSourceLine = getSourceLine(node);
 
   const rows = node.children.map((row, rowIndex) => {
+    const rowSourceLine = getSourceLine(row);
     const cells = row.children.map((cell, cellIndex) => {
       const cellNodeType = rowIndex === 0 ? headerType : cellType;
       const alignment = alignments[cellIndex] ?? null;
-      const attrs = alignment && supportsAlignmentAttr(cellNodeType) ? { alignment } : null;
+      const cellSourceLine = getSourceLine(cell);
+      const baseAttrs: Record<string, unknown> = { sourceLine: cellSourceLine };
+      if (alignment && supportsAlignmentAttr(cellNodeType)) {
+        baseAttrs.alignment = alignment;
+      }
       const inlineChildren = context.convertChildren(cell.children as Content[], marks, "inline");
-      const content = paragraphType ? [paragraphType.create(null, inlineChildren)] : inlineChildren;
-      return cellNodeType.create(attrs, content);
+      const content = paragraphType ? [paragraphType.create({ sourceLine: cellSourceLine }, inlineChildren)] : inlineChildren;
+      return cellNodeType.create(baseAttrs, content);
     });
-    return rowType.create(null, cells);
+    return rowType.create({ sourceLine: rowSourceLine }, cells);
   });
 
-  return tableType.create(null, rows);
+  return tableType.create({ sourceLine: tableSourceLine }, rows);
 }
 
 /**
@@ -152,7 +182,7 @@ export function convertMathBlock(context: MdastToPmContext, node: Math): PMNode 
   const type = context.schema.nodes.codeBlock;
   if (!type) return null;
   const text = node.value ? context.schema.text(node.value) : null;
-  return type.create({ language: MATH_BLOCK_LANGUAGE }, text ? [text] : []);
+  return type.create({ language: MATH_BLOCK_LANGUAGE, sourceLine: getSourceLine(node) }, text ? [text] : []);
 }
 
 export function convertDefinition(context: MdastToPmContext, node: Definition): PMNode | null {
@@ -163,13 +193,14 @@ export function convertDefinition(context: MdastToPmContext, node: Definition): 
     label: node.label ?? null,
     url: node.url,
     title: node.title ?? null,
+    sourceLine: getSourceLine(node),
   });
 }
 
 export function convertFrontmatter(context: MdastToPmContext, node: Yaml): PMNode | null {
   const type = context.schema.nodes.frontmatter;
   if (!type) return null;
-  return type.create({ value: node.value ?? "" });
+  return type.create({ value: node.value ?? "", sourceLine: getSourceLine(node) });
 }
 
 export function convertDetails(
@@ -181,17 +212,18 @@ export function convertDetails(
   const summaryType = context.schema.nodes.detailsSummary;
   if (!detailsType || !summaryType) return null;
 
+  const sourceLine = getSourceLine(node);
   const summaryText = node.summary ?? "Details";
   const summaryNode = summaryType.create(
-    null,
+    { sourceLine },
     summaryText ? [context.schema.text(summaryText)] : []
   );
-  const children = context.convertChildren(node.children as Content[], marks, "block");
-  if (children.length === 0 && context.schema.nodes.paragraph) {
-    children.push(context.schema.nodes.paragraph.create());
-  }
+  const children = ensureNonEmptyBlocks(
+    context.convertChildren(node.children as Content[], marks, "block"),
+    context.schema
+  );
 
-  return detailsType.create({ open: node.open ?? false }, [summaryNode, ...children]);
+  return detailsType.create({ open: node.open ?? false, sourceLine }, [summaryNode, ...children]);
 }
 
 export function convertAlert(
@@ -202,24 +234,24 @@ export function convertAlert(
   const alertType = context.schema.nodes.alertBlock;
   if (!alertType) return null;
 
-  const children = context.convertChildren(node.children as Content[], marks, "block");
-  if (children.length === 0 && context.schema.nodes.paragraph) {
-    children.push(context.schema.nodes.paragraph.create());
-  }
+  const children = ensureNonEmptyBlocks(
+    context.convertChildren(node.children as Content[], marks, "block"),
+    context.schema
+  );
 
-  return alertType.create({ alertType: node.alertType }, children);
+  return alertType.create({ alertType: node.alertType, sourceLine: getSourceLine(node) }, children);
 }
 
 export function convertWikiLink(context: MdastToPmContext, node: WikiLink): PMNode | null {
   const type = context.schema.nodes.wikiLink;
   if (!type) return null;
-  return type.create({ value: node.value, alias: node.alias ?? null });
+  return type.create({ value: node.value, alias: node.alias ?? null, sourceLine: getSourceLine(node) });
 }
 
 export function convertWikiEmbed(context: MdastToPmContext, node: WikiEmbed): PMNode | null {
   const type = context.schema.nodes.wikiEmbed;
   if (!type) return null;
-  return type.create({ value: node.value, alias: node.alias ?? null });
+  return type.create({ value: node.value, alias: node.alias ?? null, sourceLine: getSourceLine(node) });
 }
 
 export function convertHtml(
@@ -229,7 +261,7 @@ export function convertHtml(
 ): PMNode | null {
   const type = inline ? context.schema.nodes.html_inline : context.schema.nodes.html_block;
   if (!type) return null;
-  return type.create({ value: node.value ?? "" });
+  return type.create({ value: node.value ?? "", sourceLine: getSourceLine(node) });
 }
 
 export function convertFootnoteDefinition(
@@ -241,7 +273,7 @@ export function convertFootnoteDefinition(
   if (!type) return null;
 
   const children = context.convertChildren(node.children, marks, "block");
-  return type.create({ label: node.identifier }, children);
+  return type.create({ label: node.identifier, sourceLine: getSourceLine(node) }, children);
 }
 
 export function convertAlertBlockquote(
@@ -264,12 +296,12 @@ export function convertAlertBlockquote(
   }
   alertChildren.push(...node.children.slice(1));
 
-  const converted = context.convertChildren(alertChildren, marks, "block");
-  if (converted.length === 0 && context.schema.nodes.paragraph) {
-    converted.push(context.schema.nodes.paragraph.create());
-  }
+  const converted = ensureNonEmptyBlocks(
+    context.convertChildren(alertChildren, marks, "block"),
+    context.schema
+  );
 
-  return alertType.create({ alertType: stripped.alertType }, converted);
+  return alertType.create({ alertType: stripped.alertType, sourceLine: getSourceLine(node) }, converted);
 }
 
 function stripAlertMarker(

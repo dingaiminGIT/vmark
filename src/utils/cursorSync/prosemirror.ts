@@ -1,9 +1,15 @@
 import type { EditorView } from "@tiptap/pm/view";
 import type { Node as PMNode } from "@tiptap/pm/model";
-import { TextSelection } from "@tiptap/pm/state";
-import type { CursorInfo, NodeType } from "@/stores/editorStore";
-import { getContentLineIndex } from "./markdown";
-import { extractCursorContext, findBestPosition } from "./matching";
+import { Selection, TextSelection } from "@tiptap/pm/state";
+import type { CursorInfo, NodeType } from "@/types/cursorSync";
+import { extractCursorContext } from "./matching";
+import {
+  getSourceLineFromPos,
+  estimateSourceLine,
+  findClosestSourceLine,
+  findColumnInLine,
+  END_OF_LINE_THRESHOLD,
+} from "./pmHelpers";
 
 /**
  * Get node type from ProseMirror node
@@ -13,14 +19,14 @@ function getNodeTypeFromPM(node: PMNode): NodeType {
   switch (typeName) {
     case "heading":
       return "heading";
-    case "list_item":
-    case "bullet_list":
-    case "ordered_list":
+    case "listItem":
+    case "bulletList":
+    case "orderedList":
       return "list_item";
-    case "code_block":
+    case "codeBlock":
       return "code_block";
-    case "table_cell":
-    case "table_header":
+    case "tableCell":
+    case "tableHeader":
       return "table_cell";
     case "blockquote":
       return "blockquote";
@@ -29,74 +35,35 @@ function getNodeTypeFromPM(node: PMNode): NodeType {
   }
 }
 
-interface LineInfo {
-  text: string;
-  start: number;
-  end: number;
-  nodeType: NodeType;
-}
-
 /**
- * Build lines array from ProseMirror document
- */
-function buildLinesFromDoc(doc: PMNode): LineInfo[] {
-  const lines: LineInfo[] = [];
-
-  doc.descendants((node, nodePos) => {
-    if (node.isBlock && node.isTextblock) {
-      const lineText = node.textContent;
-      const lineStart = nodePos + 1; // +1 for opening tag
-      lines.push({
-        text: lineText,
-        start: lineStart,
-        end: lineStart + node.content.size,
-        nodeType: getNodeTypeFromPM(node),
-      });
-    }
-    return true;
-  });
-
-  return lines;
-}
-
-/**
- * Extract cursor info from ProseMirror editor
+ * Extract cursor info from ProseMirror editor.
+ * Uses sourceLine attribute from nodes.
  */
 export function getCursorInfoFromProseMirror(view: EditorView): CursorInfo {
   const { state } = view;
   const { from } = state.selection;
+  const $pos = state.doc.resolve(from);
 
-  // Build lines with position info
-  const lineInfos = buildLinesFromDoc(state.doc);
-  const lines = lineInfos.map((l) => l.text);
-
-  // Find which line the cursor is on
-  let lineNumber = 0;
-  let column = 0;
-  let nodeType: NodeType = "paragraph";
-
-  for (let i = 0; i < lineInfos.length; i++) {
-    const info = lineInfos[i];
-    if (from >= info.start && from <= info.end) {
-      lineNumber = i;
-      column = from - info.start;
-      nodeType = info.nodeType;
-      break;
-    }
+  // Get sourceLine from nearest ancestor
+  let sourceLine = getSourceLineFromPos($pos);
+  if (sourceLine === null) {
+    sourceLine = estimateSourceLine(state.doc, from);
   }
 
-  // Get content line index (skipping blank lines)
-  const contentLineIndex = getContentLineIndex(lines, lineNumber);
-  const lineText = lines[lineNumber] || "";
+  // Get node type
+  const parent = $pos.parent;
+  const nodeType = getNodeTypeFromPM(parent);
 
-  // Extract word and context (ProseMirror text is already stripped of markdown syntax)
+  // Get column within the parent textblock
+  const column = from - $pos.start();
+  const lineText = parent.textContent;
+
+  // Extract context
   const context = extractCursorContext(lineText, column);
-
-  // Calculate percentage position
   const percentInLine = lineText.length > 0 ? column / lineText.length : 0;
 
   return {
-    contentLineIndex,
+    sourceLine,
     wordAtCursor: context.word,
     offsetInWord: context.offsetInWord,
     nodeType,
@@ -107,55 +74,66 @@ export function getCursorInfoFromProseMirror(view: EditorView): CursorInfo {
 }
 
 /**
- * Restore cursor position in ProseMirror from cursor info
+ * Restore cursor position in ProseMirror from cursor info.
+ * Finds the node with matching sourceLine attribute.
  */
-export function restoreCursorInProseMirror(
-  view: EditorView,
-  cursorInfo: CursorInfo
-): void {
+export function restoreCursorInProseMirror(view: EditorView, cursorInfo: CursorInfo): void {
   const { state } = view;
+  const { sourceLine } = cursorInfo;
 
-  // Build lines with position info
-  const lineInfos = buildLinesFromDoc(state.doc);
-  const lines = lineInfos.map((l) => l.text);
+  // Find the first node with matching sourceLine
+  let targetPos: number | null = null;
+  let targetNode: PMNode | null = null;
+  let found = false;
 
-  // Find best position using matching strategies
-  // Note: ProseMirror text is already stripped, so we don't need to adjust for markdown syntax
-  const result = findBestPosition(
-    lines,
-    cursorInfo.contentLineIndex,
-    {
-      word: cursorInfo.wordAtCursor,
-      offsetInWord: cursorInfo.offsetInWord,
-      contextBefore: cursorInfo.contextBefore,
-      contextAfter: cursorInfo.contextAfter,
-    },
-    cursorInfo.percentInLine
-  );
-
-  if (result.line < lineInfos.length) {
-    const lineInfo = lineInfos[result.line];
-    let pos = Math.min(lineInfo.start + result.column, lineInfo.end);
-
-    // Handle cursor at line end: position after all inline nodes (e.g., footnotes)
-    // percentInLine >= 0.99 indicates cursor was at/near end of line
-    // lineInfo.end includes inline nodes, but result.column is based on textContent only
-    if (cursorInfo.percentInLine >= 0.99) {
-      pos = lineInfo.end;
+  state.doc.descendants((node, pos) => {
+    if (found) return false; // Skip remaining nodes after finding first match
+    if (node.attrs.sourceLine === sourceLine && node.isTextblock) {
+      targetPos = pos + 1; // +1 for node opening
+      targetNode = node;
+      found = true;
+      return false;
     }
+    return true;
+  });
 
-    // Clamp to valid range
-    const clampedPos = Math.max(0, Math.min(pos, state.doc.content.size));
+  // Fallback: find closest sourceLine
+  if (targetPos === null) {
+    const result = findClosestSourceLine(state.doc, sourceLine);
+    targetPos = result.pos;
+    targetNode = result.node;
+  }
 
+  if (targetPos === null || targetNode === null) {
     try {
-      const tr = state.tr.setSelection(
-        TextSelection.near(state.doc.resolve(clampedPos))
-      );
+      const tr = state.tr.setSelection(Selection.atStart(state.doc));
       view.dispatch(tr.scrollIntoView());
     } catch {
-      // Fallback: set selection at start
-      const tr = state.tr.setSelection(TextSelection.atStart(state.doc));
-      view.dispatch(tr.scrollIntoView());
+      // Ignore
     }
+    return;
+  }
+
+  // Find column within the node using word/context matching
+  const lineText = targetNode.textContent;
+  const column = findColumnInLine(lineText, cursorInfo);
+
+  // Clamp column to line length to prevent landing in next node
+  const clampedColumn = Math.min(column, lineText.length);
+  let pos = targetPos + clampedColumn;
+
+  // Handle end of line (threshold: cursor near/at line end)
+  if (cursorInfo.percentInLine >= END_OF_LINE_THRESHOLD) {
+    pos = targetPos + lineText.length;
+  }
+
+  const clampedPos = Math.max(0, Math.min(pos, state.doc.content.size));
+
+  try {
+    const tr = state.tr.setSelection(TextSelection.near(state.doc.resolve(clampedPos)));
+    view.dispatch(tr.scrollIntoView());
+  } catch {
+    const tr = state.tr.setSelection(Selection.atStart(state.doc));
+    view.dispatch(tr.scrollIntoView());
   }
 }
