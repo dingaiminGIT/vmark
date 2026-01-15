@@ -9,6 +9,14 @@ import {
   getPrevButtonIndex,
   getNextGroupFirstIndex,
   getPrevGroupLastIndex,
+  getNextFocusableIndex,
+  getPrevFocusableIndex,
+  getFirstFocusableIndex,
+  getLastFocusableIndex,
+  getNextGroupFirstFocusableIndex,
+  getPrevGroupLastFocusableIndex,
+  getNextFocusableIndexInGroup,
+  getPrevFocusableIndexInGroup,
 } from "./toolbarNavigation";
 import { TOOLBAR_GROUPS } from "./toolbarGroups";
 
@@ -67,6 +75,42 @@ describe("toolbarNavigation", () => {
       const lastIndex = getPrevGroupLastIndex(0);
       const total = getTotalButtonCount();
       expect(lastIndex).toBe(total - 1);
+    });
+  });
+
+  describe("focusable navigation helpers", () => {
+    const total = getTotalButtonCount();
+    const isFocusable = (index: number) => index % 2 === 0;
+
+    it("skips non-focusable buttons when moving next/prev", () => {
+      expect(getNextFocusableIndex(0, total, isFocusable)).toBe(2);
+      expect(getPrevFocusableIndex(2, total, isFocusable)).toBe(0);
+    });
+
+    it("finds first and last focusable buttons", () => {
+      expect(getFirstFocusableIndex(total, isFocusable)).toBe(0);
+      const last = getLastFocusableIndex(total, isFocusable);
+      expect(last % 2).toBe(0);
+    });
+
+    it("jumps to next/prev focusable group buttons", () => {
+      const next = getNextGroupFirstFocusableIndex(0, isFocusable);
+      expect(next).toBeGreaterThanOrEqual(0);
+      const prev = getPrevGroupLastFocusableIndex(0, isFocusable);
+      expect(prev).toBeGreaterThanOrEqual(0);
+    });
+
+    it("moves within the current group for left/right navigation", () => {
+      const groupRangeSize = TOOLBAR_GROUPS[1].buttons.length;
+      const groupStart = TOOLBAR_GROUPS[0].buttons.length;
+      const current = groupStart;
+      const next = getNextFocusableIndexInGroup(current, isFocusable);
+      expect(next).toBeGreaterThanOrEqual(groupStart);
+      expect(next).toBeLessThan(groupStart + groupRangeSize);
+
+      const prev = getPrevFocusableIndexInGroup(current, isFocusable);
+      expect(prev).toBeGreaterThanOrEqual(groupStart);
+      expect(prev).toBeLessThan(groupStart + groupRangeSize);
     });
   });
 });

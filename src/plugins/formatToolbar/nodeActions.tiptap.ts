@@ -1,5 +1,5 @@
 import type { EditorView } from "@tiptap/pm/view";
-import type { NodeContext } from "@/stores/formatToolbarStore";
+import type { NodeContext } from "./types";
 import { liftListItem, sinkListItem, wrapInList } from "@tiptap/pm/schema-list";
 
 export function getNodeContext(view: EditorView): NodeContext {

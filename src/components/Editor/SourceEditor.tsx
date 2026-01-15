@@ -29,6 +29,7 @@ import {
   getCursorInfoFromCodeMirror,
   restoreCursorInCodeMirror,
 } from "@/utils/cursorSync/codemirror";
+import { useSourceCursorContextStore } from "@/stores/sourceCursorContextStore";
 import {
   sourceEditorTheme,
   codeHighlightStyle,
@@ -48,14 +49,14 @@ import {
   createSourceFocusModePlugin,
   createSourceTypewriterPlugin,
   createImeGuardPlugin,
+  createSourceCursorContextPlugin,
 } from "@/plugins/codemirror";
 import { toggleTaskList } from "@/plugins/sourceFormatPopup/taskListActions";
 import {
-  sourceFormatExtension,
-  toggleTablePopup,
   applyFormat,
 } from "@/plugins/sourceFormatPopup";
 import { guardCodeMirrorKeyBinding, runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
+import { computeSourceCursorContext } from "@/plugins/sourceFormatPopup/cursorContext";
 
 // Custom brackets config for markdown (^, standard brackets)
 const markdownCloseBrackets = markdownLanguage.data.of({
@@ -177,12 +178,6 @@ export function SourceEditor() {
             },
             preventDefault: true,
           }),
-          // Cmd+Option+T: toggle table popup (when cursor is in table)
-          guardCodeMirrorKeyBinding({
-            key: "Mod-Alt-t",
-            run: (view) => toggleTablePopup(view),
-            preventDefault: true,
-          }),
           // Note: Ctrl+E is now handled by the universal toolbar (useUniversalToolbar hook)
           // The context-aware popup is retired in favor of the universal toolbar.
           // Cmd+`: inline code (reassigned from Cmd+E)
@@ -228,8 +223,8 @@ export function SourceEditor() {
         sourceEditorTheme,
         // Allow multiple selections
         EditorState.allowMultipleSelections.of(true),
-        // Source format popup (shows on selection)
-        sourceFormatExtension,
+        // Source cursor context for toolbar actions
+        createSourceCursorContextPlugin(),
       ],
     });
 
@@ -239,6 +234,10 @@ export function SourceEditor() {
     });
 
     viewRef.current = view;
+    useSourceCursorContextStore.getState().setContext(
+      computeSourceCursorContext(view),
+      view
+    );
 
     // Auto-focus and restore cursor on mount
     // Capture cursorInfo at mount time (before it might change)

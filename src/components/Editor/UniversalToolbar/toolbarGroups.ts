@@ -137,6 +137,7 @@ const INSERT_GROUP: ToolbarGroup = {
     { id: "insert-table-block", type: "button", icon: icons.table, label: "Table", action: "insertTableBlock", enabledIn: ["textblock"] },
     { id: "insert-bullet-list", type: "button", icon: icons.unorderedList, label: "Bullet List", action: "insertBulletList", enabledIn: ["textblock"] },
     { id: "insert-ordered-list", type: "button", icon: icons.orderedList, label: "Ordered List", action: "insertOrderedList", enabledIn: ["textblock"] },
+    { id: "insert-task-list", type: "button", icon: icons.taskList, label: "Task List", action: "insertTaskList", enabledIn: ["textblock"] },
   ],
 };
 
@@ -145,8 +146,8 @@ const EXPANDABLES_GROUP: ToolbarGroup = {
   id: "expandables",
   label: "Expandables",
   buttons: [
-    { id: "insert-details", type: "button", icon: icons.details, label: "Details", action: "insertDetails", enabledIn: ["never"] },
-    { id: "insert-alert", type: "button", icon: icons.alertIcon, label: "Alert", action: "insertAlert", enabledIn: ["never"] },
+    { id: "insert-details", type: "button", icon: icons.details, label: "Details", action: "insertDetails", enabledIn: ["textblock"] },
+    { id: "insert-alert", type: "button", icon: icons.alertIcon, label: "Alert", action: "insertAlert", enabledIn: ["textblock"] },
     { id: "insert-footnote", type: "button", icon: icons.footnote, label: "Footnote", action: "insertFootnote", enabledIn: ["textblock"] },
   ],
 };
@@ -156,7 +157,7 @@ const LINK_GROUP: ToolbarGroup = {
   id: "link",
   label: "Link",
   buttons: [
-    { id: "link", type: "button", icon: icons.link, label: "Link", shortcut: "⌘K", action: "link", enabledIn: ["selection", "textblock"] },
+    { id: "link", type: "dropdown", icon: icons.link, label: "Link", shortcut: "⌘K", action: "link", enabledIn: ["selection", "textblock"] },
   ],
 };
 

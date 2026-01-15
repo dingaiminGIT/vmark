@@ -5,8 +5,9 @@
  */
 
 import type { EditorView } from "@codemirror/view";
-import type { ContextMode } from "@/stores/sourceFormatStore";
 import { getWordAtCursor } from "./wordSelection";
+
+export type ContextMode = "format" | "inline-insert" | "block-insert";
 
 /**
  * Get the bounding rect for a selection range.

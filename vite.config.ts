@@ -62,4 +62,78 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+
+  build: {
+    // Keep warnings meaningful but avoid noise after intentional chunking.
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+
+          const parts = id.split("node_modules/");
+          const pkgPath = parts[parts.length - 1] ?? "";
+          const pkgName = pkgPath.startsWith("@")
+            ? pkgPath.split("/").slice(0, 2).join("/")
+            : pkgPath.split("/")[0];
+
+          if (pkgName.startsWith("@lezer/")) return "vendor-lezer";
+          if (pkgName === "@codemirror/language-data") return "vendor-codemirror-languages";
+          if (pkgName.startsWith("@codemirror/lang-") || pkgName === "@codemirror/language") {
+            return "vendor-codemirror-lang";
+          }
+          if (pkgName.startsWith("@codemirror/")) return "vendor-codemirror";
+          if (pkgName.startsWith("@tiptap/") || pkgName.startsWith("prosemirror")) return "vendor-tiptap";
+          if (pkgName === "mermaid") return "vendor-mermaid";
+          if (pkgName.startsWith("@mermaid-js/")) return "vendor-mermaid-parser";
+          if (
+            pkgName.startsWith("d3-") ||
+            pkgName === "d3" ||
+            pkgName === "dagre" ||
+            pkgName === "dagre-d3-es" ||
+            pkgName === "khroma"
+          ) {
+            return "vendor-mermaid-graph";
+          }
+          if (pkgName === "katex") return "vendor-katex";
+          if (
+            pkgName === "html2pdf.js" ||
+            pkgName === "html2canvas" ||
+            pkgName === "jspdf" ||
+            pkgName === "canvg" ||
+            pkgName === "svg-pathdata" ||
+            pkgName === "stackblur-canvas"
+          ) {
+            if (pkgName === "html2canvas" || pkgName === "stackblur-canvas") return "vendor-html2canvas";
+            if (pkgName === "jspdf") return "vendor-jspdf";
+            if (pkgName === "html2pdf.js") return "vendor-html2pdf";
+            return "vendor-export";
+          }
+          if (
+            pkgName === "cytoscape" ||
+            pkgName === "cytoscape-cose-bilkent" ||
+            pkgName === "cytoscape-fcose" ||
+            pkgName === "cose-base" ||
+            pkgName === "layout-base"
+          ) {
+            return "vendor-graph";
+          }
+          if (pkgName.startsWith("@tauri-apps/")) return "vendor-tauri";
+          if (pkgName === "react-router-dom" || pkgName === "react-router") return "vendor-react";
+          if (pkgName === "react-dom" || pkgName === "react") return "vendor-react";
+          if (pkgName === "zustand" || pkgName.startsWith("@tanstack/")) return "vendor-state";
+          if (
+            pkgName.startsWith("remark") ||
+            pkgName.startsWith("unified") ||
+            pkgName.startsWith("mdast") ||
+            pkgName.startsWith("micromark")
+          ) {
+            return "vendor-markdown";
+          }
+
+          return undefined;
+        },
+      },
+    },
+  },
 }));

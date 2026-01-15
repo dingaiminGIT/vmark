@@ -6,7 +6,11 @@
  */
 
 import type { EditorView } from "@codemirror/view";
-import type { HeadingInfo } from "@/stores/sourceFormatStore";
+export interface HeadingInfo {
+  level: number; // 1-6, or 0 for paragraph
+  lineStart: number;
+  lineEnd: number;
+}
 
 /**
  * Detect if the current line is a heading and get its info.

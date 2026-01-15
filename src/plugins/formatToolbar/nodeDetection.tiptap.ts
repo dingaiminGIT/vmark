@@ -1,5 +1,5 @@
 import type { EditorView } from "@tiptap/pm/view";
-import type { HeadingInfo, ContextMode, CodeBlockInfo } from "@/stores/formatToolbarStore";
+import type { HeadingInfo, ContextMode, CodeBlockInfo } from "./types";
 import { findWordAtCursor } from "@/plugins/syntaxReveal/marks";
 
 export function getCodeBlockInfo(view: EditorView): CodeBlockInfo | null {
@@ -88,4 +88,3 @@ export function getContextMode(view: EditorView): ContextMode {
 
   return "inline-insert";
 }
-

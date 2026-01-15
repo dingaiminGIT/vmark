@@ -22,6 +22,7 @@ import { getCursorInfoFromTiptap, restoreCursorInTiptap } from "@/utils/cursorSy
 import { getTiptapEditorView } from "@/utils/tiptapView";
 import { scheduleTiptapFocusAndRestore } from "@/utils/tiptapFocus";
 import type { CursorInfo } from "@/stores/documentStore";
+import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
 import { smartPasteExtension } from "@/plugins/smartPaste/tiptap";
 import { linkPopupExtension } from "@/plugins/linkPopup/tiptap";
 import { cursorAwareExtension } from "@/plugins/cursorAware/tiptap";
@@ -38,7 +39,7 @@ import { imageHandlerExtension } from "@/plugins/imageHandler/tiptap";
 import { codePreviewExtension } from "@/plugins/codePreview/tiptap";
 import { listContinuationExtension } from "@/plugins/listContinuation/tiptap";
 import { tableUIExtension } from "@/plugins/tableUI/tiptap";
-import { formatToolbarExtension } from "@/plugins/formatToolbar/tiptap";
+import { extractTiptapContext } from "@/plugins/formatToolbar/tiptapContext";
 import { editorKeymapExtension } from "@/plugins/editorPlugins.tiptap";
 import { highlightExtension } from "@/plugins/highlight/tiptap";
 import { subscriptExtension, superscriptExtension } from "@/plugins/subSuperscript/tiptap";
@@ -165,7 +166,6 @@ export function TiptapEditorInner() {
       imagePopupExtension,
       codePreviewExtension,
       listContinuationExtension,
-      formatToolbarExtension,
       editorKeymapExtension,
       tabIndentExtension,
     ],
@@ -244,6 +244,11 @@ export function TiptapEditorInner() {
         () => cursorInfoRef.current,
         restoreCursorInTiptap
       );
+
+      const view = getTiptapEditorView(editor);
+      if (view) {
+        useTiptapEditorStore.getState().setContext(extractTiptapContext(editor.state), view);
+      }
     },
     onUpdate: ({ editor }) => {
       if (pendingRaf.current) return;
@@ -257,6 +262,7 @@ export function TiptapEditorInner() {
       const view = getTiptapEditorView(editor);
       if (!view) return;
       scheduleCursorUpdate(getCursorInfoFromTiptap(view));
+      useTiptapEditorStore.getState().setContext(extractTiptapContext(editor.state), view);
     },
   });
 
@@ -300,6 +306,13 @@ export function TiptapEditorInner() {
       registerActiveWysiwygFlusher(null);
     };
   }, [editor, flushToStore]);
+
+  useEffect(() => {
+    useTiptapEditorStore.getState().setEditor(editor ?? null);
+    return () => {
+      useTiptapEditorStore.getState().clear();
+    };
+  }, [editor]);
 
   // Sync external content changes TO the editor.
   useEffect(() => {

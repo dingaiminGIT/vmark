@@ -3,7 +3,6 @@ import { keymap } from "@tiptap/pm/keymap";
 import { Selection, TextSelection, type Command, type EditorState } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { useUIStore } from "@/stores/uiStore";
-import { useFormatToolbarStore } from "@/stores/formatToolbarStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useSourcePeekStore } from "@/stores/sourcePeekStore";
 import { findAnyMarkRangeAtCursor, findMarkRange, findWordAtCursor } from "@/plugins/syntaxReveal/marks";
@@ -279,9 +278,9 @@ export const editorKeymapExtension = Extension.create({
         sourcePeek.close();
         return true;
       }
-      const formatStore = useFormatToolbarStore.getState();
-      if (formatStore.isOpen) {
-        formatStore.closeToolbar();
+      const uiStore = useUIStore.getState();
+      if (uiStore.universalToolbarVisible) {
+        uiStore.setUniversalToolbarVisible(false);
         return true;
       }
       return escapeMarkBoundary(view);

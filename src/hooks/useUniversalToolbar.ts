@@ -28,6 +28,16 @@ export function useUniversalToolbar(): void {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && useUIStore.getState().universalToolbarVisible) {
+        const activeEl = document.activeElement as HTMLElement | null;
+        if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        useUIStore.getState().setUniversalToolbarVisible(false);
+        return;
+      }
       // Ctrl+E toggles toolbar (Cmd+E is already mapped to Ctrl+E by the app)
       if (e.ctrlKey && e.key.toLowerCase() === "e" && !e.altKey && !e.shiftKey) {
         e.preventDefault();

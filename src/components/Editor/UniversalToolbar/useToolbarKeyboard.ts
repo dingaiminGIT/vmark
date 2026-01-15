@@ -9,19 +9,29 @@
 import { useCallback, useRef, useEffect, useState } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import {
-  getNextButtonIndex,
-  getPrevButtonIndex,
-  getNextGroupFirstIndex,
-  getPrevGroupLastIndex,
-  getFirstButtonIndex,
-  getLastButtonIndex,
+  getNextFocusableIndex,
+  getPrevFocusableIndex,
+  getFirstFocusableIndex,
+  getLastFocusableIndex,
+  getNextGroupFirstFocusableIndex,
+  getPrevGroupLastFocusableIndex,
+  getNextFocusableIndexInGroup,
+  getPrevFocusableIndexInGroup,
 } from "./toolbarNavigation";
 
 interface UseToolbarKeyboardOptions {
   /** Total number of buttons in the toolbar */
   buttonCount: number;
+  /** Whether a button is focusable (enabled) */
+  isButtonFocusable: (index: number) => boolean;
+  /** Optional external ref for the toolbar container */
+  containerRef?: React.RefObject<HTMLDivElement | null>;
   /** Callback when a button should be activated */
   onActivate: (index: number) => void;
+  /** Callback when a dropdown should open */
+  onOpenDropdown?: (index: number) => boolean;
+  /** Callback when toolbar should close */
+  onClose?: () => void;
 }
 
 interface UseToolbarKeyboardReturn {
@@ -30,7 +40,7 @@ interface UseToolbarKeyboardReturn {
   /** Set the focused index */
   setFocusedIndex: (index: number) => void;
   /** Ref to attach to the toolbar container */
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   /** Handle keydown events */
   handleKeyDown: (e: React.KeyboardEvent) => void;
 }
@@ -52,8 +62,9 @@ interface UseToolbarKeyboardReturn {
 export function useToolbarKeyboard(
   options: UseToolbarKeyboardOptions
 ): UseToolbarKeyboardReturn {
-  const { buttonCount, onActivate } = options;
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { buttonCount, isButtonFocusable, onActivate, onOpenDropdown, onClose, containerRef: externalRef } = options;
+  const internalRef = useRef<HTMLDivElement>(null);
+  const containerRef = externalRef ?? internalRef;
 
   // Get initial focus from store (persisted across opens)
   const lastFocusedIndex = useUIStore((state) => state.lastFocusedToolbarIndex);
@@ -69,8 +80,12 @@ export function useToolbarKeyboard(
 
   // Close toolbar action
   const closeToolbar = useCallback(() => {
+    if (onClose) {
+      onClose();
+      return;
+    }
     useUIStore.getState().setUniversalToolbarVisible(false);
-  }, []);
+  }, [onClose]);
 
   // Move focus to a button
   const focusButton = useCallback((index: number) => {
@@ -78,13 +93,12 @@ export function useToolbarKeyboard(
     const container = containerRef.current;
     if (!container) return;
 
-    const buttons = container.querySelectorAll<HTMLButtonElement>(
-      ".universal-toolbar-btn"
-    );
-    if (buttons[index]) {
-      buttons[index].focus();
+    const buttons = container.querySelectorAll<HTMLButtonElement>(".universal-toolbar-btn");
+    const targetIndex = Math.min(index, buttons.length - 1);
+    if (buttons[targetIndex]) {
+      buttons[targetIndex].focus();
     }
-  }, [setFocusedIndex]);
+  }, [setFocusedIndex, containerRef]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -96,44 +110,55 @@ export function useToolbarKeyboard(
         case "Tab":
           e.preventDefault();
           if (e.shiftKey) {
-            focusButton(getPrevButtonIndex(current, buttonCount));
+            focusButton(getPrevFocusableIndex(current, buttonCount, isButtonFocusable));
           } else {
-            focusButton(getNextButtonIndex(current, buttonCount));
+            focusButton(getNextFocusableIndex(current, buttonCount, isButtonFocusable));
           }
           break;
 
         case "ArrowRight":
           e.preventDefault();
           if (groupModifier) {
-            focusButton(getNextGroupFirstIndex(current));
+            focusButton(getNextGroupFirstFocusableIndex(current, isButtonFocusable));
           } else {
-            focusButton(getNextButtonIndex(current, buttonCount));
+            focusButton(getNextFocusableIndexInGroup(current, isButtonFocusable));
           }
           break;
 
         case "ArrowLeft":
           e.preventDefault();
           if (groupModifier) {
-            focusButton(getPrevGroupLastIndex(current));
+            focusButton(getPrevGroupLastFocusableIndex(current, isButtonFocusable));
           } else {
-            focusButton(getPrevButtonIndex(current, buttonCount));
+            focusButton(getPrevFocusableIndexInGroup(current, isButtonFocusable));
+          }
+          break;
+
+        case "ArrowDown":
+          if (onOpenDropdown) {
+            const opened = onOpenDropdown(current);
+            if (opened) {
+              e.preventDefault();
+            }
           }
           break;
 
         case "Home":
           e.preventDefault();
-          focusButton(getFirstButtonIndex());
+          focusButton(getFirstFocusableIndex(buttonCount, isButtonFocusable));
           break;
 
         case "End":
           e.preventDefault();
-          focusButton(getLastButtonIndex(buttonCount));
+          focusButton(getLastFocusableIndex(buttonCount, isButtonFocusable));
           break;
 
         case "Enter":
         case " ":
           e.preventDefault();
-          onActivate(current);
+          if (isButtonFocusable(current)) {
+            onActivate(current);
+          }
           break;
 
         case "Escape":
@@ -142,7 +167,7 @@ export function useToolbarKeyboard(
           break;
       }
     },
-    [buttonCount, focusButton, focusedIndex, onActivate, closeToolbar]
+    [buttonCount, focusButton, focusedIndex, onActivate, closeToolbar, isButtonFocusable, onOpenDropdown]
   );
 
   // Focus button when toolbar opens
@@ -152,22 +177,22 @@ export function useToolbarKeyboard(
 
     // Delay to ensure DOM is ready
     const timer = setTimeout(() => {
-      const buttons = container.querySelectorAll<HTMLButtonElement>(
-        ".universal-toolbar-btn"
-      );
-      const targetIndex = Math.min(focusedIndex, buttons.length - 1);
-      if (buttons[targetIndex]) {
-        buttons[targetIndex].focus();
-      }
+      const buttons = container.querySelectorAll<HTMLButtonElement>(".universal-toolbar-btn");
+      if (buttons.length === 0) return;
+      const safeIndex = Math.min(focusedIndex, buttons.length - 1);
+      const targetIndex = isButtonFocusable(safeIndex)
+        ? safeIndex
+        : getFirstFocusableIndex(buttons.length, isButtonFocusable);
+      if (buttons[targetIndex]) buttons[targetIndex].focus();
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [focusedIndex]);
+  }, [focusedIndex, isButtonFocusable, containerRef]);
 
   return {
     focusedIndex,
     setFocusedIndex,
-    containerRef: containerRef as React.RefObject<HTMLDivElement>,
+    containerRef,
     handleKeyDown,
   };
 }
