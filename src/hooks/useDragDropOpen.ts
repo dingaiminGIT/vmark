@@ -18,23 +18,7 @@ import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { filterMarkdownPaths } from "@/utils/dropPaths";
 import { resolveOpenAction } from "@/utils/openPolicy";
-import { normalizePath } from "@/utils/paths";
-
-/**
- * Find an existing tab for a file path in the current window.
- */
-function findExistingTabForPath(windowLabel: string, filePath: string): string | null {
-  const tabs = useTabStore.getState().getTabsByWindow(windowLabel);
-  const normalizedTarget = normalizePath(filePath);
-
-  for (const tab of tabs) {
-    const doc = useDocumentStore.getState().getDocument(tab.id);
-    if (doc?.filePath && normalizePath(doc.filePath) === normalizedTarget) {
-      return tab.id;
-    }
-  }
-  return null;
-}
+import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceableTab";
 
 /**
  * Opens a file in a new tab (or activates existing tab if already open).
@@ -94,6 +78,9 @@ export function useDragDropOpen(): void {
         // Get current workspace state for policy decisions
         const { isWorkspaceMode, rootPath } = useWorkspaceStore.getState();
 
+        // Check for replaceable tab (single clean untitled tab)
+        const replaceableTab = getReplaceableTab(windowLabel);
+
         // Open each markdown file using the policy
         await Promise.all(
           markdownPaths.map(async (path) => {
@@ -104,6 +91,7 @@ export function useDragDropOpen(): void {
               workspaceRoot: rootPath,
               isWorkspaceMode,
               existingTabId,
+              replaceableTab,
             });
 
             switch (decision.action) {
@@ -112,6 +100,18 @@ export function useDragDropOpen(): void {
                 break;
               case "create_tab":
                 await openFileInNewTab(windowLabel, path);
+                break;
+              case "replace_tab":
+                // Replace the clean untitled tab with the file content
+                try {
+                  const content = await readTextFile(path);
+                  useTabStore.getState().updateTabPath(decision.tabId, decision.filePath);
+                  useDocumentStore.getState().loadContent(decision.tabId, content, decision.filePath);
+                  useWorkspaceStore.getState().openWorkspace(decision.workspaceRoot);
+                  useRecentFilesStore.getState().addFile(path);
+                } catch (error) {
+                  console.error("[DragDrop] Failed to replace tab with file:", path, error);
+                }
                 break;
               case "open_workspace_in_new_window":
                 try {

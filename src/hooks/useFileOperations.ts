@@ -18,25 +18,9 @@ import {
   resolvePostSaveWorkspaceAction,
   resolveMissingFileSaveAction,
 } from "@/utils/openPolicy";
+import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceableTab";
 import { createUntitledTab } from "@/utils/newFile";
 import { getDirectory } from "@/utils/pathUtils";
-import { normalizePath } from "@/utils/paths";
-
-/**
- * Find an existing tab for a file path in the current window.
- */
-function findExistingTabForPath(windowLabel: string, filePath: string): string | null {
-  const tabs = useTabStore.getState().getTabsByWindow(windowLabel);
-  const normalizedTarget = normalizePath(filePath);
-
-  for (const tab of tabs) {
-    const doc = useDocumentStore.getState().getDocument(tab.id);
-    if (doc?.filePath && normalizePath(doc.filePath) === normalizedTarget) {
-      return tab.id;
-    }
-  }
-  return null;
-}
 
 export function useFileOperations() {
   const windowLabel = useWindowLabel();
@@ -78,11 +62,15 @@ export function useFileOperations() {
       const { isWorkspaceMode, rootPath } = useWorkspaceStore.getState();
       const existingTabId = findExistingTabForPath(windowLabel, path);
 
+      // Check for replaceable tab (single clean untitled tab)
+      const replaceableTab = getReplaceableTab(windowLabel);
+
       const decision = resolveOpenAction({
         filePath: path,
         workspaceRoot: rootPath,
         isWorkspaceMode,
         existingTabId,
+        replaceableTab,
       });
 
       switch (decision.action) {
@@ -91,6 +79,22 @@ export function useFileOperations() {
           break;
         case "create_tab":
           await openFileInNewTab(path);
+          break;
+        case "replace_tab":
+          // Replace the clean untitled tab with the file content
+          try {
+            const content = await readTextFile(path);
+            // Update the tab's file path
+            useTabStore.getState().updateTabPath(decision.tabId, decision.filePath);
+            // Load content into the document
+            useDocumentStore.getState().loadContent(decision.tabId, content, decision.filePath);
+            // Open workspace with the file's parent folder
+            useWorkspaceStore.getState().openWorkspace(decision.workspaceRoot);
+            // Add to recent files
+            useRecentFilesStore.getState().addFile(path);
+          } catch (error) {
+            console.error("[FileOps] Failed to replace tab with file:", error);
+          }
           break;
         case "open_workspace_in_new_window":
           try {
@@ -224,9 +228,6 @@ export function useFileOperations() {
     [openFileInNewTab, windowLabel]
   );
 
-  // NOTE: app:open-file handler removed - Rust now directly creates windows via
-  // create_document_window instead of broadcasting events
-
   const handleNew = useCallback(() => {
     createUntitledTab(windowLabel);
   }, [windowLabel]);
@@ -285,8 +286,6 @@ export function useFileOperations() {
       );
       if (cancelled) { unlistenOpenFile(); return; }
       unlistenRefs.current.push(unlistenOpenFile);
-
-      // NOTE: app:open-file listener removed - Rust now creates windows directly
     };
 
     setupListeners();

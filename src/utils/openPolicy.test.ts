@@ -14,10 +14,12 @@ import {
   resolveMissingFileSaveAction,
   resolveExternalChangeAction,
   resolvePostSaveWorkspaceAction,
+  findReplaceableTab,
   type OpenActionContext,
   type MissingFileSaveContext,
   type ExternalChangeContext,
   type PostSaveWorkspaceContext,
+  type TabInfo,
 } from "./openPolicy";
 
 describe("resolveOpenAction", () => {
@@ -28,6 +30,7 @@ describe("resolveOpenAction", () => {
         workspaceRoot: "/workspace/project",
         isWorkspaceMode: true,
         existingTabId: null,
+        replaceableTab: null,
       };
 
       const result = resolveOpenAction(context);
@@ -44,6 +47,7 @@ describe("resolveOpenAction", () => {
         workspaceRoot: "/workspace/project",
         isWorkspaceMode: true,
         existingTabId: "tab-123",
+        replaceableTab: null,
       };
 
       const result = resolveOpenAction(context);
@@ -60,6 +64,7 @@ describe("resolveOpenAction", () => {
         workspaceRoot: "/workspace/project",
         isWorkspaceMode: true,
         existingTabId: null,
+        replaceableTab: null,
       };
 
       const result = resolveOpenAction(context);
@@ -77,6 +82,7 @@ describe("resolveOpenAction", () => {
         workspaceRoot: "/workspace/project",
         isWorkspaceMode: true,
         existingTabId: null,
+        replaceableTab: null,
       };
 
       const result = resolveOpenAction(context);
@@ -89,12 +95,13 @@ describe("resolveOpenAction", () => {
   });
 
   describe("when not in workspace mode", () => {
-    it("returns open_workspace_in_new_window for any file", () => {
+    it("returns open_workspace_in_new_window for any file without replaceable tab", () => {
       const context: OpenActionContext = {
         filePath: "/some/folder/file.md",
         workspaceRoot: null,
         isWorkspaceMode: false,
         existingTabId: null,
+        replaceableTab: null,
       };
 
       const result = resolveOpenAction(context);
@@ -112,6 +119,7 @@ describe("resolveOpenAction", () => {
         workspaceRoot: null,
         isWorkspaceMode: false,
         existingTabId: "tab-456",
+        replaceableTab: null,
       };
 
       const result = resolveOpenAction(context);
@@ -123,6 +131,81 @@ describe("resolveOpenAction", () => {
     });
   });
 
+  describe("with replaceable tab (clean untitled)", () => {
+    it("returns replace_tab when not in workspace mode and replaceable tab exists", () => {
+      const context: OpenActionContext = {
+        filePath: "/some/folder/file.md",
+        workspaceRoot: null,
+        isWorkspaceMode: false,
+        existingTabId: null,
+        replaceableTab: { tabId: "untitled-tab" },
+      };
+
+      const result = resolveOpenAction(context);
+
+      expect(result).toEqual({
+        action: "replace_tab",
+        tabId: "untitled-tab",
+        filePath: "/some/folder/file.md",
+        workspaceRoot: "/some/folder",
+      });
+    });
+
+    it("returns replace_tab when file is outside workspace and replaceable tab exists", () => {
+      const context: OpenActionContext = {
+        filePath: "/other/folder/file.md",
+        workspaceRoot: "/workspace/project",
+        isWorkspaceMode: true,
+        existingTabId: null,
+        replaceableTab: { tabId: "untitled-tab" },
+      };
+
+      const result = resolveOpenAction(context);
+
+      expect(result).toEqual({
+        action: "replace_tab",
+        tabId: "untitled-tab",
+        filePath: "/other/folder/file.md",
+        workspaceRoot: "/other/folder",
+      });
+    });
+
+    it("still returns create_tab for file within workspace even with replaceable tab", () => {
+      const context: OpenActionContext = {
+        filePath: "/workspace/project/src/file.md",
+        workspaceRoot: "/workspace/project",
+        isWorkspaceMode: true,
+        existingTabId: null,
+        replaceableTab: { tabId: "untitled-tab" },
+      };
+
+      const result = resolveOpenAction(context);
+
+      // Within workspace, create a new tab (don't replace)
+      expect(result).toEqual({
+        action: "create_tab",
+        filePath: "/workspace/project/src/file.md",
+      });
+    });
+
+    it("still returns activate_tab when file already open even with replaceable tab", () => {
+      const context: OpenActionContext = {
+        filePath: "/some/folder/file.md",
+        workspaceRoot: null,
+        isWorkspaceMode: false,
+        existingTabId: "existing-tab",
+        replaceableTab: { tabId: "untitled-tab" },
+      };
+
+      const result = resolveOpenAction(context);
+
+      expect(result).toEqual({
+        action: "activate_tab",
+        tabId: "existing-tab",
+      });
+    });
+  });
+
   describe("edge cases", () => {
     it("handles Windows-style paths", () => {
       const context: OpenActionContext = {
@@ -130,6 +213,7 @@ describe("resolveOpenAction", () => {
         workspaceRoot: "C:\\Users\\test\\project",
         isWorkspaceMode: true,
         existingTabId: null,
+        replaceableTab: null,
       };
 
       const result = resolveOpenAction(context);
@@ -146,6 +230,7 @@ describe("resolveOpenAction", () => {
         workspaceRoot: "/workspace/project",
         isWorkspaceMode: true,
         existingTabId: null,
+        replaceableTab: null,
       };
 
       const result = resolveOpenAction(context);
@@ -367,5 +452,58 @@ describe("resolvePostSaveWorkspaceAction", () => {
 
       expect(result).toEqual({ action: "no_op" });
     });
+  });
+});
+
+describe("findReplaceableTab", () => {
+  it("returns tabId for single clean untitled tab", () => {
+    const tabs: TabInfo[] = [{ id: "tab-1", filePath: null, isDirty: false }];
+
+    const result = findReplaceableTab(tabs);
+
+    expect(result).toEqual({ tabId: "tab-1" });
+  });
+
+  it("returns null for multiple tabs", () => {
+    const tabs: TabInfo[] = [
+      { id: "tab-1", filePath: null, isDirty: false },
+      { id: "tab-2", filePath: "/file.md", isDirty: false },
+    ];
+
+    const result = findReplaceableTab(tabs);
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null for empty tabs list", () => {
+    const tabs: TabInfo[] = [];
+
+    const result = findReplaceableTab(tabs);
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null for single tab with file path", () => {
+    const tabs: TabInfo[] = [{ id: "tab-1", filePath: "/file.md", isDirty: false }];
+
+    const result = findReplaceableTab(tabs);
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null for single dirty untitled tab", () => {
+    const tabs: TabInfo[] = [{ id: "tab-1", filePath: null, isDirty: true }];
+
+    const result = findReplaceableTab(tabs);
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null for single dirty tab with file path", () => {
+    const tabs: TabInfo[] = [{ id: "tab-1", filePath: "/file.md", isDirty: true }];
+
+    const result = findReplaceableTab(tabs);
+
+    expect(result).toBeNull();
   });
 });

@@ -52,6 +52,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useMenuEvents } from "@/hooks/useMenuEvents";
+import { useExportMenuEvents } from "@/hooks/useExportMenuEvents";
 import { useWorkspaceMenuEvents } from "@/hooks/useWorkspaceMenuEvents";
 import { useWorkspaceBootstrap } from "@/hooks/useWorkspaceBootstrap";
 import { useFileOperations } from "@/hooks/useFileOperations";
@@ -97,6 +98,7 @@ function MainLayout() {
   // Initialize hooks
   useWorkspaceBootstrap(); // Load config from disk on startup (must be first)
   useMenuEvents();
+  useExportMenuEvents();
   useWorkspaceMenuEvents();
   useFileOperations();
   useSearchCommands();

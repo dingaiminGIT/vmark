@@ -10,12 +10,10 @@ import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { useTabStore } from "@/stores/tabStore";
 import { clearAllHistory } from "@/hooks/useHistoryRecovery";
 import { historyLog } from "@/utils/debug";
-import { exportToHtml, exportToPdf, savePdf, copyAsHtml } from "@/hooks/useExportOperations";
-import { getFileNameWithoutExtension } from "@/utils/pathUtils";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { withReentryGuard } from "@/utils/reentryGuard";
-import { getActiveDocument } from "@/utils/activeDocument";
 import { resolveOpenAction } from "@/utils/openPolicy";
+import { getReplaceableTab } from "@/hooks/useReplaceableTab";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -175,12 +173,16 @@ export function useMenuEvents() {
         const { isWorkspaceMode, rootPath } = useWorkspaceStore.getState();
         const existingTab = useTabStore.getState().findTabByPath(windowLabel, file.path);
 
+        // Check for replaceable tab (single clean untitled tab)
+        const replaceableTab = getReplaceableTab(windowLabel);
+
         // Use policy to resolve where to open (respects workspace boundaries)
         const result = resolveOpenAction({
           filePath: file.path,
           workspaceRoot: rootPath,
           isWorkspaceMode,
           existingTabId: existingTab?.id ?? null,
+          replaceableTab,
         });
 
         await withReentryGuard(windowLabel, "open-recent", async () => {
@@ -197,6 +199,29 @@ export function useMenuEvents() {
                 useRecentFilesStore.getState().addFile(file.path); // Move to top
               } catch (error) {
                 console.error("[Menu] Failed to open recent file:", error);
+                const remove = await ask(
+                  "This file could not be opened. It may have been moved or deleted.\n\nRemove from recent files?",
+                  { title: "File Not Found", kind: "warning" }
+                );
+                if (remove) {
+                  useRecentFilesStore.getState().removeFile(file.path);
+                }
+              }
+              break;
+            case "replace_tab":
+              // Replace the clean untitled tab with the file content
+              try {
+                const content = await readTextFile(file.path);
+                // Update the tab's file path
+                useTabStore.getState().updateTabPath(result.tabId, result.filePath);
+                // Load content into the document
+                useDocumentStore.getState().loadContent(result.tabId, content, result.filePath);
+                // Open workspace with the file's parent folder
+                useWorkspaceStore.getState().openWorkspace(result.workspaceRoot);
+                // Add to recent files
+                useRecentFilesStore.getState().addFile(file.path);
+              } catch (error) {
+                console.error("[Menu] Failed to replace tab with recent file:", error);
                 const remove = await ask(
                   "This file could not be opened. It may have been moved or deleted.\n\nRemove from recent files?",
                   { title: "File Not Found", kind: "warning" }
@@ -226,83 +251,7 @@ export function useMenuEvents() {
       if (cancelled) { unlistenOpenRecent(); return; }
       unlistenRefs.current.push(unlistenOpenRecent);
 
-      // Export menu events - share single "export" guard per window
-      const unlistenExportHtml = await currentWindow.listen<string>("menu:export-html", async (event) => {
-        if (event.payload !== windowLabel) return;
-        flushActiveWysiwygNow();
-
-        await withReentryGuard(windowLabel, "export", async () => {
-          const doc = getActiveDocument(windowLabel);
-          if (!doc) return;
-          const defaultName = doc.filePath
-            ? getFileNameWithoutExtension(doc.filePath) || "document"
-            : "document";
-          try {
-            await exportToHtml(doc.content, defaultName);
-          } catch (error) {
-            console.error("[Menu] Failed to export HTML:", error);
-          }
-        });
-      });
-      if (cancelled) { unlistenExportHtml(); return; }
-      unlistenRefs.current.push(unlistenExportHtml);
-
-      const unlistenSavePdf = await currentWindow.listen<string>("menu:save-pdf", async (event) => {
-        if (event.payload !== windowLabel) return;
-        flushActiveWysiwygNow();
-
-        await withReentryGuard(windowLabel, "export", async () => {
-          const doc = getActiveDocument(windowLabel);
-          if (!doc) return;
-          const defaultName = doc.filePath
-            ? getFileNameWithoutExtension(doc.filePath) || "document"
-            : "document";
-          try {
-            await savePdf(doc.content, defaultName);
-          } catch (error) {
-            console.error("[Menu] Failed to save PDF:", error);
-          }
-        });
-      });
-      if (cancelled) { unlistenSavePdf(); return; }
-      unlistenRefs.current.push(unlistenSavePdf);
-
-      const unlistenExportPdf = await currentWindow.listen<string>("menu:export-pdf", async (event) => {
-        if (event.payload !== windowLabel) return;
-        flushActiveWysiwygNow();
-
-        await withReentryGuard(windowLabel, "export", async () => {
-          const doc = getActiveDocument(windowLabel);
-          if (!doc) return;
-          const title = doc.filePath
-            ? getFileNameWithoutExtension(doc.filePath) || "Document"
-            : "Document";
-          try {
-            await exportToPdf(doc.content, title);
-          } catch (error) {
-            console.error("[Menu] Failed to export PDF:", error);
-          }
-        });
-      });
-      if (cancelled) { unlistenExportPdf(); return; }
-      unlistenRefs.current.push(unlistenExportPdf);
-
-      const unlistenCopyHtml = await currentWindow.listen<string>("menu:copy-html", async (event) => {
-        if (event.payload !== windowLabel) return;
-        flushActiveWysiwygNow();
-
-        await withReentryGuard(windowLabel, "export", async () => {
-          const doc = getActiveDocument(windowLabel);
-          if (!doc) return;
-          try {
-            await copyAsHtml(doc.content);
-          } catch (error) {
-            console.error("[Menu] Failed to copy HTML:", error);
-          }
-        });
-      });
-      if (cancelled) { unlistenCopyHtml(); return; }
-      unlistenRefs.current.push(unlistenCopyHtml);
+      // Export menu events are handled by useExportMenuEvents hook
     };
 
     setupListeners();

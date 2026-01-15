@@ -20,6 +20,14 @@ import { isWithinRoot, getParentDir, normalizePath } from "@/utils/paths/paths";
 // -----------------------------------------------------------------------------
 
 /**
+ * Info about a tab that can be replaced instead of opening a new window.
+ * A tab is replaceable if it's the only tab, is untitled, and is clean.
+ */
+export interface ReplaceableTabInfo {
+  tabId: string;
+}
+
+/**
  * Context for resolving where to open a file.
  */
 export interface OpenActionContext {
@@ -31,6 +39,8 @@ export interface OpenActionContext {
   isWorkspaceMode: boolean;
   /** ID of an existing tab for this file (null if none) */
   existingTabId: string | null;
+  /** Info about a replaceable tab (single clean untitled tab), or null if none */
+  replaceableTab: ReplaceableTabInfo | null;
 }
 
 /**
@@ -39,6 +49,7 @@ export interface OpenActionContext {
 export type OpenActionResult =
   | { action: "create_tab"; filePath: string }
   | { action: "activate_tab"; tabId: string }
+  | { action: "replace_tab"; tabId: string; filePath: string; workspaceRoot: string }
   | { action: "open_workspace_in_new_window"; filePath: string; workspaceRoot: string }
   | { action: "no_op"; reason: string };
 
@@ -48,7 +59,8 @@ export type OpenActionResult =
  * Decision logic:
  * 1. If file already has an open tab, activate it
  * 2. If in workspace mode and file is within workspace, create new tab
- * 3. If file is outside workspace (or not in workspace mode), open in new window
+ * 3. If there's a replaceable tab (single clean untitled), replace it
+ * 4. Otherwise, open in new window
  *
  * @param context - Current workspace and file context
  * @returns Action to take for opening the file
@@ -60,19 +72,31 @@ export type OpenActionResult =
  *   workspaceRoot: "/project",
  *   isWorkspaceMode: true,
  *   existingTabId: null,
+ *   replaceableTab: null,
  * }); // { action: "create_tab", filePath: "/project/src/file.md" }
  *
  * @example
- * // File outside workspace - open new window
+ * // Clean untitled tab exists - replace it
+ * resolveOpenAction({
+ *   filePath: "/other/file.md",
+ *   workspaceRoot: null,
+ *   isWorkspaceMode: false,
+ *   existingTabId: null,
+ *   replaceableTab: { tabId: "tab-1" },
+ * }); // { action: "replace_tab", tabId: "tab-1", ... }
+ *
+ * @example
+ * // No replaceable tab - open new window
  * resolveOpenAction({
  *   filePath: "/other/file.md",
  *   workspaceRoot: "/project",
  *   isWorkspaceMode: true,
  *   existingTabId: null,
+ *   replaceableTab: null,
  * }); // { action: "open_workspace_in_new_window", ... }
  */
 export function resolveOpenAction(context: OpenActionContext): OpenActionResult {
-  const { filePath, workspaceRoot, isWorkspaceMode, existingTabId } = context;
+  const { filePath, workspaceRoot, isWorkspaceMode, existingTabId, replaceableTab } = context;
 
   // Guard: empty path
   if (!filePath) {
@@ -91,12 +115,23 @@ export function resolveOpenAction(context: OpenActionContext): OpenActionResult 
     }
   }
 
-  // Outside workspace or not in workspace mode: open in new window
+  // Resolve workspace root for external file
   const newWorkspaceRoot = resolveWorkspaceRootForExternalFile(filePath);
   if (!newWorkspaceRoot) {
     return { action: "no_op", reason: "cannot_resolve_workspace_root" };
   }
 
+  // If there's a replaceable tab (single clean untitled), replace it instead of new window
+  if (replaceableTab) {
+    return {
+      action: "replace_tab",
+      tabId: replaceableTab.tabId,
+      filePath,
+      workspaceRoot: newWorkspaceRoot,
+    };
+  }
+
+  // No replaceable tab: open in new window
   return {
     action: "open_workspace_in_new_window",
     filePath,
@@ -331,4 +366,62 @@ export function resolvePostSaveWorkspaceAction(
   }
 
   return { action: "open_workspace", workspaceRoot };
+}
+
+// -----------------------------------------------------------------------------
+// findReplaceableTab
+// -----------------------------------------------------------------------------
+
+/**
+ * Tab info for determining if it's replaceable.
+ */
+export interface TabInfo {
+  id: string;
+  filePath: string | null;
+  isDirty: boolean;
+}
+
+/**
+ * Find a replaceable tab in the given tabs list.
+ *
+ * A tab is replaceable if:
+ * 1. It's the only tab in the window
+ * 2. It's untitled (no filePath)
+ * 3. It's clean (not dirty)
+ *
+ * @param tabs - List of tabs in the window
+ * @returns ReplaceableTabInfo if found, null otherwise
+ *
+ * @example
+ * // Single clean untitled tab - replaceable
+ * findReplaceableTab([{ id: "tab-1", filePath: null, isDirty: false }])
+ * // { tabId: "tab-1" }
+ *
+ * @example
+ * // Multiple tabs - not replaceable
+ * findReplaceableTab([
+ *   { id: "tab-1", filePath: null, isDirty: false },
+ *   { id: "tab-2", filePath: "/file.md", isDirty: false },
+ * ])
+ * // null
+ */
+export function findReplaceableTab(tabs: TabInfo[]): ReplaceableTabInfo | null {
+  // Must have exactly one tab
+  if (tabs.length !== 1) {
+    return null;
+  }
+
+  const tab = tabs[0];
+
+  // Must be untitled (no filePath)
+  if (tab.filePath !== null) {
+    return null;
+  }
+
+  // Must be clean (not dirty)
+  if (tab.isDirty) {
+    return null;
+  }
+
+  return { tabId: tab.id };
 }
