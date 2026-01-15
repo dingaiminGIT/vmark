@@ -84,6 +84,15 @@ export function TiptapEditorInner() {
         // Keep Tiptap defaults for schema names and commands.
         listItem: false,
         underline: false,
+        // Disable default link click behavior - we handle it via linkPopupExtension
+        link: {
+          openOnClick: false,
+          // Don't add target="_blank" - it bypasses our click handling
+          HTMLAttributes: {
+            target: null,
+            rel: null,
+          },
+        },
       }),
       slashMenuExtension,
       taskListItemExtension,

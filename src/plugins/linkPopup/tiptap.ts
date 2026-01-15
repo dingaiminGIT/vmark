@@ -80,8 +80,16 @@ function findLinkMarkRange(view: EditorView, pos: number): MarkRange | null {
   return null;
 }
 
+/** Delay before showing popup on hover (ms) */
+const HOVER_DELAY = 300;
+
+/**
+ * Click handler: Cmd/Ctrl+click opens link in browser.
+ * Regular click just places cursor (default behavior).
+ */
 function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean {
   try {
+    // Cmd/Ctrl + click: open link in browser
     if (event.metaKey || event.ctrlKey) {
       const linkRange = findLinkMarkRange(view, pos);
       if (linkRange) {
@@ -97,27 +105,7 @@ function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean 
       return false;
     }
 
-    const linkRange = findLinkMarkRange(view, pos);
-
-    if (linkRange) {
-      const startCoords = view.coordsAtPos(linkRange.from);
-      const endCoords = view.coordsAtPos(linkRange.to);
-
-      useLinkPopupStore.getState().openPopup({
-        href: linkRange.mark.attrs.href || "",
-        linkFrom: linkRange.from,
-        linkTo: linkRange.to,
-        anchorRect: {
-          top: startCoords.top,
-          left: startCoords.left,
-          bottom: startCoords.bottom,
-          right: endCoords.right,
-        },
-      });
-
-      return false;
-    }
-
+    // Regular click: close popup if open, let default cursor placement happen
     if (useLinkPopupStore.getState().isOpen) {
       useLinkPopupStore.getState().closePopup();
     }
@@ -131,9 +119,109 @@ function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean 
 
 class LinkPopupPluginView {
   private popupView: LinkPopupView;
+  private view: EditorView;
+  private hoverTimeout: ReturnType<typeof setTimeout> | null = null;
+  private currentLinkElement: HTMLElement | null = null;
 
   constructor(view: EditorView) {
+    this.view = view;
     this.popupView = new LinkPopupView(view);
+
+    // Add hover listeners to the editor DOM
+    view.dom.addEventListener("mouseover", this.handleMouseOver);
+    view.dom.addEventListener("mouseout", this.handleMouseOut);
+  }
+
+  private handleMouseOver = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    const linkElement = target.closest("a") as HTMLElement | null;
+
+    if (!linkElement) {
+      // Not hovering a link - clear any pending timeout
+      this.clearHoverTimeout();
+      return;
+    }
+
+    // Same link - ignore
+    if (linkElement === this.currentLinkElement) {
+      return;
+    }
+
+    // Clear any existing timeout
+    this.clearHoverTimeout();
+    this.currentLinkElement = linkElement;
+
+    // Start hover delay
+    this.hoverTimeout = setTimeout(() => {
+      this.showPopupForLink(linkElement);
+    }, HOVER_DELAY);
+  };
+
+  private handleMouseOut = (event: MouseEvent) => {
+    const relatedTarget = event.relatedTarget as HTMLElement | null;
+
+    // Check if we're moving to the popup itself
+    const popup = document.querySelector(".link-popup");
+    if (popup && (popup.contains(relatedTarget) || popup === relatedTarget)) {
+      // Moving to popup - don't close
+      return;
+    }
+
+    // Check if still within a link
+    if (relatedTarget?.closest("a")) {
+      // Still in a link - let mouseover handle it
+      return;
+    }
+
+    // Left the link area - clear timeout and close popup after delay
+    this.clearHoverTimeout();
+    this.currentLinkElement = null;
+
+    // Small delay before closing to allow moving to popup
+    this.hoverTimeout = setTimeout(() => {
+      // Only close if not hovering the popup
+      const popupEl = document.querySelector(".link-popup");
+      if (popupEl && !popupEl.matches(":hover")) {
+        useLinkPopupStore.getState().closePopup();
+      }
+    }, 100);
+  };
+
+  private showPopupForLink(linkElement: HTMLElement) {
+    try {
+      // Get the document position from the link element
+      const pos = this.view.posAtDOM(linkElement, 0);
+      const linkRange = findLinkMarkRange(this.view, pos);
+
+      if (linkRange) {
+        const startCoords = this.view.coordsAtPos(linkRange.from);
+        const endCoords = this.view.coordsAtPos(linkRange.to);
+
+        useLinkPopupStore.getState().openPopup({
+          href: linkRange.mark.attrs.href || "",
+          linkFrom: linkRange.from,
+          linkTo: linkRange.to,
+          anchorRect: {
+            top: startCoords.top,
+            left: startCoords.left,
+            bottom: startCoords.bottom,
+            right: endCoords.right,
+          },
+        });
+      }
+    } catch (error) {
+      // Position lookup can fail in edge cases - ignore silently
+      if (import.meta.env.DEV) {
+        console.debug("[LinkPopup] Failed to show popup for link:", error);
+      }
+    }
+  }
+
+  private clearHoverTimeout() {
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = null;
+    }
   }
 
   update() {
@@ -141,6 +229,9 @@ class LinkPopupPluginView {
   }
 
   destroy() {
+    this.clearHoverTimeout();
+    this.view.dom.removeEventListener("mouseover", this.handleMouseOver);
+    this.view.dom.removeEventListener("mouseout", this.handleMouseOut);
     this.popupView.destroy();
   }
 }

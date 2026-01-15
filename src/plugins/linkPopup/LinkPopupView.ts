@@ -72,6 +72,9 @@ export class LinkPopupView {
 
     // Handle click outside
     document.addEventListener("mousedown", this.handleClickOutside);
+
+    // Handle mouse leaving the popup
+    this.container.addEventListener("mouseleave", this.handleMouseLeave);
   }
 
   private getFocusableElements(): HTMLElement[] {
@@ -317,10 +320,28 @@ export class LinkPopupView {
     }
   };
 
+  private handleMouseLeave = (e: MouseEvent) => {
+    const relatedTarget = e.relatedTarget as HTMLElement | null;
+
+    // If moving back to a link in the editor, don't close
+    if (relatedTarget?.closest("a")) {
+      return;
+    }
+
+    // If input is focused (user is editing), don't close on mouse leave
+    if (document.activeElement === this.input) {
+      return;
+    }
+
+    // Close the popup
+    useLinkPopupStore.getState().closePopup();
+  };
+
   destroy() {
     this.unsubscribe();
     this.removeKeyboardNavigation();
     document.removeEventListener("mousedown", this.handleClickOutside);
+    this.container.removeEventListener("mouseleave", this.handleMouseLeave);
     this.container.remove();
   }
 }
