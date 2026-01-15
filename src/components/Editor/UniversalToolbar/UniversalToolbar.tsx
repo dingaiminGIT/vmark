@@ -291,10 +291,6 @@ export function UniversalToolbar() {
               />
             );
           })()}
-          {/* Separator between groups (except last) */}
-          {groupIndex < TOOLBAR_GROUPS.length - 1 && (
-            <div className="universal-toolbar-separator" />
-          )}
         </div>
       ))}
 

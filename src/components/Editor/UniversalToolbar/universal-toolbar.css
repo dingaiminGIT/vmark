@@ -23,10 +23,10 @@
 
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 
   background-color: var(--bg-color);
-  border-top: 1px solid var(--border-color);
 
   /* Slide-up animation matching FindBar */
   animation: universal-toolbar-slide-up 0.15s ease-out;
@@ -54,14 +54,6 @@
   align-items: center;
   gap: 2px;
   min-height: 28px;
-}
-
-/* Group separator */
-.universal-toolbar-separator {
-  width: 1px;
-  height: 20px;
-  background-color: var(--border-color);
-  margin: 0 4px;
 }
 
 /* Button styles */

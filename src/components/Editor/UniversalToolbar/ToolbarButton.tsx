@@ -67,7 +67,7 @@ export function ToolbarButton({
       {button.type === "dropdown" && (
         <span
           className="universal-toolbar-caret"
-          dangerouslySetInnerHTML={{ __html: icons.chevronDown }}
+          dangerouslySetInnerHTML={{ __html: icons.chevronUp }}
         />
       )}
     </button>

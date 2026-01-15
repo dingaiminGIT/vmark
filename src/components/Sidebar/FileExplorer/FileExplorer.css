@@ -8,11 +8,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
+  padding: 6px 18px;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
-  border-bottom: 1px solid var(--border-color);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -53,7 +52,7 @@
 .file-explorer-tree {
   flex: 1;
   overflow: hidden;
-  padding: 4px 0;
+  padding: 4px 12px;
 }
 
 .file-explorer-empty {
@@ -67,28 +66,22 @@
 .file-node {
   display: flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 2px 28px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 8px;
   user-select: none;
 }
 
 .file-node:hover {
-  background-color: var(--selection-color);
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .file-node.selected {
-  background-color: var(--selection-color);
+  background-color: rgba(0, 0, 0, 0.03);
 }
 
 .file-node.active {
-  background-color: var(--primary-color);
-  color: white;
-}
-
-.file-node.active .file-node-icon,
-.file-node.active .file-node-arrow {
-  color: white;
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 .file-node-indent {

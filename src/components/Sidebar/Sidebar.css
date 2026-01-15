@@ -4,26 +4,20 @@
   align-self: stretch;
   flex-shrink: 0;
   background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
 }
 
-/* Resize handle */
+/* Resize handle - 6px hit area, invisible */
 .sidebar-resize-handle {
-  width: 3px;
+  width: 6px;
   height: 100%;
   cursor: col-resize;
   background: transparent;
   position: relative;
   flex-shrink: 0;
-  margin-left: -1px;
+  margin-left: -3px;
   z-index: 10;
-}
-
-.sidebar-resize-handle:hover,
-.sidebar-resize-handle:active {
-  background: var(--border-color);
 }
 
 /* Header */
@@ -59,6 +53,12 @@
   letter-spacing: 0.5px;
   color: var(--text-secondary);
   text-align: center;
+}
+
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 /* Content */

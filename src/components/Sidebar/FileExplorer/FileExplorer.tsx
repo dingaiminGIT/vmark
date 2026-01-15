@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import { Tree, type TreeApi } from "react-arborist";
-import { FilePlus, FolderPlus, Folder } from "lucide-react";
+import { Folder } from "lucide-react";
 import { useFileTree } from "./useFileTree";
 import { useExplorerOperations } from "./useExplorerOperations";
 import { FileNode } from "./FileNode";
@@ -22,11 +22,17 @@ interface ContextMenuState {
   targetIsFolder: boolean;
 }
 
+export interface FileExplorerHandle {
+  createNewFile: () => void;
+  createNewFolder: () => void;
+}
+
 interface FileExplorerProps {
   currentFilePath: string | null;
 }
 
-export function FileExplorer({ currentFilePath }: FileExplorerProps) {
+export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(
+  function FileExplorer({ currentFilePath }, ref) {
   // Workspace-only: file tree only shows when in workspace mode
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath);
   const isWorkspaceMode = useWorkspaceStore((s) => s.isWorkspaceMode);
@@ -261,6 +267,12 @@ export function FileExplorer({ currentFilePath }: FileExplorerProps) {
     [rootPath, createFolder, refresh]
   );
 
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    createNewFile: () => handleNewFile(),
+    createNewFolder: () => handleNewFolder(),
+  }), [handleNewFile, handleNewFolder]);
+
   // Extract workspace name from path
   const workspaceName = workspaceRootPath
     ? getFileName(workspaceRootPath) || "Workspace"
@@ -294,23 +306,6 @@ export function FileExplorer({ currentFilePath }: FileExplorerProps) {
           <span className="file-explorer-workspace-name">{workspaceName}</span>
         </div>
       )}
-      <div className="file-explorer-toolbar">
-        <button
-          className="file-explorer-btn"
-          onClick={() => handleNewFile()}
-          title="New File"
-        >
-          <FilePlus size={14} />
-        </button>
-        <button
-          className="file-explorer-btn"
-          onClick={() => handleNewFolder()}
-          title="New Folder"
-        >
-          <FolderPlus size={14} />
-        </button>
-      </div>
-
       <div className="file-explorer-tree" onContextMenu={handleContextMenu}>
         <Tree<FileNodeType>
           ref={treeRef}
@@ -344,4 +339,4 @@ export function FileExplorer({ currentFilePath }: FileExplorerProps) {
       )}
     </div>
   );
-}
+});

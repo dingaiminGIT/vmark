@@ -74,6 +74,7 @@ export const icons = {
 
   // UI icons
   chevronDown: `<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>`,
+  chevronUp: `<svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg>`,
 };
 
 /**

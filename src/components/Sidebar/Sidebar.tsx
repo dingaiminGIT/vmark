@@ -4,10 +4,11 @@
  * Navigation sidebar with Files, Outline, and History views.
  */
 
-import { ListTree, TableOfContents, History } from "lucide-react";
+import { useRef } from "react";
+import { ListTree, TableOfContents, History, FilePlus, FolderPlus } from "lucide-react";
 import { useUIStore, type SidebarViewMode } from "@/stores/uiStore";
 import { useDocumentFilePath } from "@/hooks/useDocumentState";
-import { FileExplorer } from "./FileExplorer";
+import { FileExplorer, type FileExplorerHandle } from "./FileExplorer";
 import { OutlineView } from "./OutlineView";
 import { HistoryView } from "./HistoryView";
 import "./Sidebar.css";
@@ -26,13 +27,10 @@ const VIEW_CONFIG: Record<SidebarViewMode, {
   history: { icon: History, title: "HISTORY", next: "files" },
 };
 
-function FilesView() {
-  const filePath = useDocumentFilePath();
-  return <FileExplorer currentFilePath={filePath} />;
-}
-
 export function Sidebar() {
   const viewMode = useUIStore((state) => state.sidebarViewMode);
+  const filePath = useDocumentFilePath();
+  const fileExplorerRef = useRef<FileExplorerHandle>(null);
   const config = VIEW_CONFIG[viewMode];
   const Icon = config.icon;
   const nextTitle = VIEW_CONFIG[config.next].title;
@@ -55,10 +53,29 @@ export function Sidebar() {
           <Icon size={16} />
         </button>
         <span className="sidebar-title">{config.title}</span>
+        {/* Action buttons - only show for files view */}
+        {viewMode === "files" && (
+          <div className="sidebar-header-actions">
+            <button
+              className="sidebar-btn"
+              onClick={() => fileExplorerRef.current?.createNewFile()}
+              title="New File"
+            >
+              <FilePlus size={14} />
+            </button>
+            <button
+              className="sidebar-btn"
+              onClick={() => fileExplorerRef.current?.createNewFolder()}
+              title="New Folder"
+            >
+              <FolderPlus size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="sidebar-content">
-        {viewMode === "files" && <FilesView />}
+        {viewMode === "files" && <FileExplorer ref={fileExplorerRef} currentFilePath={filePath} />}
         {viewMode === "outline" && <OutlineView />}
         {viewMode === "history" && <HistoryView />}
       </div>
