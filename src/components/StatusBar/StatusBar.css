@@ -29,11 +29,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 28px;
-  padding: 0 12px;
+  height: 40px;
+  padding: 6px 12px;
   background-color: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -142,12 +142,12 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  height: 20px;
+  height: 22px;
   padding: 0 8px;
-  border-radius: 10px;
+  border-radius: 11px;
   background-color: transparent;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease;
@@ -223,8 +223,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: none;
   border-radius: 50%;

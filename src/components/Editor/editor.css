@@ -560,6 +560,8 @@
 /* Source mode indicator - subtle background */
 .editor-content:has(.source-editor) {
   background-color: var(--source-mode-bg, rgba(0, 0, 0, 0.02));
+  /* Remove bottom padding in source mode - CodeMirror handles its own scrolling */
+  padding-bottom: 0;
 }
 
 .source-editor .cm-editor {
