@@ -67,6 +67,7 @@ import {
   type ContentContext,
   type MdastToPmContext,
 } from "./mdastBlockConverters";
+import { generateSlug, makeUniqueSlug } from "@/utils/headingSlug";
 
 /**
  * Convert MDAST root to ProseMirror document.
@@ -89,12 +90,26 @@ export function mdastToProseMirror(schema: Schema, mdast: Root): PMNode {
  */
 class MdastToPMConverter {
   private context: MdastToPmContext;
+  private usedSlugs = new Set<string>();
 
   constructor(private schema: Schema) {
     this.context = {
       schema,
       convertChildren: this.convertChildren.bind(this),
+      generateHeadingId: this.generateHeadingId.bind(this),
     };
+  }
+
+  /**
+   * Generate a unique heading ID from text.
+   * Tracks used slugs to ensure uniqueness within the document.
+   */
+  private generateHeadingId(text: string): string | null {
+    const baseSlug = generateSlug(text);
+    if (!baseSlug) return null;
+    const uniqueSlug = makeUniqueSlug(baseSlug, this.usedSlugs);
+    this.usedSlugs.add(uniqueSlug);
+    return uniqueSlug;
   }
 
   /**

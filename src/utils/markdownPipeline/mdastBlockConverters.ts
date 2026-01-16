@@ -20,6 +20,8 @@ export type ContentContext = "block" | "inline";
 export interface MdastToPmContext {
   schema: Schema;
   convertChildren: (children: readonly Content[], marks: Mark[], context: ContentContext) => PMNode[];
+  /** Generate a unique heading ID from text. Returns null if ID generation is disabled. */
+  generateHeadingId?: (text: string) => string | null;
 }
 
 /**
@@ -77,7 +79,12 @@ export function convertHeading(
   const type = context.schema.nodes.heading;
   if (!type) return null;
   const children = context.convertChildren(node.children as Content[], marks, "inline");
-  return type.create({ level: node.depth, sourceLine: getSourceLine(node) }, children);
+  // Extract heading text for ID generation
+  const headingText = node.children
+    .map((child) => ("value" in child ? String(child.value) : ""))
+    .join("");
+  const id = context.generateHeadingId?.(headingText) ?? null;
+  return type.create({ level: node.depth, sourceLine: getSourceLine(node), id }, children);
 }
 
 export function convertCode(context: MdastToPmContext, node: Code): PMNode | null {
