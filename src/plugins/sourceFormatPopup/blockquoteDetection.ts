@@ -42,9 +42,9 @@ export function isBlockquoteLine(text: string): boolean {
 /**
  * Detect if cursor is inside a blockquote and get its info.
  */
-export function getBlockquoteInfo(view: EditorView): BlockquoteInfo | null {
+export function getBlockquoteInfo(view: EditorView, pos?: number): BlockquoteInfo | null {
   const { state } = view;
-  const { from } = state.selection.main;
+  const from = typeof pos === "number" ? pos : state.selection.main.from;
   const doc = state.doc;
   const currentLine = doc.lineAt(from);
   const lineText = currentLine.text;

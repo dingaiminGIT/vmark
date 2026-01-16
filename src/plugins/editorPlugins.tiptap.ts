@@ -1,169 +1,17 @@
 import { Extension } from "@tiptap/core";
 import { keymap } from "@tiptap/pm/keymap";
-import { Selection, TextSelection, type Command, type EditorState } from "@tiptap/pm/state";
+import { Selection, type Command, type EditorState } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { useUIStore } from "@/stores/uiStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useSourcePeekStore } from "@/stores/sourcePeekStore";
-import { findAnyMarkRangeAtCursor, findMarkRange, findWordAtCursor } from "@/plugins/syntaxReveal/marks";
 import { openSourcePeek } from "@/utils/sourcePeek";
 import { guardProseMirrorCommand } from "@/utils/imeGuard";
+import { canRunActionInMultiSelection } from "@/plugins/toolbarActions/multiSelectionPolicy";
+import { getWysiwygMultiSelectionContext } from "@/plugins/toolbarActions/multiSelectionContext";
+import { expandedToggleMark } from "@/plugins/editorPlugins/expandedToggleMark";
+import { findAnyMarkRangeAtCursor } from "@/plugins/syntaxReveal/marks";
 
-interface LastRemovedMark {
-  markType: string;
-  from: number;
-  to: number;
-  docTextHash: number;
-}
-
-const lastRemovedMarkMap = new WeakMap<EditorView, LastRemovedMark | null>();
-
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash;
-}
-
-function expandedToggleMark(view: EditorView, markTypeName: string): boolean {
-  const { state, dispatch } = view;
-  const markType = state.schema.marks[markTypeName];
-  if (!markType) return false;
-
-  const opposingMarkTypeName =
-    markTypeName === "subscript"
-      ? "superscript"
-      : markTypeName === "superscript"
-        ? "subscript"
-        : null;
-  const opposingMarkType = opposingMarkTypeName
-    ? state.schema.marks[opposingMarkTypeName]
-    : null;
-
-  const { from, to, empty } = state.selection;
-  const $from = state.selection.$from;
-  const docTextHash = hashString(state.doc.textContent);
-
-  const lastRemovedMark = lastRemovedMarkMap.get(view) ?? null;
-
-  const clearLastRemoved = () => {
-    lastRemovedMarkMap.set(view, null);
-  };
-
-  const setLastRemoved = (mark: LastRemovedMark) => {
-    lastRemovedMarkMap.set(view, mark);
-  };
-
-  if (!empty) {
-    clearLastRemoved();
-    let tr = state.tr;
-    if (opposingMarkType) {
-      tr = tr.removeMark(from, to, opposingMarkType);
-    }
-    if (tr.doc.rangeHasMark(from, to, markType)) {
-      tr = tr.removeMark(from, to, markType);
-    } else {
-      tr = tr.addMark(from, to, markType.create());
-    }
-    dispatch(tr);
-    return true;
-  }
-
-  const markRange = findMarkRange(
-    from,
-    markType.create(),
-    $from.start(),
-    $from.parent as unknown as Parameters<typeof findMarkRange>[3]
-  );
-
-  if (markRange) {
-    setLastRemoved({
-      markType: markTypeName,
-      from: markRange.from,
-      to: markRange.to,
-      docTextHash,
-    });
-    dispatch(state.tr.removeMark(markRange.from, markRange.to, markType));
-    return true;
-  }
-
-  if (opposingMarkType) {
-    const opposingRange = findMarkRange(
-      from,
-      opposingMarkType.create(),
-      $from.start(),
-      $from.parent as unknown as Parameters<typeof findMarkRange>[3]
-    );
-    if (opposingRange) {
-      dispatch(state.tr.removeMark(opposingRange.from, opposingRange.to, opposingMarkType));
-    }
-  }
-
-  if (
-    lastRemovedMark &&
-    lastRemovedMark.markType === markTypeName &&
-    lastRemovedMark.docTextHash === docTextHash &&
-    from >= lastRemovedMark.from &&
-    from <= lastRemovedMark.to
-  ) {
-    dispatch(state.tr.addMark(lastRemovedMark.from, lastRemovedMark.to, markType.create()));
-    clearLastRemoved();
-    return true;
-  }
-
-  const inheritedRange = findAnyMarkRangeAtCursor(
-    from,
-    $from as unknown as Parameters<typeof findAnyMarkRangeAtCursor>[1]
-  );
-
-  if (inheritedRange && !(markTypeName === "code" && inheritedRange.isLink)) {
-    clearLastRemoved();
-    let tr = state.tr;
-    if (opposingMarkType) {
-      tr = tr.removeMark(inheritedRange.from, inheritedRange.to, opposingMarkType);
-    }
-    tr = tr.addMark(inheritedRange.from, inheritedRange.to, markType.create());
-    dispatch(tr);
-    return true;
-  }
-
-  // Auto-format word at cursor (uses Intl.Segmenter for CJK support)
-  const wordRange = findWordAtCursor($from);
-  if (wordRange) {
-    clearLastRemoved();
-    const originalPos = from;
-    let tr = state.tr;
-    if (opposingMarkType) {
-      tr = tr.removeMark(wordRange.from, wordRange.to, opposingMarkType);
-    }
-    // Toggle: remove mark if word already has it, otherwise add
-    if (tr.doc.rangeHasMark(wordRange.from, wordRange.to, markType)) {
-      tr = tr.removeMark(wordRange.from, wordRange.to, markType);
-    } else {
-      tr = tr.addMark(wordRange.from, wordRange.to, markType.create());
-    }
-    // Restore cursor to original position
-    tr = tr.setSelection(TextSelection.create(tr.doc, originalPos));
-    dispatch(tr);
-    return true;
-  }
-
-  // Fallback: toggle stored marks (for whitespace/punctuation)
-  clearLastRemoved();
-  const storedMarks = state.storedMarks || $from.marks();
-  if (opposingMarkType && opposingMarkType.isInSet(storedMarks)) {
-    dispatch(state.tr.removeStoredMark(opposingMarkType));
-  }
-  if (markType.isInSet(storedMarks)) {
-    dispatch(state.tr.removeStoredMark(markType));
-  } else {
-    dispatch(state.tr.addStoredMark(markType.create()));
-  }
-  return true;
-}
 
 function escapeMarkBoundary(view: EditorView): boolean {
   const { state, dispatch } = view;
@@ -215,6 +63,15 @@ function bindIfKey(binds: Record<string, Command>, key: string, command: Command
   binds[key] = guardProseMirrorCommand(command);
 }
 
+function wrapWithMultiSelectionGuard(action: string, command: Command): Command {
+  return (state, dispatch, view) => {
+    if (!view) return false;
+    const multi = getWysiwygMultiSelectionContext(view);
+    if (!canRunActionInMultiSelection(action, multi)) return false;
+    return command(state, dispatch, view);
+  };
+}
+
 export const editorKeymapExtension = Extension.create({
   name: "editorKeymaps",
   priority: 1000,
@@ -227,38 +84,70 @@ export const editorKeymapExtension = Extension.create({
       return true;
     });
 
-    bindIfKey(bindings, shortcuts.getShortcut("bold"), (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "bold");
-    });
-    bindIfKey(bindings, shortcuts.getShortcut("italic"), (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "italic");
-    });
-    bindIfKey(bindings, shortcuts.getShortcut("code"), (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "code");
-    });
-    bindIfKey(bindings, shortcuts.getShortcut("strikethrough"), (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "strike");
-    });
-    bindIfKey(bindings, shortcuts.getShortcut("link"), (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "link");
-    });
-    bindIfKey(bindings, shortcuts.getShortcut("highlight"), (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "highlight");
-    });
-    bindIfKey(bindings, shortcuts.getShortcut("subscript"), (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "subscript");
-    });
-    bindIfKey(bindings, shortcuts.getShortcut("superscript"), (_state, _dispatch, view) => {
-      if (!view) return false;
-      return expandedToggleMark(view, "superscript");
-    });
+    bindIfKey(
+      bindings,
+      shortcuts.getShortcut("bold"),
+      wrapWithMultiSelectionGuard("bold", (_state, _dispatch, view) => {
+        if (!view) return false;
+        return expandedToggleMark(view, "bold");
+      })
+    );
+    bindIfKey(
+      bindings,
+      shortcuts.getShortcut("italic"),
+      wrapWithMultiSelectionGuard("italic", (_state, _dispatch, view) => {
+        if (!view) return false;
+        return expandedToggleMark(view, "italic");
+      })
+    );
+    bindIfKey(
+      bindings,
+      shortcuts.getShortcut("code"),
+      wrapWithMultiSelectionGuard("code", (_state, _dispatch, view) => {
+        if (!view) return false;
+        return expandedToggleMark(view, "code");
+      })
+    );
+    bindIfKey(
+      bindings,
+      shortcuts.getShortcut("strikethrough"),
+      wrapWithMultiSelectionGuard("strikethrough", (_state, _dispatch, view) => {
+        if (!view) return false;
+        return expandedToggleMark(view, "strike");
+      })
+    );
+    bindIfKey(
+      bindings,
+      shortcuts.getShortcut("link"),
+      wrapWithMultiSelectionGuard("link", (_state, _dispatch, view) => {
+        if (!view) return false;
+        return expandedToggleMark(view, "link");
+      })
+    );
+    bindIfKey(
+      bindings,
+      shortcuts.getShortcut("highlight"),
+      wrapWithMultiSelectionGuard("highlight", (_state, _dispatch, view) => {
+        if (!view) return false;
+        return expandedToggleMark(view, "highlight");
+      })
+    );
+    bindIfKey(
+      bindings,
+      shortcuts.getShortcut("subscript"),
+      wrapWithMultiSelectionGuard("subscript", (_state, _dispatch, view) => {
+        if (!view) return false;
+        return expandedToggleMark(view, "subscript");
+      })
+    );
+    bindIfKey(
+      bindings,
+      shortcuts.getShortcut("superscript"),
+      wrapWithMultiSelectionGuard("superscript", (_state, _dispatch, view) => {
+        if (!view) return false;
+        return expandedToggleMark(view, "superscript");
+      })
+    );
 
     bindIfKey(bindings, shortcuts.getShortcut("sourcePeek"), (_state, _dispatch, view) => {
       if (!view) return false;

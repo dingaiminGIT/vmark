@@ -7,6 +7,7 @@ import { Selection, TextSelection, SelectionRange } from "@tiptap/pm/state";
 import type { EditorState, Transaction } from "@tiptap/pm/state";
 import { MultiSelection } from "./MultiSelection";
 import { normalizeRangesWithPrimary } from "./rangeUtils";
+import { getCodeBlockBounds } from "./codeBlockBounds";
 
 /**
  * Check if a position is within any existing range.
@@ -39,12 +40,12 @@ function snapToTextSelection(state: EditorState, pos: number): number {
 
   if ((nodeAfter && nodeAfter.isAtom) || (nodeBefore && nodeBefore.isAtom)) {
     const bias = nodeAfter ? 1 : -1;
-    const near = Selection.near($pos, bias, true);
+    const near = Selection.near($pos, bias);
     return near.from;
   }
 
   if (!$pos.parent.isTextblock) {
-    const near = Selection.near($pos, 1, true);
+    const near = Selection.near($pos, 1);
     return near.from;
   }
 
@@ -67,6 +68,14 @@ export function addCursorAtPosition(
 
   // Validate position
   if (pos < 0 || pos > doc.content.size) {
+    return null;
+  }
+
+  const primaryPos = selection instanceof MultiSelection
+    ? selection.ranges[selection.primaryIndex].$from.pos
+    : selection.from;
+  const bounds = getCodeBlockBounds(state, primaryPos);
+  if (bounds && (pos < bounds.from || pos > bounds.to)) {
     return null;
   }
 

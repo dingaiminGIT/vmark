@@ -3,6 +3,7 @@ import type { ToolbarGroupButton, ToolbarMenuItem } from "@/components/Editor/Un
 import type { CursorContext as WysiwygContext } from "@/plugins/toolbarContext/types";
 import type { CursorContext as SourceContext } from "@/types/cursorContext";
 import type { ToolbarContext } from "./types";
+import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 
 export interface ToolbarItemState {
   disabled: boolean;
@@ -34,6 +35,7 @@ const SOURCE_SELECTION_REQUIRED_ACTIONS = new Set<string>([
   "clearFormatting",
   "insertFootnote",
 ]);
+
 
 function isWysiwygMarkActive(view: TiptapEditorView, markName: string): boolean {
   const { state } = view;
@@ -176,6 +178,7 @@ function shouldRequireSelection(action: string, surface: ToolbarContext["surface
   return false;
 }
 
+
 export function getToolbarButtonState(
   button: ToolbarGroupButton,
   context: ToolbarContext
@@ -204,7 +207,8 @@ export function getToolbarButtonState(
   }
 
   const enabled = matchesEnabledContext(button.enabledIn, ctx) &&
-    (!shouldRequireSelection(button.action, surface) || ctx.hasSelection);
+    (!shouldRequireSelection(button.action, surface) || ctx.hasSelection) &&
+    canRunActionInMultiSelection(button.action, context.multiSelection);
 
   const active = surface === "wysiwyg"
     ? isWysiwygActionActive(
@@ -236,7 +240,8 @@ export function getToolbarItemState(
   }
 
   const enabled = matchesEnabledContext(item.enabledIn, ctx) &&
-    (!shouldRequireSelection(item.action, surface) || ctx.hasSelection);
+    (!shouldRequireSelection(item.action, surface) || ctx.hasSelection) &&
+    canRunActionInMultiSelection(item.action, context.multiSelection);
 
   const active = surface === "wysiwyg"
     ? isWysiwygActionActive(

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Schema } from "@tiptap/pm/model";
+import { Schema, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { EditorState, TextSelection, SelectionRange } from "@tiptap/pm/state";
 import { multiCursorPlugin } from "../multiCursorPlugin";
 import { MultiSelection } from "../MultiSelection";
@@ -8,12 +8,14 @@ import {
   selectAllOccurrences,
   collapseMultiSelection,
 } from "../commands";
+import { getCodeBlockBounds } from "../codeBlockBounds";
 
 // Simple schema for testing
 const schema = new Schema({
   nodes: {
-    doc: { content: "paragraph+" },
-    paragraph: { content: "text*" },
+    doc: { content: "block+" },
+    paragraph: { content: "text*", group: "block" },
+    codeBlock: { content: "text*", group: "block" },
     text: { inline: true },
   },
 });
@@ -22,6 +24,27 @@ function createDoc(text: string) {
   return schema.node("doc", null, [
     schema.node("paragraph", null, text ? [schema.text(text)] : []),
   ]);
+}
+
+function createMixedDoc() {
+  return schema.node("doc", null, [
+    schema.node("codeBlock", null, [schema.text("hello hello")]),
+    schema.node("paragraph", null, [schema.text("hello")]),
+  ]);
+}
+
+function findOccurrences(doc: ProseMirrorNode, searchText: string) {
+  const results: Array<{ from: number; to: number }> = [];
+  doc.descendants((node: { isText?: boolean; text?: string }, pos: number) => {
+    if (!node.isText) return;
+    const text = node.text ?? "";
+    let index = text.indexOf(searchText);
+    while (index !== -1) {
+      results.push({ from: pos + index, to: pos + index + searchText.length });
+      index = text.indexOf(searchText, index + 1);
+    }
+  });
+  return results;
 }
 
 function createState(text: string, selection?: { anchor: number; head: number }) {
@@ -132,6 +155,32 @@ describe("commands", () => {
       // Should return null since cursor is at space position
       expect(result).toBeNull();
     });
+
+    it("restricts occurrences to the current code block", () => {
+      const doc = createMixedDoc();
+      const occurrences = findOccurrences(doc, "hello");
+      const first = occurrences[0];
+      const state = EditorState.create({
+        doc,
+        schema,
+        plugins: [multiCursorPlugin()],
+        selection: TextSelection.create(doc, first.from, first.to),
+      });
+
+      const result = selectNextOccurrence(state);
+      expect(result).not.toBeNull();
+      if (result) {
+        const nextState = state.apply(result);
+        const bounds = getCodeBlockBounds(nextState, first.from);
+        expect(bounds).not.toBeNull();
+        const multiSel = nextState.selection as MultiSelection;
+        expect(multiSel.ranges.length).toBe(2);
+        const allInside = multiSel.ranges.every(
+          (range) => bounds && range.$from.pos >= bounds.from && range.$to.pos <= bounds.to
+        );
+        expect(allInside).toBe(true);
+      }
+    });
   });
 
   describe("selectAllOccurrences", () => {
@@ -180,6 +229,31 @@ describe("commands", () => {
         // Either TextSelection or MultiSelection with 1 range
         expect(newState.selection.from).toBe(1);
         expect(newState.selection.to).toBe(6);
+      }
+    });
+
+    it("selects occurrences only within the current code block", () => {
+      const doc = createMixedDoc();
+      const occurrences = findOccurrences(doc, "hello");
+      const first = occurrences[0];
+      const state = EditorState.create({
+        doc,
+        schema,
+        plugins: [multiCursorPlugin()],
+        selection: TextSelection.create(doc, first.from, first.to),
+      });
+
+      const result = selectAllOccurrences(state);
+      expect(result).not.toBeNull();
+      if (result) {
+        const nextState = state.apply(result);
+        const bounds = getCodeBlockBounds(nextState, first.from);
+        expect(bounds).not.toBeNull();
+        const multiSel = nextState.selection as MultiSelection;
+        const allInside = multiSel.ranges.every(
+          (range) => bounds && range.$from.pos >= bounds.from && range.$to.pos <= bounds.to
+        );
+        expect(allInside).toBe(true);
       }
     });
   });

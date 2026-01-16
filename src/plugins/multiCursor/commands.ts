@@ -10,79 +10,9 @@ import { TextSelection, SelectionRange } from "@tiptap/pm/state";
 import type { EditorState, Transaction } from "@tiptap/pm/state";
 import { MultiSelection } from "./MultiSelection";
 import { normalizeRangesWithPrimary } from "./rangeUtils";
-import { findWordBoundaries } from "../../utils/wordSegmentation";
+import { filterRangesToBounds, getCodeBlockBounds } from "./codeBlockBounds";
+import { findAllOccurrences, getSelectionText, getWordAtCursor } from "./textSearch";
 
-/**
- * Get the text content of a selection range.
- */
-function getSelectionText(state: EditorState): string {
-  const { from, to } = state.selection;
-  return state.doc.textBetween(from, to);
-}
-
-/**
- * Get word at cursor position when selection is empty.
- * Returns the word boundaries in document coordinates.
- */
-function getWordAtCursor(
-  state: EditorState
-): { from: number; to: number; text: string } | null {
-  const { from, to } = state.selection;
-
-  // Only works for cursor (empty selection)
-  if (from !== to) return null;
-
-  // Get text content of the paragraph/block containing cursor
-  const $pos = state.doc.resolve(from);
-  const parent = $pos.parent;
-  const parentOffset = $pos.parentOffset;
-
-  const text = parent.textContent;
-  const boundaries = findWordBoundaries(text, parentOffset);
-
-  if (!boundaries) return null;
-
-  // Convert to document coordinates
-  const blockStart = from - parentOffset;
-  return {
-    from: blockStart + boundaries.start,
-    to: blockStart + boundaries.end,
-    text: text.slice(boundaries.start, boundaries.end),
-  };
-}
-
-/**
- * Find all occurrences of searchText in the document.
- * Returns array of { from, to } positions.
- */
-function findAllOccurrences(
-  state: EditorState,
-  searchText: string
-): Array<{ from: number; to: number }> {
-  const results: Array<{ from: number; to: number }> = [];
-
-  if (!searchText) return results;
-
-  state.doc.descendants((node, pos) => {
-    if (!node.isText) return;
-
-    const text = node.text || "";
-    let index = text.indexOf(searchText);
-
-    while (index !== -1) {
-      results.push({
-        from: pos + index,
-        to: pos + index + searchText.length,
-      });
-      index = text.indexOf(searchText, index + 1);
-    }
-  });
-
-  // Sort by position
-  results.sort((a, b) => a.from - b.from);
-
-  return results;
-}
 
 /**
  * Check if a range is already in the MultiSelection.
@@ -111,20 +41,27 @@ export function selectNextOccurrence(state: EditorState): Transaction | null {
   let currentFrom: number;
   let currentTo: number;
   let selectedFromEmpty = false;
+  let bounds: { from: number; to: number } | null = null;
 
   // Get current ranges (may be MultiSelection or regular selection)
   const existingRanges: SelectionRange[] = [];
 
   if (selection instanceof MultiSelection) {
-    existingRanges.push(...selection.ranges);
     // Use primary selection's text
     const primary = selection.ranges[selection.primaryIndex];
     currentFrom = primary.$from.pos;
     currentTo = primary.$to.pos;
     searchText = state.doc.textBetween(currentFrom, currentTo);
+    bounds = getCodeBlockBounds(state, currentFrom);
+    if (bounds) {
+      existingRanges.push(...filterRangesToBounds(selection.ranges, bounds));
+    } else {
+      existingRanges.push(...selection.ranges);
+    }
   } else {
     currentFrom = selection.from;
     currentTo = selection.to;
+    bounds = getCodeBlockBounds(state, currentFrom);
 
     if (currentFrom === currentTo) {
       // Empty selection - get word under cursor
@@ -134,6 +71,9 @@ export function selectNextOccurrence(state: EditorState): Transaction | null {
       searchText = word.text;
       currentFrom = word.from;
       currentTo = word.to;
+      if (bounds && (word.from < bounds.from || word.to > bounds.to)) {
+        return null;
+      }
       const $from = state.doc.resolve(word.from);
       const $to = state.doc.resolve(word.to);
       existingRanges.push(new SelectionRange($from, $to));
@@ -149,7 +89,7 @@ export function selectNextOccurrence(state: EditorState): Transaction | null {
   if (!searchText) return null;
 
   // Find all occurrences
-  const occurrences = findAllOccurrences(state, searchText);
+  const occurrences = findAllOccurrences(state, searchText, bounds ?? undefined);
 
   if (occurrences.length <= 1) {
     if (selectedFromEmpty && existingRanges.length === 1) {
@@ -215,11 +155,16 @@ export function selectAllOccurrences(state: EditorState): Transaction | null {
   let searchText: string;
   let initialFrom: number;
   let initialTo: number;
+  const bounds = getCodeBlockBounds(state, selection.from);
 
   if (selection.from === selection.to) {
     // Empty selection - get word under cursor
     const word = getWordAtCursor(state);
     if (!word) return null;
+
+    if (bounds && (word.from < bounds.from || word.to > bounds.to)) {
+      return null;
+    }
 
     searchText = word.text;
     initialFrom = word.from;
@@ -233,7 +178,7 @@ export function selectAllOccurrences(state: EditorState): Transaction | null {
   if (!searchText) return null;
 
   // Find all occurrences
-  const occurrences = findAllOccurrences(state, searchText);
+  const occurrences = findAllOccurrences(state, searchText, bounds ?? undefined);
 
   if (occurrences.length === 0) return null;
 
@@ -243,24 +188,29 @@ export function selectAllOccurrences(state: EditorState): Transaction | null {
     const $to = state.doc.resolve(occ.to);
     return new SelectionRange($from, $to);
   });
+  const filteredRanges = bounds ? filterRangesToBounds(ranges, bounds) : ranges;
+  if (filteredRanges.length === 0) return null;
 
   // Find which occurrence contains the original selection to set as primary
   let primaryIndex = 0;
-  for (let i = 0; i < occurrences.length; i++) {
-    if (occurrences[i].from === initialFrom && occurrences[i].to === initialTo) {
+  for (let i = 0; i < filteredRanges.length; i++) {
+    if (
+      filteredRanges[i].$from.pos === initialFrom &&
+      filteredRanges[i].$to.pos === initialTo
+    ) {
       primaryIndex = i;
       break;
     }
   }
 
-  if (ranges.length === 1) {
+  if (filteredRanges.length === 1) {
     // Single occurrence - use TextSelection
     return state.tr.setSelection(
-      TextSelection.create(state.doc, ranges[0].$from.pos, ranges[0].$to.pos)
+      TextSelection.create(state.doc, filteredRanges[0].$from.pos, filteredRanges[0].$to.pos)
     );
   }
 
-  const newSel = new MultiSelection(ranges, primaryIndex);
+  const newSel = new MultiSelection(filteredRanges, primaryIndex);
   return state.tr.setSelection(newSel);
 }
 

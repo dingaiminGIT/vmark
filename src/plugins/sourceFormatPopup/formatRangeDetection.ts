@@ -6,7 +6,7 @@
  */
 
 import type { EditorView } from "@codemirror/view";
-import type { FormatType } from "./formatActions";
+import type { FormatType } from "./formatTypes";
 
 export interface FormattedRangeInfo {
   type: FormatType;

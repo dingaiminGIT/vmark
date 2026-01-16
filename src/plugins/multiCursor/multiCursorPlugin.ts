@@ -7,7 +7,7 @@
  * - Handling input distribution across multiple cursors
  */
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import type { EditorState } from "@tiptap/pm/state";
+import type { EditorState, Transaction } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { MultiSelection } from "./MultiSelection";
 import { createMultiCursorDecorations } from "./decorations";

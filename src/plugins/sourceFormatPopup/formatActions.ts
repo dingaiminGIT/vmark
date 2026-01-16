@@ -6,59 +6,8 @@
 
 import type { EditorView } from "@codemirror/view";
 import { findAllReferences, renumberFootnotesDoc } from "./footnoteActions";
-
-export type FormatType =
-  | "bold"
-  | "italic"
-  | "code"
-  | "strikethrough"
-  | "highlight"
-  | "link"
-  | "image"
-  | "superscript"
-  | "subscript"
-  | "footnote";
-
-interface FormatMarkers {
-  prefix: string;
-  suffix: string;
-}
-
-// Formats that use simple prefix/suffix wrapping
-type WrapFormatType = Exclude<FormatType, "footnote">;
-
-const FORMAT_MARKERS: Record<WrapFormatType, FormatMarkers> = {
-  bold: { prefix: "**", suffix: "**" },
-  italic: { prefix: "*", suffix: "*" },
-  code: { prefix: "`", suffix: "`" },
-  strikethrough: { prefix: "~~", suffix: "~~" },
-  highlight: { prefix: "==", suffix: "==" },
-  link: { prefix: "[", suffix: "](url)" },
-  image: { prefix: "![", suffix: "](url)" },
-  superscript: { prefix: "^", suffix: "^" },
-  subscript: { prefix: "~", suffix: "~" },
-};
-
-/**
- * Check if text is wrapped with specific markers.
- */
-function isWrapped(text: string, prefix: string, suffix: string): boolean {
-  return text.startsWith(prefix) && text.endsWith(suffix);
-}
-
-/**
- * Unwrap text by removing prefix and suffix.
- */
-function unwrap(text: string, prefix: string, suffix: string): string {
-  return text.slice(prefix.length, text.length - suffix.length);
-}
-
-/**
- * Wrap text with prefix and suffix.
- */
-function wrap(text: string, prefix: string, suffix: string): string {
-  return `${prefix}${text}${suffix}`;
-}
+import { FORMAT_MARKERS, type FormatType, type WrapFormatType } from "./formatTypes";
+import { getOppositeFormat, isWrapped, unwrap, wrap } from "./formatUtils";
 
 function unwrapOppositeFormat(
   view: EditorView,
@@ -67,8 +16,7 @@ function unwrapOppositeFormat(
   to: number,
   selectedText: string
 ): { from: number; to: number; text: string } | null {
-  const oppositeFormat =
-    format === "subscript" ? "superscript" : format === "superscript" ? "subscript" : null;
+  const oppositeFormat = getOppositeFormat(format);
   if (!oppositeFormat) return null;
 
   const { prefix, suffix } = FORMAT_MARKERS[oppositeFormat];

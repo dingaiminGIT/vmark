@@ -1,11 +1,14 @@
 import type { EditorView } from "@codemirror/view";
 import { applyFormat, type FormatType } from "@/plugins/sourceFormatPopup";
+import { applyInlineFormatToSelections } from "@/plugins/sourceFormatPopup/formatMultiSelection";
 import { getBlockquoteInfo, nestBlockquote, removeBlockquote, unnestBlockquote } from "@/plugins/sourceFormatPopup/blockquoteDetection";
 import { convertToHeading, getHeadingInfo, setHeadingLevel } from "@/plugins/sourceFormatPopup/headingDetection";
 import { getListItemInfo, indentListItem, outdentListItem, removeList, toBulletList, toOrderedList, toTaskList } from "@/plugins/sourceFormatPopup/listDetection";
 import { getSourceTableInfo } from "@/plugins/sourceFormatPopup/tableDetection";
 import { deleteColumn, deleteRow, deleteTable, insertColumnLeft, insertColumnRight, insertRowAbove, insertRowBelow, setAllColumnsAlignment, setColumnAlignment } from "@/plugins/sourceFormatPopup/tableActions";
+import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import type { SourceToolbarContext } from "./types";
+import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./sourceMultiSelection";
 
 const TABLE_TEMPLATE = "| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n";
 
@@ -23,7 +26,13 @@ function insertText(view: EditorView, text: string, cursorOffset?: number) {
 }
 
 function applyInlineFormat(view: EditorView, format: FormatType): boolean {
-  const { from, to } = view.state.selection.main;
+  const { selection } = view.state;
+  if (selection.ranges.length > 1) {
+    if (format === "footnote" || format === "image" || format === "link") return false;
+    return applyInlineFormatToSelections(view, format);
+  }
+
+  const { from, to } = selection.main;
   if (from === to) return false;
   applyFormat(view, format);
   return true;
@@ -79,6 +88,9 @@ function insertListMarker(view: EditorView, marker: string): boolean {
 export function setSourceHeadingLevel(context: SourceToolbarContext, level: number): boolean {
   const view = context.view;
   if (!view) return false;
+  if (!canRunActionInMultiSelection(`heading:${level}`, context.multiSelection)) return false;
+
+  if (applyMultiSelectionHeading(view, level)) return true;
 
   const info = getHeadingInfo(view);
   if (info) {
@@ -94,6 +106,7 @@ export function setSourceHeadingLevel(context: SourceToolbarContext, level: numb
 export function performSourceToolbarAction(action: string, context: SourceToolbarContext): boolean {
   const view = context.view;
   if (!view) return false;
+  if (!canRunActionInMultiSelection(action, context.multiSelection)) return false;
 
   switch (action) {
     case "bold":
@@ -117,36 +130,42 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
     case "insertFootnote":
       return insertFootnote(view);
     case "bulletList": {
+      if (applyMultiSelectionListAction(view, action)) return true;
       const info = getListItemInfo(view);
       if (!info) return false;
       toBulletList(view, info);
       return true;
     }
     case "orderedList": {
+      if (applyMultiSelectionListAction(view, action)) return true;
       const info = getListItemInfo(view);
       if (!info) return false;
       toOrderedList(view, info);
       return true;
     }
     case "taskList": {
+      if (applyMultiSelectionListAction(view, action)) return true;
       const info = getListItemInfo(view);
       if (!info) return false;
       toTaskList(view, info);
       return true;
     }
     case "indent": {
+      if (applyMultiSelectionListAction(view, action)) return true;
       const info = getListItemInfo(view);
       if (!info) return false;
       indentListItem(view, info);
       return true;
     }
     case "outdent": {
+      if (applyMultiSelectionListAction(view, action)) return true;
       const info = getListItemInfo(view);
       if (!info) return false;
       outdentListItem(view, info);
       return true;
     }
     case "removeList": {
+      if (applyMultiSelectionListAction(view, action)) return true;
       const info = getListItemInfo(view);
       if (!info) return false;
       removeList(view, info);
@@ -233,18 +252,21 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
       return true;
     }
     case "nestQuote": {
+      if (applyMultiSelectionBlockquoteAction(view, action)) return true;
       const info = getBlockquoteInfo(view);
       if (!info) return false;
       nestBlockquote(view, info);
       return true;
     }
     case "unnestQuote": {
+      if (applyMultiSelectionBlockquoteAction(view, action)) return true;
       const info = getBlockquoteInfo(view);
       if (!info) return false;
       unnestBlockquote(view, info);
       return true;
     }
     case "removeQuote": {
+      if (applyMultiSelectionBlockquoteAction(view, action)) return true;
       const info = getBlockquoteInfo(view);
       if (!info) return false;
       removeBlockquote(view, info);

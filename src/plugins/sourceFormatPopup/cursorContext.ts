@@ -19,7 +19,7 @@ import type {
   FootnoteContext,
   FormattedRangeContext,
 } from "@/types/cursorContext";
-import type { FormatType } from "./formatActions";
+import type { FormatType } from "./formatTypes";
 import { getCodeFenceInfo } from "./codeFenceDetection";
 import { getBlockMathInfo } from "./blockMathDetection";
 import { getSourceTableInfo } from "./tableDetection";
@@ -189,7 +189,7 @@ function toHeadingContext(
  */
 export function computeSourceCursorContext(view: EditorView): CursorContext {
   const { from, to } = view.state.selection.main;
-  const hasSelection = from !== to;
+  const hasSelection = view.state.selection.ranges.some((range) => range.from !== range.to);
 
   // Block contexts
   const codeFence = getCodeFenceInfo(view);

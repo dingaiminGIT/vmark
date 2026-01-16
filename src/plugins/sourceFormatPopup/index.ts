@@ -1,1 +1,2 @@
-export { applyFormat, type FormatType } from "./formatActions";
+export { applyFormat } from "./formatActions";
+export type { FormatType } from "./formatTypes";

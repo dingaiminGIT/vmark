@@ -9,6 +9,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { expandedToggleMarkTiptap } from "@/plugins/editorPlugins.tiptap";
 import { copyImageToAssets, insertBlockImageNode } from "@/hooks/useImageOperations";
 import { withReentryGuard } from "@/utils/reentryGuard";
+import { MultiSelection } from "@/plugins/multiCursor";
 
 const INSERT_IMAGE_GUARD = "menu-insert-image";
 
@@ -108,23 +109,30 @@ export function useTiptapFormatCommands(editor: TiptapEditor | null) {
 
         const view = editor.view;
         const { state, dispatch } = view;
-        const { from, to } = state.selection;
-        if (from === to) return;
-
+        const { selection } = state;
+        const ranges = selection instanceof MultiSelection ? selection.ranges : [{ $from: selection.$from, $to: selection.$to }];
         let tr = state.tr;
-        state.doc.nodesBetween(from, to, (node: PMNode, pos: number) => {
-          if (node.isText && node.marks.length > 0) {
-            node.marks.forEach((mark: PMMark) => {
-              tr = tr.removeMark(
-                Math.max(from, pos),
-                Math.min(to, pos + node.nodeSize),
-                mark.type
-              );
-            });
-          }
-        });
+        let applied = false;
 
-        if (tr.docChanged) {
+        for (const range of ranges) {
+          const from = range.$from.pos;
+          const to = range.$to.pos;
+          if (from === to) continue;
+          applied = true;
+          state.doc.nodesBetween(from, to, (node: PMNode, pos: number) => {
+            if (node.isText && node.marks.length > 0) {
+              node.marks.forEach((mark: PMMark) => {
+                tr = tr.removeMark(
+                  Math.max(from, pos),
+                  Math.min(to, pos + node.nodeSize),
+                  mark.type
+                );
+              });
+            }
+          });
+        }
+
+        if (applied && tr.docChanged) {
           dispatch(tr);
           view.focus();
         }

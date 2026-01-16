@@ -1,4 +1,4 @@
-import type { FormatType } from "./formatActions";
+import type { FormatType } from "./formatTypes";
 
 const SHORTCUT_MAP: Record<string, FormatType> = {
   b: "bold",

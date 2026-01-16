@@ -6,17 +6,38 @@ import type { CursorContext as SourceCursorContext } from "@/types/cursorContext
 
 export type ToolbarSurface = "wysiwyg" | "source";
 
+export type MultiSelectionPolicy = "allow" | "conditional" | "disallow";
+
+export interface MultiSelectionContext {
+  enabled: boolean;
+  reason: "multi" | "none";
+  inCodeBlock: boolean;
+  inTable: boolean;
+  inList: boolean;
+  inBlockquote: boolean;
+  inHeading: boolean;
+  inLink: boolean;
+  inInlineMath: boolean;
+  inFootnote: boolean;
+  inImage: boolean;
+  inTextblock: boolean;
+  sameBlockParent: boolean;
+  blockParentType: string | null;
+}
+
 export interface WysiwygToolbarContext {
   surface: "wysiwyg";
   view: TiptapEditorView | null;
   editor: TiptapEditor | null;
   context: WysiwygCursorContext | null;
+  multiSelection?: MultiSelectionContext;
 }
 
 export interface SourceToolbarContext {
   surface: "source";
   view: CodeMirrorView | null;
   context: SourceCursorContext | null;
+  multiSelection?: MultiSelectionContext;
 }
 
 export type ToolbarContext = WysiwygToolbarContext | SourceToolbarContext;

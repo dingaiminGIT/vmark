@@ -6,6 +6,8 @@ import { resolveLinkPopupPayload } from "@/plugins/formatToolbar/linkPopupUtils"
 import { handleBlockquoteNest, handleBlockquoteUnnest, handleRemoveBlockquote, handleListIndent, handleListOutdent, handleRemoveList, handleToBulletList, handleToOrderedList } from "@/plugins/formatToolbar/nodeActions.tiptap";
 import { addColLeft, addColRight, addRowAbove, addRowBelow, alignColumn, deleteCurrentColumn, deleteCurrentRow, deleteCurrentTable } from "@/plugins/tableUI/tableActions.tiptap";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
+import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./wysiwygMultiSelection";
 import type { WysiwygToolbarContext } from "./types";
 
 const DEFAULT_MATH_BLOCK = "c = \\pm\\sqrt{a^2 + b^2}";
@@ -54,6 +56,10 @@ function openLinkEditor(context: WysiwygToolbarContext): boolean {
 export function setWysiwygHeadingLevel(context: WysiwygToolbarContext, level: number): boolean {
   const editor = context.editor;
   if (!editor) return false;
+  if (!canRunActionInMultiSelection(`heading:${level}`, context.multiSelection)) return false;
+
+  const view = context.view;
+  if (view && applyMultiSelectionHeading(view, editor, level)) return true;
 
   if (level === 0) {
     editor.chain().focus().setParagraph().run();
@@ -82,6 +88,7 @@ function insertMathBlock(context: WysiwygToolbarContext): boolean {
 
 export function performWysiwygToolbarAction(action: string, context: WysiwygToolbarContext): boolean {
   const view = context.view;
+  if (!canRunActionInMultiSelection(action, context.multiSelection)) return false;
 
   switch (action) {
     case "bold":
@@ -106,17 +113,23 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
     case "link":
       return openLinkEditor(context);
     case "bulletList":
+      if (view && applyMultiSelectionListAction(view, action, context.editor)) return true;
       return view ? (handleToBulletList(view), true) : false;
     case "orderedList":
+      if (view && applyMultiSelectionListAction(view, action, context.editor)) return true;
       return view ? (handleToOrderedList(view), true) : false;
     case "taskList":
+      if (view && applyMultiSelectionListAction(view, action, context.editor)) return true;
       void emitMenuEvent("menu:task-list");
       return true;
     case "indent":
+      if (view && applyMultiSelectionListAction(view, action, context.editor)) return true;
       return view ? (handleListIndent(view), true) : false;
     case "outdent":
+      if (view && applyMultiSelectionListAction(view, action, context.editor)) return true;
       return view ? (handleListOutdent(view), true) : false;
     case "removeList":
+      if (view && applyMultiSelectionListAction(view, action, context.editor)) return true;
       return view ? (handleRemoveList(view), true) : false;
     case "insertTable":
     case "insertTableBlock":
@@ -149,10 +162,13 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
     case "alignAllRight":
       return view ? alignColumn(view, "right", true) : false;
     case "nestQuote":
+      if (view && applyMultiSelectionBlockquoteAction(view, action)) return true;
       return view ? (handleBlockquoteNest(view), true) : false;
     case "unnestQuote":
+      if (view && applyMultiSelectionBlockquoteAction(view, action)) return true;
       return view ? (handleBlockquoteUnnest(view), true) : false;
     case "removeQuote":
+      if (view && applyMultiSelectionBlockquoteAction(view, action)) return true;
       return view ? (handleRemoveBlockquote(view), true) : false;
     case "insertImage":
       void emitMenuEvent("menu:image");

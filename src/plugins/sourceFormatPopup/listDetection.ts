@@ -30,9 +30,9 @@ export interface ListItemInfo {
 /**
  * Detect if cursor is on a list item line and get its info.
  */
-export function getListItemInfo(view: EditorView): ListItemInfo | null {
+export function getListItemInfo(view: EditorView, pos?: number): ListItemInfo | null {
   const { state } = view;
-  const { from } = state.selection.main;
+  const from = typeof pos === "number" ? pos : state.selection.main.from;
   const doc = state.doc;
   const line = doc.lineAt(from);
   const lineText = line.text;

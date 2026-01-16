@@ -13,6 +13,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useSourceCursorContextStore } from "@/stores/sourceCursorContextStore";
 import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
 import { getToolbarButtonState, getToolbarItemState } from "@/plugins/toolbarActions/enableRules";
+import { getSourceMultiSelectionContext, getWysiwygMultiSelectionContext } from "@/plugins/toolbarActions/multiSelectionContext";
 import { performSourceToolbarAction, setSourceHeadingLevel } from "@/plugins/toolbarActions/sourceAdapter";
 import { performWysiwygToolbarAction, setWysiwygHeadingLevel } from "@/plugins/toolbarActions/wysiwygAdapter";
 import type { ToolbarContext } from "@/plugins/toolbarActions/types";
@@ -64,6 +65,7 @@ export function UniversalToolbar() {
         surface: "source",
         view: sourceView,
         context: sourceContext,
+        multiSelection: getSourceMultiSelectionContext(sourceView, sourceContext),
       };
     }
     return {
@@ -71,6 +73,7 @@ export function UniversalToolbar() {
       view: wysiwygView,
       editor: wysiwygEditor,
       context: wysiwygContext,
+      multiSelection: getWysiwygMultiSelectionContext(wysiwygView, wysiwygContext),
     };
   }, [sourceMode, sourceView, sourceContext, wysiwygView, wysiwygEditor, wysiwygContext]);
 
@@ -114,10 +117,21 @@ export function UniversalToolbar() {
       const isSource = useEditorStore.getState().sourceMode;
       if (isSource) {
         const state = useSourceCursorContextStore.getState();
-        setSourceHeadingLevel({ surface: "source", view: state.editorView, context: state.context }, level);
+        setSourceHeadingLevel({
+          surface: "source",
+          view: state.editorView,
+          context: state.context,
+          multiSelection: getSourceMultiSelectionContext(state.editorView, state.context),
+        }, level);
       } else {
         const state = useTiptapEditorStore.getState();
-        setWysiwygHeadingLevel({ surface: "wysiwyg", view: state.editorView, editor: state.editor, context: state.context }, level);
+        setWysiwygHeadingLevel({
+          surface: "wysiwyg",
+          view: state.editorView,
+          editor: state.editor,
+          context: state.context,
+          multiSelection: getWysiwygMultiSelectionContext(state.editorView, state.context),
+        }, level);
       }
       return;
     }
@@ -129,6 +143,7 @@ export function UniversalToolbar() {
         surface: "source",
         view: state.editorView,
         context: state.context,
+        multiSelection: getSourceMultiSelectionContext(state.editorView, state.context),
       });
       return;
     }
@@ -139,6 +154,7 @@ export function UniversalToolbar() {
       view: state.editorView,
       editor: state.editor,
       context: state.context,
+      multiSelection: getWysiwygMultiSelectionContext(state.editorView, state.context),
     });
   }, []);
 
