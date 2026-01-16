@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useMemo, useRef } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import type { ToolbarMenuItem } from "./toolbarGroups";
+import { isSeparator, type ToolbarMenuItem, type ToolbarActionItem } from "./toolbarGroups";
 import type { ToolbarItemState } from "@/plugins/toolbarActions/enableRules";
 
 interface GroupDropdownItem {
@@ -20,7 +20,14 @@ const GroupDropdown = forwardRef<HTMLDivElement, GroupDropdownProps>(
     const containerRef = useRef<HTMLDivElement>(null);
 
     const enabledIndices = useMemo(
-      () => items.map((entry, index) => (entry.state.disabled ? -1 : index)).filter((i) => i >= 0),
+      () =>
+        items
+          .map((entry, index) => {
+            // Separators are not selectable
+            if (isSeparator(entry.item)) return -1;
+            return entry.state.disabled ? -1 : index;
+          })
+          .filter((i) => i >= 0),
       [items]
     );
 
@@ -85,25 +92,31 @@ const GroupDropdown = forwardRef<HTMLDivElement, GroupDropdownProps>(
         role="menu"
         aria-label="Toolbar group"
       >
-        {items.map(({ item, state }) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`universal-toolbar-dropdown-item${state.active ? " active" : ""}`}
-            onClick={() => onSelect(item.action)}
-            disabled={state.disabled}
-            title={state.notImplemented ? `${item.label} — Not available yet` : item.label}
-          >
-            <span
-              className="universal-toolbar-dropdown-icon"
-              dangerouslySetInnerHTML={{ __html: item.icon }}
-            />
-            <span className="universal-toolbar-dropdown-label">{item.label}</span>
-            {item.shortcut && (
-              <span className="universal-toolbar-dropdown-shortcut">{item.shortcut}</span>
-            )}
-          </button>
-        ))}
+        {items.map(({ item, state }) => {
+          if (isSeparator(item)) {
+            return <div key={item.id} className="universal-toolbar-dropdown-separator" role="separator" />;
+          }
+          const actionItem = item as ToolbarActionItem;
+          return (
+            <button
+              key={actionItem.id}
+              type="button"
+              className={`universal-toolbar-dropdown-item${state.active ? " active" : ""}`}
+              onClick={() => onSelect(actionItem.action)}
+              disabled={state.disabled}
+              title={state.notImplemented ? `${actionItem.label} — Not available yet` : actionItem.label}
+            >
+              <span
+                className="universal-toolbar-dropdown-icon"
+                dangerouslySetInnerHTML={{ __html: actionItem.icon }}
+              />
+              <span className="universal-toolbar-dropdown-label">{actionItem.label}</span>
+              {actionItem.shortcut && (
+                <span className="universal-toolbar-dropdown-shortcut">{actionItem.shortcut}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
     );
   }

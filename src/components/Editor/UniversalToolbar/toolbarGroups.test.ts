@@ -4,7 +4,7 @@
  * TDD tests for button group definitions (WI-002).
  */
 import { describe, it, expect } from "vitest";
-import { TOOLBAR_GROUPS } from "./toolbarGroups";
+import { TOOLBAR_GROUPS, isSeparator } from "./toolbarGroups";
 
 describe("toolbarGroups", () => {
   describe("structure", () => {
@@ -31,10 +31,12 @@ describe("toolbarGroups", () => {
       }
     });
 
-    it("each item has required properties", () => {
+    it("each action item has required properties", () => {
       for (const group of TOOLBAR_GROUPS) {
         for (const item of group.items) {
           expect(item.id).toBeDefined();
+          // Separators only need an id
+          if (isSeparator(item)) continue;
           expect(item.icon).toBeDefined();
           expect(item.label).toBeDefined();
           expect(item.action).toBeDefined();
@@ -102,10 +104,12 @@ describe("toolbarGroups", () => {
   });
 
   describe("button enabled state", () => {
-    it("buttons have enabledIn property for context", () => {
-      // All buttons should have enabledIn to define when they're active
+    it("action items have enabledIn property for context", () => {
+      // All action items should have enabledIn to define when they're active
       for (const group of TOOLBAR_GROUPS) {
         for (const item of group.items) {
+          // Separators don't have enabledIn
+          if (isSeparator(item)) continue;
           expect(item.enabledIn).toBeDefined();
         }
       }
@@ -118,7 +122,8 @@ describe("toolbarGroups", () => {
       expect(expandables).toBeDefined();
 
       const itemIds = expandables!.items.map((item) => item.id);
-      const itemActions = expandables!.items.map((item) => item.action);
+      const actionItems = expandables!.items.filter((item) => !isSeparator(item));
+      const itemActions = actionItems.map((item) => !isSeparator(item) ? item.action : "");
 
       // Should NOT have single insertAlert
       expect(itemActions).not.toContain("insertAlert");
@@ -146,6 +151,7 @@ describe("toolbarGroups", () => {
 
       expect(alertItems.length).toBe(5);
       for (const item of alertItems) {
+        if (isSeparator(item)) continue;
         expect(item.enabledIn).toContain("textblock");
       }
     });

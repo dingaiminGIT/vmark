@@ -1,5 +1,5 @@
 import type { EditorView as TiptapEditorView } from "@tiptap/pm/view";
-import type { ToolbarGroupButton, ToolbarMenuItem } from "@/components/Editor/UniversalToolbar/toolbarGroups";
+import { isSeparator, type ToolbarGroupButton, type ToolbarMenuItem, type ToolbarActionItem } from "@/components/Editor/UniversalToolbar/toolbarGroups";
 import type { CursorContext as WysiwygContext } from "@/plugins/toolbarContext/types";
 import type { CursorContext as SourceContext } from "@/types/cursorContext";
 import type { ToolbarContext } from "./types";
@@ -123,7 +123,7 @@ function isSourceActionActive(action: string, context: SourceContext | null): bo
   }
 }
 
-function matchesEnabledContext(enabled: ToolbarMenuItem["enabledIn"], ctx: WysiwygContext | SourceContext | null): boolean {
+function matchesEnabledContext(enabled: ToolbarActionItem["enabledIn"], ctx: WysiwygContext | SourceContext | null): boolean {
   if (!ctx) return false;
 
   for (const rule of enabled) {
@@ -225,8 +225,14 @@ export function getToolbarItemState(
   item: ToolbarMenuItem,
   context: ToolbarContext
 ): ToolbarItemState {
+  // Separators are always disabled (non-interactive visual elements)
+  if (isSeparator(item)) {
+    return { disabled: true, notImplemented: false, active: false };
+  }
+
+  const actionItem = item as ToolbarActionItem;
   const { surface } = context;
-  const notImplemented = item.enabledIn.includes("never") || !isActionImplemented(item.action, surface);
+  const notImplemented = actionItem.enabledIn.includes("never") || !isActionImplemented(actionItem.action, surface);
 
   const ctx = context.context;
   const view = context.view;
@@ -235,17 +241,17 @@ export function getToolbarItemState(
     return { disabled: true, notImplemented, active: false };
   }
 
-  const enabled = matchesEnabledContext(item.enabledIn, ctx) &&
-    (!shouldRequireSelection(item.action, surface) || ctx.hasSelection) &&
-    canRunActionInMultiSelection(item.action, context.multiSelection);
+  const enabled = matchesEnabledContext(actionItem.enabledIn, ctx) &&
+    (!shouldRequireSelection(actionItem.action, surface) || ctx.hasSelection) &&
+    canRunActionInMultiSelection(actionItem.action, context.multiSelection);
 
   const active = surface === "wysiwyg"
     ? isWysiwygActionActive(
-        item.action,
+        actionItem.action,
         ctx as WysiwygContext,
         (view as TiptapEditorView | null)
       )
-    : isSourceActionActive(item.action, ctx as SourceContext);
+    : isSourceActionActive(actionItem.action, ctx as SourceContext);
 
   return {
     disabled: !enabled || notImplemented,

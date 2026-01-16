@@ -1,4 +1,4 @@
-import type { ToolbarGroupButton } from "./toolbarGroups";
+import { isSeparator, type ToolbarGroupButton } from "./toolbarGroups";
 import type { ToolbarContext } from "@/plugins/toolbarActions/types";
 
 interface ToolbarButtonState {
@@ -16,7 +16,7 @@ interface FocusOptions {
 
 function findGroupIndexForAction(buttons: ToolbarGroupButton[], action: string): number {
   return buttons.findIndex((button) =>
-    button.items.some((item) => item.action === action)
+    button.items.some((item) => !isSeparator(item) && item.action === action)
   );
 }
 

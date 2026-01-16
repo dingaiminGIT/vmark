@@ -23,14 +23,29 @@ export type EnableContext =
   | "codeblock"    // Inside a code block
   | "never";       // Always disabled (not yet implemented)
 
-/** Menu item definition */
-export interface ToolbarMenuItem {
+/** Separator item (visual divider in dropdown) */
+export interface ToolbarSeparator {
   id: string;
+  type: "separator";
+}
+
+/** Action menu item definition */
+export interface ToolbarActionItem {
+  id: string;
+  type?: "action";       // Optional, defaults to action
   icon: string;
   label: string;
   shortcut?: string;
   action: string;        // Action identifier for adapters
   enabledIn: EnableContext[];
+}
+
+/** Menu item can be an action or separator */
+export type ToolbarMenuItem = ToolbarActionItem | ToolbarSeparator;
+
+/** Type guard for separator items */
+export function isSeparator(item: ToolbarMenuItem): item is ToolbarSeparator {
+  return item.type === "separator";
 }
 
 /** Group definition */
