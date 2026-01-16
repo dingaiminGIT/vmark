@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { useTabStore, type Tab as TabType } from "@/stores/tabStore";
-import { useDocumentStore } from "@/stores/documentStore";
+import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
 import { Tab } from "./Tab";
 import { TabContextMenu, type ContextMenuPosition } from "./TabContextMenu";
 
@@ -27,16 +27,8 @@ export function TabBar() {
   );
 
   const handleCloseTab = useCallback(
-    (tabId: string) => {
-      // Check if document is dirty
-      const doc = useDocumentStore.getState().documents[tabId];
-      if (doc?.isDirty) {
-        // TODO: Show save dialog before closing
-        // For now, just close without saving
-      }
-
-      useTabStore.getState().closeTab(windowLabel, tabId);
-      useDocumentStore.getState().removeDocument(tabId);
+    async (tabId: string) => {
+      await closeTabWithDirtyCheck(windowLabel, tabId);
     },
     [windowLabel]
   );

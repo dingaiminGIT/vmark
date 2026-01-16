@@ -61,3 +61,11 @@ vi.mock("@tauri-apps/api/webviewWindow", () => {
     },
   };
 });
+
+vi.mock("@tauri-apps/api/path", () => ({
+  homeDir: vi.fn(() => Promise.resolve("/Users/test")),
+  appDataDir: vi.fn(() => Promise.resolve("/Users/test/.config")),
+  join: vi.fn((...parts: string[]) => Promise.resolve(parts.join("/"))),
+  dirname: vi.fn((path: string) => Promise.resolve(path.split("/").slice(0, -1).join("/") || "/")),
+  basename: vi.fn((path: string) => Promise.resolve(path.split("/").pop() || "")),
+}));
