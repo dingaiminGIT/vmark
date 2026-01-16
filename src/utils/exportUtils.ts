@@ -10,6 +10,7 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
+import type { Options as RemarkRehypeOptions } from "remark-rehype";
 import type { Root, Blockquote, Paragraph, Text, Parent, Content } from "mdast";
 import type { Alert, AlertType, Details, WikiLink, WikiEmbed, Highlight, Underline, Subscript, Superscript } from "@/utils/markdownPipeline/types";
 import { parseMarkdownToMdast } from "@/utils/markdownPipeline/parser";
@@ -392,11 +393,13 @@ const rehypeHandlers = {
   },
 } as const;
 
+const remarkRehypeOptions: RemarkRehypeOptions = {
+  allowDangerousHtml: true,
+  handlers: rehypeHandlers as RemarkRehypeOptions["handlers"],
+};
+
 const htmlProcessor = unified()
-  .use(remarkRehype, {
-    allowDangerousHtml: true,
-    handlers: rehypeHandlers,
-  })
+  .use(remarkRehype, remarkRehypeOptions)
   .use(rehypeStringify, { allowDangerousHtml: true });
 
 /**

@@ -15,7 +15,7 @@ describe("promptSaveForDirtyDocument", () => {
   });
 
   it("returns cancelled when user dismisses prompt", async () => {
-    vi.mocked(ask).mockResolvedValueOnce(null);
+    vi.mocked(ask).mockResolvedValueOnce(null as unknown as boolean);
 
     const result = await promptSaveForDirtyDocument({
       windowLabel: WINDOW_LABEL,
@@ -56,7 +56,9 @@ describe("promptSaveForDirtyDocument", () => {
 
     expect(saveToPath).toHaveBeenCalledWith("tab-1", "/tmp/test.md", "content", "manual");
     expect(result.action).toBe("saved");
-    expect(result.path).toBe("/tmp/test.md");
+    if (result.action === "saved") {
+      expect(result.path).toBe("/tmp/test.md");
+    }
   });
 
   it("returns cancelled when Save As dialog is cancelled", async () => {

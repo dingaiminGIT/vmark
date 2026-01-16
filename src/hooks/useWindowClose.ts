@@ -71,8 +71,6 @@ export function useWindowClose() {
         return true;
       }
 
-      const { message } = await import("@tauri-apps/plugin-dialog");
-
       // Process each dirty tab - prompt user for each one
       for (const dirtyTab of dirtyTabs) {
         const doc = useDocumentStore.getState().getDocument(dirtyTab.id);

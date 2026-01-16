@@ -192,9 +192,8 @@ export function PrintPreviewPage() {
   const [htmlContent, setHtmlContent] = useState<string>("");
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const preserveLineBreaks = useSettingsStore((state) => state.markdown.preserveLineBreaks);
-
   useEffect(() => {
+    const preserveLineBreaks = useSettingsStore.getState().markdown.preserveLineBreaks;
     // Read content from localStorage (set by main window before opening this window)
     const markdown = localStorage.getItem(PRINT_CONTENT_KEY);
     // Use !== null to allow empty documents (empty string is valid content)

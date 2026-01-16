@@ -44,7 +44,7 @@ describe("closeTabWithDirtyCheck", () => {
     useDocumentStore.getState().initDocument(tabId, "hello", "/tmp/dirty.md");
     useDocumentStore.getState().setContent(tabId, "changed");
 
-    vi.mocked(ask).mockResolvedValueOnce(null);
+    vi.mocked(ask).mockResolvedValueOnce(null as unknown as boolean);
 
     const result = await closeTabWithDirtyCheck(WINDOW_LABEL, tabId);
 
@@ -53,7 +53,7 @@ describe("closeTabWithDirtyCheck", () => {
     expect(useDocumentStore.getState().getDocument(tabId)).toBeDefined();
   });
 
-  it("closes dirty tab without saving when user chooses Don\'t Save", async () => {
+  it("closes dirty tab without saving when user chooses Don't Save", async () => {
     const tabId = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/dirty.md");
     useDocumentStore.getState().initDocument(tabId, "hello", "/tmp/dirty.md");
     useDocumentStore.getState().setContent(tabId, "changed");

@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { useTabStore, type Tab as TabType } from "@/stores/tabStore";
+import { useDocumentStore } from "@/stores/documentStore";
 import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
 import { Tab } from "./Tab";
 import { TabContextMenu, type ContextMenuPosition } from "./TabContextMenu";

@@ -106,7 +106,6 @@ function handleHeadingAdjust(view: EditorView, direction: "increase" | "decrease
 }
 
 function deleteSelection(view: EditorView): void {
-  const selection = view.state.selection;
   const transaction = view.state.changeByRange((range) => {
     if (range.from === range.to) return { range };
     return {
@@ -115,7 +114,7 @@ function deleteSelection(view: EditorView): void {
     };
   });
 
-  if (!transaction.docChanged) return;
+  if (transaction.changes.empty) return;
 
   view.dispatch(transaction);
   view.focus();
