@@ -28,6 +28,7 @@ const MARKER_DEFS: MarkerDef[] = [
   { marker: "__", type: "bold" },
   { marker: "~~", type: "strikethrough" },
   { marker: "==", type: "highlight" },
+  { marker: "++", type: "underline" },
   { marker: "`", type: "code" },
   { marker: "*", type: "italic" },
   { marker: "_", type: "italic" },

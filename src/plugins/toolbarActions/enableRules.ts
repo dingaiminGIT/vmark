@@ -15,13 +15,8 @@ interface ToolbarButtonState extends ToolbarItemState {
   itemStates?: ToolbarItemState[];
 }
 
-const SOURCE_UNIMPLEMENTED_ACTIONS = new Set<string>([
-  "underline",
-  "clearFormatting",
-  "insertDetails",
-  "insertAlert",
-  "insertMath",
-]);
+// All Source mode actions are now implemented
+const SOURCE_UNIMPLEMENTED_ACTIONS = new Set<string>([]);
 
 const SOURCE_SELECTION_REQUIRED_ACTIONS = new Set<string>([
   "bold",
@@ -111,6 +106,7 @@ function isSourceActionActive(action: string, context: SourceContext | null): bo
     case "superscript":
     case "subscript":
     case "code":
+    case "underline":
       return context.activeFormats.includes(action as SourceContext["activeFormats"][number]);
     case "link":
       return Boolean(context.inLink);

@@ -196,8 +196,20 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
     case "insertDetails":
       void emitMenuEvent("menu:collapsible-block");
       return true;
-    case "insertAlert":
+    case "insertAlertNote":
       void emitMenuEvent("menu:info-note");
+      return true;
+    case "insertAlertTip":
+      void emitMenuEvent("menu:info-tip");
+      return true;
+    case "insertAlertImportant":
+      void emitMenuEvent("menu:info-important");
+      return true;
+    case "insertAlertWarning":
+      void emitMenuEvent("menu:info-warning");
+      return true;
+    case "insertAlertCaution":
+      void emitMenuEvent("menu:info-caution");
       return true;
     case "insertFootnote":
       if (!context.editor) return false;

@@ -1,6 +1,9 @@
+import { EditorSelection } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { applyFormat, type FormatType } from "@/plugins/sourceFormatPopup";
+import { clearAllFormatting } from "@/plugins/sourceFormatPopup/clearFormatting";
 import { applyInlineFormatToSelections } from "@/plugins/sourceFormatPopup/formatMultiSelection";
+import { buildAlertBlock, buildDetailsBlock, buildMathBlock, type AlertType } from "@/plugins/sourceFormatPopup/sourceInsertions";
 import { getBlockquoteInfo, nestBlockquote, removeBlockquote, unnestBlockquote } from "@/plugins/sourceFormatPopup/blockquoteDetection";
 import { convertToHeading, getHeadingInfo, setHeadingLevel } from "@/plugins/sourceFormatPopup/headingDetection";
 import { getListItemInfo, indentListItem, outdentListItem, removeList, toBulletList, toOrderedList, toTaskList } from "@/plugins/sourceFormatPopup/listDetection";
@@ -35,6 +38,28 @@ function applyInlineFormat(view: EditorView, format: FormatType): boolean {
   const { from, to } = selection.main;
   if (from === to) return false;
   applyFormat(view, format);
+  return true;
+}
+
+function clearFormattingSelections(view: EditorView): boolean {
+  const { selection, doc } = view.state;
+  if (selection.ranges.length <= 1) return false;
+  const hasSelection = selection.ranges.some((range) => range.from !== range.to);
+  if (!hasSelection) return false;
+
+  const docText = doc.toString();
+  const transaction = view.state.changeByRange((range) => {
+    if (range.from === range.to) return { range };
+    const selectedText = docText.slice(range.from, range.to);
+    const cleared = clearAllFormatting(selectedText);
+    return {
+      changes: { from: range.from, to: range.to, insert: cleared },
+      range: EditorSelection.range(range.from, range.from + cleared.length),
+    };
+  });
+
+  view.dispatch(transaction);
+  view.focus();
   return true;
 }
 
@@ -123,8 +148,23 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
       return applyInlineFormat(view, "subscript");
     case "code":
       return applyInlineFormat(view, "code");
+    case "underline":
+      return applyInlineFormat(view, "underline");
     case "link":
       return insertLink(view);
+    case "clearFormatting": {
+      if (clearFormattingSelections(view)) return true;
+      const { from, to } = view.state.selection.main;
+      if (from === to) return false;
+      const selectedText = view.state.doc.sliceString(from, to);
+      const cleared = clearAllFormatting(selectedText);
+      view.dispatch({
+        changes: { from, to, insert: cleared },
+        selection: { anchor: from, head: from + cleared.length },
+      });
+      view.focus();
+      return true;
+    }
     case "insertImage":
       return insertImage(view);
     case "insertFootnote":
@@ -286,6 +326,30 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
       return insertListMarker(view, "1. ");
     case "insertTaskList":
       return insertListMarker(view, "- [ ] ");
+    case "insertDetails": {
+      const { from, to } = view.state.selection.main;
+      const selection = from === to ? "" : view.state.doc.sliceString(from, to);
+      const { text, cursorOffset } = buildDetailsBlock(selection);
+      insertText(view, text, cursorOffset);
+      return true;
+    }
+    case "insertAlertNote":
+    case "insertAlertTip":
+    case "insertAlertImportant":
+    case "insertAlertWarning":
+    case "insertAlertCaution": {
+      const alertType = action.replace("insertAlert", "").toUpperCase() as AlertType;
+      const { text, cursorOffset } = buildAlertBlock(alertType);
+      insertText(view, text, cursorOffset);
+      return true;
+    }
+    case "insertMath": {
+      const { from, to } = view.state.selection.main;
+      const selection = from === to ? "" : view.state.doc.sliceString(from, to);
+      const { text, cursorOffset } = buildMathBlock(selection);
+      insertText(view, text, cursorOffset);
+      return true;
+    }
     default:
       return false;
   }

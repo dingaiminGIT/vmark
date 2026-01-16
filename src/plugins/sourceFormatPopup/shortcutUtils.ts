@@ -3,6 +3,7 @@ import type { FormatType } from "./formatTypes";
 const SHORTCUT_MAP: Record<string, FormatType> = {
   b: "bold",
   i: "italic",
+  u: "underline",
   k: "link",
   s: "strikethrough",
   h: "highlight",

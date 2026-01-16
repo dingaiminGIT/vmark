@@ -111,4 +111,43 @@ describe("toolbarGroups", () => {
       }
     });
   });
+
+  describe("expandables group", () => {
+    it("contains 5 alert type items instead of single alert", () => {
+      const expandables = TOOLBAR_GROUPS.find((g) => g.id === "expandables");
+      expect(expandables).toBeDefined();
+
+      const itemIds = expandables!.items.map((item) => item.id);
+      const itemActions = expandables!.items.map((item) => item.action);
+
+      // Should NOT have single insertAlert
+      expect(itemActions).not.toContain("insertAlert");
+
+      // Should have 5 specific alert types
+      expect(itemIds).toContain("insert-alert-note");
+      expect(itemIds).toContain("insert-alert-tip");
+      expect(itemIds).toContain("insert-alert-important");
+      expect(itemIds).toContain("insert-alert-warning");
+      expect(itemIds).toContain("insert-alert-caution");
+
+      // Verify actions match
+      expect(itemActions).toContain("insertAlertNote");
+      expect(itemActions).toContain("insertAlertTip");
+      expect(itemActions).toContain("insertAlertImportant");
+      expect(itemActions).toContain("insertAlertWarning");
+      expect(itemActions).toContain("insertAlertCaution");
+    });
+
+    it("alert items are enabled in textblock context", () => {
+      const expandables = TOOLBAR_GROUPS.find((g) => g.id === "expandables");
+      const alertItems = expandables!.items.filter((item) =>
+        item.id.startsWith("insert-alert-")
+      );
+
+      expect(alertItems.length).toBe(5);
+      for (const item of alertItems) {
+        expect(item.enabledIn).toContain("textblock");
+      }
+    });
+  });
 });

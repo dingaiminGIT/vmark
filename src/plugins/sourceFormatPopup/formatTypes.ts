@@ -4,6 +4,7 @@ export type FormatType =
   | "code"
   | "strikethrough"
   | "highlight"
+  | "underline"
   | "link"
   | "image"
   | "superscript"
@@ -24,6 +25,7 @@ export const FORMAT_MARKERS: Record<WrapFormatType, FormatMarkers> = {
   code: { prefix: "`", suffix: "`" },
   strikethrough: { prefix: "~~", suffix: "~~" },
   highlight: { prefix: "==", suffix: "==" },
+  underline: { prefix: "++", suffix: "++" },
   link: { prefix: "[", suffix: "](url)" },
   image: { prefix: "![", suffix: "](url)" },
   superscript: { prefix: "^", suffix: "^" },

@@ -161,7 +161,11 @@ const EXPANDABLES_GROUP: ToolbarGroup = {
   icon: icons.details,
   items: [
     { id: "insert-details", icon: icons.details, label: "Details", action: "insertDetails", enabledIn: ["textblock"] },
-    { id: "insert-alert", icon: icons.alertIcon, label: "Alert", action: "insertAlert", enabledIn: ["textblock"] },
+    { id: "insert-alert-note", icon: icons.alertIcon, label: "Alert Note", action: "insertAlertNote", enabledIn: ["textblock"] },
+    { id: "insert-alert-tip", icon: icons.alertIcon, label: "Alert Tip", action: "insertAlertTip", enabledIn: ["textblock"] },
+    { id: "insert-alert-important", icon: icons.alertIcon, label: "Alert Important", action: "insertAlertImportant", enabledIn: ["textblock"] },
+    { id: "insert-alert-warning", icon: icons.alertIcon, label: "Alert Warning", action: "insertAlertWarning", enabledIn: ["textblock"] },
+    { id: "insert-alert-caution", icon: icons.alertIcon, label: "Alert Caution", action: "insertAlertCaution", enabledIn: ["textblock"] },
     { id: "insert-footnote", icon: icons.footnote, label: "Footnote", action: "insertFootnote", enabledIn: ["textblock"] },
   ],
 };
