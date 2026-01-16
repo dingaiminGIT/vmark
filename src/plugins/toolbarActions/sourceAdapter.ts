@@ -76,6 +76,20 @@ function insertLink(view: EditorView): boolean {
   return true;
 }
 
+function insertWikiSyntax(view: EditorView, prefix: string, suffix: string, defaultValue: string): boolean {
+  const { from, to } = view.state.selection.main;
+  const selectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
+  const value = selectedText || defaultValue;
+  const text = `${prefix}${value}${suffix}`;
+  const cursorOffset = prefix.length + value.length; // position after value, before suffix
+  view.dispatch({
+    changes: { from, to, insert: text },
+    selection: { anchor: from + cursorOffset },
+  });
+  view.focus();
+  return true;
+}
+
 function insertImage(view: EditorView): boolean {
   insertText(view, "![](url)", 4);
   return true;
@@ -152,6 +166,14 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
       return applyInlineFormat(view, "underline");
     case "link":
       return insertLink(view);
+    case "link:wiki":
+      return insertWikiSyntax(view, "[[", "]]", "page");
+    case "link:wikiEmbed":
+      return insertWikiSyntax(view, "![[", "]]", "file");
+    case "link:bookmark":
+    case "link:reference":
+      // Not yet implemented - requires heading picker / reference manager
+      return false;
     case "clearFormatting": {
       if (clearFormattingSelections(view)) return true;
       const { from, to } = view.state.selection.main;

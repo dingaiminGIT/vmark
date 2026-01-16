@@ -215,7 +215,55 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       if (!context.editor) return false;
       insertFootnoteAndOpenPopup(context.editor);
       return true;
+    case "link:wiki":
+      return insertWikiLink(context);
+    case "link:wikiEmbed":
+      return insertWikiEmbed(context);
+    case "link:bookmark":
+    case "link:reference":
+      // Not yet implemented - requires heading picker / reference manager
+      return false;
     default:
       return false;
   }
+}
+
+function insertWikiLink(context: WysiwygToolbarContext): boolean {
+  const view = context.view;
+  if (!view) return false;
+
+  const { state, dispatch } = view;
+  const { from, to } = state.selection;
+  const selectedText = from !== to ? state.doc.textBetween(from, to) : "";
+  const wikiLinkType = state.schema.nodes.wikiLink;
+  if (!wikiLinkType) return false;
+
+  const node = wikiLinkType.create({
+    value: selectedText || "page",
+    alias: null,
+  });
+
+  dispatch(state.tr.replaceSelectionWith(node));
+  view.focus();
+  return true;
+}
+
+function insertWikiEmbed(context: WysiwygToolbarContext): boolean {
+  const view = context.view;
+  if (!view) return false;
+
+  const { state, dispatch } = view;
+  const { from, to } = state.selection;
+  const selectedText = from !== to ? state.doc.textBetween(from, to) : "";
+  const wikiEmbedType = state.schema.nodes.wikiEmbed;
+  if (!wikiEmbedType) return false;
+
+  const node = wikiEmbedType.create({
+    value: selectedText || "file",
+    alias: null,
+  });
+
+  dispatch(state.tr.replaceSelectionWith(node));
+  view.focus();
+  return true;
 }
