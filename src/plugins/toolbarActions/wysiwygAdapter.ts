@@ -282,25 +282,29 @@ function insertBookmarkLink(context: WysiwygToolbarContext): boolean {
     return false;
   }
 
+  // Capture selected text for link text fallback (not position-sensitive)
   const { from, to } = state.selection;
-  const selectedText = from !== to ? state.doc.textBetween(from, to) : "";
+  const capturedSelectedText = from !== to ? state.doc.textBetween(from, to) : "";
 
   useHeadingPickerStore.getState().openPicker(headings, (id, text) => {
-    const linkMark = state.schema.marks.link;
+    // Re-read current state to get fresh positions (doc may have changed)
+    const currentState = view.state;
+    const linkMark = currentState.schema.marks.link;
     if (!linkMark) return;
 
+    const { from: currentFrom, to: currentTo } = currentState.selection;
     const href = `#${id}`;
-    const linkText = selectedText || text;
+    const linkText = capturedSelectedText || text;
 
     // Create link with the heading's ID as href
-    const tr = state.tr;
-    if (from === to) {
+    const tr = currentState.tr;
+    if (currentFrom === currentTo) {
       // No selection - insert new text with link mark
-      const textNode = state.schema.text(linkText, [linkMark.create({ href })]);
-      tr.insert(from, textNode);
+      const textNode = currentState.schema.text(linkText, [linkMark.create({ href })]);
+      tr.insert(currentFrom, textNode);
     } else {
       // Has selection - apply link mark to it
-      tr.addMark(from, to, linkMark.create({ href }));
+      tr.addMark(currentFrom, currentTo, linkMark.create({ href }));
     }
 
     view.dispatch(tr);
@@ -314,31 +318,35 @@ function insertReferenceLink(context: WysiwygToolbarContext): boolean {
   const view = context.view;
   if (!view) return false;
 
+  // Capture selected text for link text fallback (not position-sensitive)
   const { state } = view;
   const { from, to } = state.selection;
-  const selectedText = from !== to ? state.doc.textBetween(from, to) : "";
+  const capturedSelectedText = from !== to ? state.doc.textBetween(from, to) : "";
 
-  useLinkReferenceDialogStore.getState().openDialog(selectedText, (identifier, url, title) => {
-    const linkRefType = state.schema.nodes.link_reference;
-    const linkDefType = state.schema.nodes.link_definition;
+  useLinkReferenceDialogStore.getState().openDialog(capturedSelectedText, (identifier, url, title) => {
+    // Re-read current state to get fresh positions (doc may have changed)
+    const currentState = view.state;
+    const linkRefType = currentState.schema.nodes.link_reference;
+    const linkDefType = currentState.schema.nodes.link_definition;
 
     if (!linkRefType || !linkDefType) return;
 
-    const tr = state.tr;
-    const linkText = selectedText || identifier;
+    const { from: currentFrom, to: currentTo } = currentState.selection;
+    const tr = currentState.tr;
+    const linkText = capturedSelectedText || identifier;
 
     // Create link reference node with the text
-    const textNode = state.schema.text(linkText);
+    const textNode = currentState.schema.text(linkText);
     const linkRefNode = linkRefType.create(
       { identifier, referenceType: "full" },
       textNode
     );
 
     // Insert the link reference at cursor
-    if (from === to) {
-      tr.insert(from, linkRefNode);
+    if (currentFrom === currentTo) {
+      tr.insert(currentFrom, linkRefNode);
     } else {
-      tr.replaceWith(from, to, linkRefNode);
+      tr.replaceWith(currentFrom, currentTo, linkRefNode);
     }
 
     // Find end of document to insert definition

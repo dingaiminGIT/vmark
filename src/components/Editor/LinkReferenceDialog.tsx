@@ -51,11 +51,14 @@ export function LinkReferenceDialog() {
     [handleClose, handleInsert]
   );
 
-  // Set default identifier from selected text
+  // Set default identifier from selected text only on open transition
+  const wasOpenRef = useRef(false);
   useEffect(() => {
-    if (isOpen && selectedText) {
+    if (isOpen && !wasOpenRef.current && selectedText) {
+      // Dialog just opened - seed identifier from selected text
       setIdentifier(selectedText.toLowerCase().replace(/\s+/g, "-"));
     }
+    wasOpenRef.current = isOpen;
   }, [isOpen, selectedText]);
 
   // Focus identifier input when opening

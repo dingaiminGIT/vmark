@@ -71,29 +71,38 @@ export function HeadingPicker() {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      const maxIndex = filteredHeadings.length - 1;
       if (e.key === "Escape") {
         e.preventDefault();
         handleClose();
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, filteredHeadings.length - 1));
+        if (maxIndex >= 0) {
+          setSelectedIndex((prev) => Math.min(prev + 1, maxIndex));
+        }
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedIndex((prev) => Math.max(prev - 1, 0));
+        if (maxIndex >= 0) {
+          setSelectedIndex((prev) => Math.max(prev - 1, 0));
+        }
       } else if (e.key === "Enter") {
         e.preventDefault();
-        if (filteredHeadings[selectedIndex]) {
-          handleSelect(filteredHeadings[selectedIndex]);
+        const selected = filteredHeadings[selectedIndex];
+        if (selected) {
+          handleSelect(selected);
         }
       }
     },
     [filteredHeadings, selectedIndex, handleClose, handleSelect]
   );
 
-  // Reset selection when filter changes
+  // Reset and clamp selection when filter changes
   useEffect(() => {
-    setSelectedIndex(0);
-  }, [filter]);
+    setSelectedIndex((prev) => {
+      if (filteredHeadings.length === 0) return 0;
+      return Math.min(prev, filteredHeadings.length - 1);
+    });
+  }, [filter, filteredHeadings.length]);
 
   // Scroll selected item into view
   useEffect(() => {

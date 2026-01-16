@@ -122,16 +122,19 @@ function insertSourceBookmarkLink(view: EditorView): boolean {
     return false;
   }
 
+  // Capture selected text for link text fallback (not position-sensitive)
   const { from, to } = view.state.selection.main;
-  const selectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
+  const capturedSelectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
 
   useHeadingPickerStore.getState().openPicker(headings, (id, text) => {
-    const linkText = selectedText || text;
+    // Re-read current state to get fresh positions (doc may have changed)
+    const { from: currentFrom, to: currentTo } = view.state.selection.main;
+    const linkText = capturedSelectedText || text;
     const markdown = `[${linkText}](#${id})`;
 
     view.dispatch({
-      changes: { from, to, insert: markdown },
-      selection: { anchor: from + markdown.length },
+      changes: { from: currentFrom, to: currentTo, insert: markdown },
+      selection: { anchor: currentFrom + markdown.length },
     });
     view.focus();
   });
@@ -140,11 +143,14 @@ function insertSourceBookmarkLink(view: EditorView): boolean {
 }
 
 function insertSourceReferenceLink(view: EditorView): boolean {
+  // Capture selected text for link text fallback (not position-sensitive)
   const { from, to } = view.state.selection.main;
-  const selectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
+  const capturedSelectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
 
-  useLinkReferenceDialogStore.getState().openDialog(selectedText, (identifier, url, title) => {
-    const linkText = selectedText || identifier;
+  useLinkReferenceDialogStore.getState().openDialog(capturedSelectedText, (identifier, url, title) => {
+    // Re-read current state to get fresh positions (doc may have changed)
+    const { from: currentFrom, to: currentTo } = view.state.selection.main;
+    const linkText = capturedSelectedText || identifier;
     const reference = `[${linkText}][${identifier}]`;
     const definition = title
       ? `[${identifier}]: ${url} "${title}"`
@@ -152,14 +158,14 @@ function insertSourceReferenceLink(view: EditorView): boolean {
 
     // Insert reference at cursor, definition at end of document
     const docLength = view.state.doc.length;
-    const needsNewline = view.state.doc.sliceString(docLength - 1) !== "\n";
+    const needsNewline = docLength > 0 && view.state.doc.sliceString(docLength - 1) !== "\n";
 
     view.dispatch({
       changes: [
-        { from, to, insert: reference },
+        { from: currentFrom, to: currentTo, insert: reference },
         { from: docLength, insert: `${needsNewline ? "\n" : ""}\n${definition}` },
       ],
-      selection: { anchor: from + reference.length },
+      selection: { anchor: currentFrom + reference.length },
     });
     view.focus();
   });

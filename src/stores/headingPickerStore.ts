@@ -44,9 +44,10 @@ export const useHeadingPickerStore = create<HeadingPickerStore>((set, get) => ({
 
   selectHeading: (heading) => {
     const { onSelect } = get();
+    // Reset state before callback to ensure cleanup even if callback throws
+    set(initialState);
     if (onSelect) {
       onSelect(heading.id, heading.text);
     }
-    set(initialState);
   },
 }));

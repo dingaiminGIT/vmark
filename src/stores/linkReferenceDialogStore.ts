@@ -44,9 +44,10 @@ export const useLinkReferenceDialogStore = create<LinkReferenceDialogStore>((set
 
   insert: (identifier, url, title) => {
     const { onInsert } = get();
+    // Reset state before callback to ensure cleanup even if callback throws
+    set(initialState);
     if (onInsert) {
       onInsert(identifier, url, title);
     }
-    set(initialState);
   },
 }));
