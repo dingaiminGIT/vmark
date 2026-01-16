@@ -7,6 +7,7 @@ import { handleBlockquoteNest, handleBlockquoteUnnest, handleRemoveBlockquote, h
 import { addColLeft, addColRight, addRowAbove, addRowBelow, alignColumn, deleteCurrentColumn, deleteCurrentRow, deleteCurrentTable } from "@/plugins/tableUI/tableActions.tiptap";
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { useLinkReferenceDialogStore } from "@/stores/linkReferenceDialogStore";
 import { extractHeadingsWithIds } from "@/utils/headingSlug";
 import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./wysiwygMultiSelection";
@@ -224,8 +225,7 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
     case "link:bookmark":
       return insertBookmarkLink(context);
     case "link:reference":
-      // Not yet implemented - requires reference manager
-      return false;
+      return insertReferenceLink(context);
     default:
       return false;
   }
@@ -302,6 +302,57 @@ function insertBookmarkLink(context: WysiwygToolbarContext): boolean {
       // Has selection - apply link mark to it
       tr.addMark(from, to, linkMark.create({ href }));
     }
+
+    view.dispatch(tr);
+    view.focus();
+  });
+
+  return true;
+}
+
+function insertReferenceLink(context: WysiwygToolbarContext): boolean {
+  const view = context.view;
+  if (!view) return false;
+
+  const { state } = view;
+  const { from, to } = state.selection;
+  const selectedText = from !== to ? state.doc.textBetween(from, to) : "";
+
+  useLinkReferenceDialogStore.getState().openDialog(selectedText, (identifier, url, title) => {
+    const linkRefType = state.schema.nodes.link_reference;
+    const linkDefType = state.schema.nodes.link_definition;
+
+    if (!linkRefType || !linkDefType) return;
+
+    const tr = state.tr;
+    const linkText = selectedText || identifier;
+
+    // Create link reference node with the text
+    const textNode = state.schema.text(linkText);
+    const linkRefNode = linkRefType.create(
+      { identifier, referenceType: "full" },
+      textNode
+    );
+
+    // Insert the link reference at cursor
+    if (from === to) {
+      tr.insert(from, linkRefNode);
+    } else {
+      tr.replaceWith(from, to, linkRefNode);
+    }
+
+    // Find end of document to insert definition
+    const docEnd = tr.doc.content.size;
+
+    // Create link definition node
+    const linkDefNode = linkDefType.create({
+      identifier,
+      url,
+      title: title || null,
+    });
+
+    // Add newline and definition at end
+    tr.insert(docEnd, linkDefNode);
 
     view.dispatch(tr);
     view.focus();

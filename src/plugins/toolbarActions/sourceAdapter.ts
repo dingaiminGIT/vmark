@@ -10,6 +10,7 @@ import { getListItemInfo, indentListItem, outdentListItem, removeList, toBulletL
 import { getSourceTableInfo } from "@/plugins/sourceFormatPopup/tableDetection";
 import { deleteColumn, deleteRow, deleteTable, insertColumnLeft, insertColumnRight, insertRowAbove, insertRowBelow, setAllColumnsAlignment, setColumnAlignment } from "@/plugins/sourceFormatPopup/tableActions";
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
+import { useLinkReferenceDialogStore } from "@/stores/linkReferenceDialogStore";
 import { generateSlug, makeUniqueSlug, type HeadingWithId } from "@/utils/headingSlug";
 import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import type { SourceToolbarContext } from "./types";
@@ -138,6 +139,34 @@ function insertSourceBookmarkLink(view: EditorView): boolean {
   return true;
 }
 
+function insertSourceReferenceLink(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const selectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
+
+  useLinkReferenceDialogStore.getState().openDialog(selectedText, (identifier, url, title) => {
+    const linkText = selectedText || identifier;
+    const reference = `[${linkText}][${identifier}]`;
+    const definition = title
+      ? `[${identifier}]: ${url} "${title}"`
+      : `[${identifier}]: ${url}`;
+
+    // Insert reference at cursor, definition at end of document
+    const docLength = view.state.doc.length;
+    const needsNewline = view.state.doc.sliceString(docLength - 1) !== "\n";
+
+    view.dispatch({
+      changes: [
+        { from, to, insert: reference },
+        { from: docLength, insert: `${needsNewline ? "\n" : ""}\n${definition}` },
+      ],
+      selection: { anchor: from + reference.length },
+    });
+    view.focus();
+  });
+
+  return true;
+}
+
 function insertImage(view: EditorView): boolean {
   insertText(view, "![](url)", 4);
   return true;
@@ -221,8 +250,7 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
     case "link:bookmark":
       return insertSourceBookmarkLink(view);
     case "link:reference":
-      // Not yet implemented - requires reference manager
-      return false;
+      return insertSourceReferenceLink(view);
     case "clearFormatting": {
       if (clearFormattingSelections(view)) return true;
       const { from, to } = view.state.selection.main;
