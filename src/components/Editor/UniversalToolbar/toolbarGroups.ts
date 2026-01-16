@@ -23,14 +23,29 @@ export type EnableContext =
   | "codeblock"    // Inside a code block
   | "never";       // Always disabled (not yet implemented)
 
-/** Menu item definition */
-export interface ToolbarMenuItem {
+/** Separator item (visual divider in dropdown) */
+export interface ToolbarSeparator {
   id: string;
+  type: "separator";
+}
+
+/** Action menu item definition */
+export interface ToolbarActionItem {
+  id: string;
+  type?: "action";       // Optional, defaults to action
   icon: string;
   label: string;
   shortcut?: string;
   action: string;        // Action identifier for adapters
   enabledIn: EnableContext[];
+}
+
+/** Menu item can be an action or separator */
+export type ToolbarMenuItem = ToolbarActionItem | ToolbarSeparator;
+
+/** Type guard for separator items */
+export function isSeparator(item: ToolbarMenuItem): item is ToolbarSeparator {
+  return item.type === "separator";
 }
 
 /** Group definition */
@@ -166,17 +181,24 @@ const EXPANDABLES_GROUP: ToolbarGroup = {
     { id: "insert-alert-important", icon: icons.alertIcon, label: "Alert Important", action: "insertAlertImportant", enabledIn: ["textblock"] },
     { id: "insert-alert-warning", icon: icons.alertIcon, label: "Alert Warning", action: "insertAlertWarning", enabledIn: ["textblock"] },
     { id: "insert-alert-caution", icon: icons.alertIcon, label: "Alert Caution", action: "insertAlertCaution", enabledIn: ["textblock"] },
-    { id: "insert-footnote", icon: icons.footnote, label: "Footnote", action: "insertFootnote", enabledIn: ["textblock"] },
   ],
 };
 
-// --- Link Group ---
+// --- Link Group (consolidated) ---
 const LINK_GROUP: ToolbarGroup = {
   id: "link",
   label: "Link",
   icon: icons.link,
   items: [
-    { id: "link", icon: icons.link, label: "Link", shortcut: "⌘K", action: "link", enabledIn: ["selection", "textblock"] },
+    { id: "link", icon: icons.link, label: "Hyperlink", shortcut: "⌘K", action: "link", enabledIn: ["selection", "textblock"] },
+    { id: "bookmark", icon: icons.hash, label: "Bookmark", action: "link:bookmark", enabledIn: ["textblock"] },
+    { id: "separator1", type: "separator" },
+    { id: "wikiLink", icon: icons.fileText, label: "Wiki Link", action: "link:wiki", enabledIn: ["textblock"] },
+    { id: "wikiEmbed", icon: icons.fileImage, label: "Wiki Embed", action: "link:wikiEmbed", enabledIn: ["textblock"] },
+    { id: "separator2", type: "separator" },
+    { id: "referenceLink", icon: icons.bookmarkLink, label: "Reference Link", action: "link:reference", enabledIn: ["textblock"] },
+    { id: "separator3", type: "separator" },
+    { id: "footnote", icon: icons.footnote, label: "Footnote", action: "insertFootnote", enabledIn: ["textblock"] },
   ],
 };
 

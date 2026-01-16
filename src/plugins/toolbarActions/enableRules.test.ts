@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import type { EditorView as CodeMirrorView } from "@codemirror/view";
 import { getToolbarButtonState } from "./enableRules";
-import type { ToolbarGroupButton, ToolbarMenuItem } from "@/components/Editor/UniversalToolbar/toolbarGroups";
+import type { ToolbarGroupButton, ToolbarActionItem } from "@/components/Editor/UniversalToolbar/toolbarGroups";
 
-function createItem(action: string, enabledIn: ToolbarMenuItem["enabledIn"]): ToolbarMenuItem {
+function createItem(action: string, enabledIn: ToolbarActionItem["enabledIn"]): ToolbarActionItem {
   return {
     id: `${action}-item`,
     icon: "",
@@ -13,7 +13,7 @@ function createItem(action: string, enabledIn: ToolbarMenuItem["enabledIn"]): To
   };
 }
 
-function createGroupButton(action: string, items: ToolbarMenuItem[]): ToolbarGroupButton {
+function createGroupButton(action: string, items: ToolbarActionItem[]): ToolbarGroupButton {
   return {
     id: action,
     type: "dropdown",

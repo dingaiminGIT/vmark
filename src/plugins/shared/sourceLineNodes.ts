@@ -15,8 +15,9 @@ import { HorizontalRule } from "@tiptap/extension-horizontal-rule";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { withSourceLine } from "./sourceLineAttr";
+import { withHeadingId } from "./headingIdAttr";
 
-export const HeadingWithSourceLine = withSourceLine(Heading);
+export const HeadingWithSourceLine = withHeadingId(withSourceLine(Heading));
 export const ParagraphWithSourceLine = withSourceLine(Paragraph);
 export const CodeBlockWithSourceLine = withSourceLine(CodeBlock);
 export const BlockquoteWithSourceLine = withSourceLine(Blockquote);

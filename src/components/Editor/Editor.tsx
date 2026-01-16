@@ -3,7 +3,11 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useDocumentId } from "@/hooks/useDocumentState";
 import { SourceEditor } from "./SourceEditor";
 import { TiptapEditorInner } from "./TiptapEditor";
+import { HeadingPicker } from "./HeadingPicker";
+import { LinkReferenceDialog } from "./LinkReferenceDialog";
 import "./editor.css";
+import "./heading-picker.css";
+import "./link-reference-dialog.css";
 import "./source-peek.css";
 import "@/plugins/cursorAware/cursor-aware.css";
 import "@/plugins/linkPopup/link-popup.css";
@@ -41,6 +45,8 @@ export function Editor() {
       <div className="editor-content">
         {sourceMode ? <SourceEditor key={editorKey} /> : <TiptapEditorInner key={editorKey} />}
       </div>
+      <HeadingPicker />
+      <LinkReferenceDialog />
     </div>
   );
 }

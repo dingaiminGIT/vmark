@@ -9,6 +9,9 @@ import { convertToHeading, getHeadingInfo, setHeadingLevel } from "@/plugins/sou
 import { getListItemInfo, indentListItem, outdentListItem, removeList, toBulletList, toOrderedList, toTaskList } from "@/plugins/sourceFormatPopup/listDetection";
 import { getSourceTableInfo } from "@/plugins/sourceFormatPopup/tableDetection";
 import { deleteColumn, deleteRow, deleteTable, insertColumnLeft, insertColumnRight, insertRowAbove, insertRowBelow, setAllColumnsAlignment, setColumnAlignment } from "@/plugins/sourceFormatPopup/tableActions";
+import { useHeadingPickerStore } from "@/stores/headingPickerStore";
+import { useLinkReferenceDialogStore } from "@/stores/linkReferenceDialogStore";
+import { generateSlug, makeUniqueSlug, type HeadingWithId } from "@/utils/headingSlug";
 import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import type { SourceToolbarContext } from "./types";
 import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./sourceMultiSelection";
@@ -73,6 +76,100 @@ function insertLink(view: EditorView): boolean {
   const text = "[](url)";
   const cursorOffset = 3; // inside url
   insertText(view, text, cursorOffset);
+  return true;
+}
+
+function insertWikiSyntax(view: EditorView, prefix: string, suffix: string, defaultValue: string): boolean {
+  const { from, to } = view.state.selection.main;
+  const selectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
+  const value = selectedText || defaultValue;
+  const text = `${prefix}${value}${suffix}`;
+  const cursorOffset = prefix.length + value.length; // position after value, before suffix
+  view.dispatch({
+    changes: { from, to, insert: text },
+    selection: { anchor: from + cursorOffset },
+  });
+  view.focus();
+  return true;
+}
+
+function extractMarkdownHeadings(text: string): HeadingWithId[] {
+  const headings: HeadingWithId[] = [];
+  const usedSlugs = new Set<string>();
+  const headingRegex = /^(#{1,6})\s+(.+)$/gm;
+  let match;
+
+  while ((match = headingRegex.exec(text)) !== null) {
+    const level = match[1].length;
+    const headingText = match[2].trim();
+    const baseSlug = generateSlug(headingText);
+    const id = makeUniqueSlug(baseSlug, usedSlugs);
+
+    if (id) {
+      usedSlugs.add(id);
+      headings.push({ level, text: headingText, id, pos: match.index });
+    }
+  }
+
+  return headings;
+}
+
+function insertSourceBookmarkLink(view: EditorView): boolean {
+  const docText = view.state.doc.toString();
+  const headings = extractMarkdownHeadings(docText);
+
+  if (headings.length === 0) {
+    return false;
+  }
+
+  // Capture selected text for link text fallback (not position-sensitive)
+  const { from, to } = view.state.selection.main;
+  const capturedSelectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
+
+  useHeadingPickerStore.getState().openPicker(headings, (id, text) => {
+    // Re-read current state to get fresh positions (doc may have changed)
+    const { from: currentFrom, to: currentTo } = view.state.selection.main;
+    const linkText = capturedSelectedText || text;
+    const markdown = `[${linkText}](#${id})`;
+
+    view.dispatch({
+      changes: { from: currentFrom, to: currentTo, insert: markdown },
+      selection: { anchor: currentFrom + markdown.length },
+    });
+    view.focus();
+  });
+
+  return true;
+}
+
+function insertSourceReferenceLink(view: EditorView): boolean {
+  // Capture selected text for link text fallback (not position-sensitive)
+  const { from, to } = view.state.selection.main;
+  const capturedSelectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
+
+  useLinkReferenceDialogStore.getState().openDialog(capturedSelectedText, (identifier, url, title) => {
+    // Re-read current state to get fresh positions (doc may have changed)
+    const { from: currentFrom, to: currentTo } = view.state.selection.main;
+    const linkText = capturedSelectedText || identifier;
+    const reference = `[${linkText}][${identifier}]`;
+    const definition = title
+      ? `[${identifier}]: ${url} "${title}"`
+      : `[${identifier}]: ${url}`;
+
+    // Insert reference at cursor, definition at end of document
+    const docLength = view.state.doc.length;
+    const needsNewline = docLength > 0 && view.state.doc.sliceString(docLength - 1) !== "\n";
+
+    view.dispatch({
+      changes: [
+        { from: currentFrom, to: currentTo, insert: reference },
+        { from: docLength, insert: `${needsNewline ? "\n" : ""}\n${definition}` },
+      ],
+      selection: { anchor: currentFrom + reference.length },
+    });
+    view.focus();
+  });
+
   return true;
 }
 
@@ -152,6 +249,14 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
       return applyInlineFormat(view, "underline");
     case "link":
       return insertLink(view);
+    case "link:wiki":
+      return insertWikiSyntax(view, "[[", "]]", "page");
+    case "link:wikiEmbed":
+      return insertWikiSyntax(view, "![[", "]]", "file");
+    case "link:bookmark":
+      return insertSourceBookmarkLink(view);
+    case "link:reference":
+      return insertSourceReferenceLink(view);
     case "clearFormatting": {
       if (clearFormattingSelections(view)) return true;
       const { from, to } = view.state.selection.main;

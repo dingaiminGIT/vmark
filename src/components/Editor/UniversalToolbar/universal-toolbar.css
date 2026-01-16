@@ -154,6 +154,13 @@
   cursor: not-allowed;
 }
 
+/* Dropdown separator */
+.universal-toolbar-dropdown-separator {
+  height: 1px;
+  margin: 4px 8px;
+  background-color: var(--border-color);
+}
+
 .universal-toolbar-dropdown-icon {
   display: flex;
   align-items: center;
