@@ -1,0 +1,1 @@
+export { wikiEmbedPopupExtension } from "./tiptap";

@@ -1,0 +1,68 @@
+/**
+ * Wiki Embed Popup Styles
+ */
+
+.wiki-embed-popup {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-color);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  width: 300px;
+}
+
+.wiki-embed-popup-target {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 12px;
+  outline: none;
+}
+
+.wiki-embed-popup-target:focus {
+  border-color: var(--primary-color, #0a84ff);
+}
+
+.wiki-embed-popup-preview {
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
+}
+
+.wiki-embed-popup-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.wiki-embed-popup-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 12px;
+  cursor: default;
+}
+
+.wiki-embed-popup-btn:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.06));
+}
+
+.wiki-embed-popup-btn-save {
+  border-color: var(--primary-color, #0a84ff);
+  color: var(--primary-color, #0a84ff);
+}
+
+.dark-theme .wiki-embed-popup-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

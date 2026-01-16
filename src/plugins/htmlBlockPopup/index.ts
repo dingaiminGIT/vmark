@@ -1,0 +1,1 @@
+export { htmlBlockPopupExtension } from "./tiptap";

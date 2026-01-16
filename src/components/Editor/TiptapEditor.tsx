@@ -48,6 +48,7 @@ import { alertBlockExtension } from "@/plugins/alertBlock/tiptap";
 import { detailsBlockExtension, detailsSummaryExtension } from "@/plugins/detailsBlock/tiptap";
 import { taskListItemExtension } from "@/plugins/taskToggle/tiptap";
 import { mathInlineExtension } from "@/plugins/latex/tiptapInlineMath";
+import { mathPopupExtension } from "@/plugins/mathPopup";
 import { footnotePopupExtension } from "@/plugins/footnotePopup/tiptap";
 import { footnoteDefinitionExtension, footnoteReferenceExtension } from "@/plugins/footnotePopup/tiptapNodes";
 import { slashMenuExtension } from "@/plugins/triggerMenu/tiptapSlashMenu";
@@ -70,6 +71,9 @@ import {
   wikiEmbedExtension,
   wikiLinkExtension,
 } from "@/plugins/markdownArtifacts";
+import { wikiLinkPopupExtension } from "@/plugins/wikiLinkPopup";
+import { wikiEmbedPopupExtension } from "@/plugins/wikiEmbedPopup";
+import { htmlBlockPopupExtension } from "@/plugins/htmlBlockPopup";
 
 /**
  * Delay before enabling cursor tracking after editor creation.
@@ -134,6 +138,7 @@ export function TiptapEditorInner() {
       superscriptExtension,
       underlineExtension,
       mathInlineExtension,
+      mathPopupExtension,
       alertBlockExtension,
       detailsSummaryExtension,
       detailsBlockExtension,
@@ -144,6 +149,9 @@ export function TiptapEditorInner() {
       frontmatterExtension,
       htmlInlineExtension,
       htmlBlockExtension,
+      wikiLinkPopupExtension,
+      wikiEmbedPopupExtension,
+      htmlBlockPopupExtension,
       footnoteReferenceExtension,
       footnoteDefinitionExtension,
       TableWithSourceLine.configure({ resizable: false }),

@@ -2,6 +2,7 @@ import { Node } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { NodeView } from "@tiptap/pm/view";
 import { loadKatex } from "./katexLoader";
+import { useMathPopupStore } from "@/stores/mathPopupStore";
 
 /**
  * NodeView for inline math rendering.
@@ -10,13 +11,19 @@ import { loadKatex } from "./katexLoader";
 class MathInlineAtomView implements NodeView {
   dom: HTMLElement;
   private renderToken = 0;
+  private getPos: (() => number | undefined) | null;
+  private currentLatex: string;
 
-  constructor(node: PMNode) {
+  constructor(node: PMNode, getPos?: () => number | undefined) {
     this.dom = document.createElement("span");
     this.dom.className = "math-inline";
     this.dom.dataset.type = "math_inline";
+    this.getPos = getPos ?? null;
+    this.currentLatex = String(node.attrs.content || "");
 
-    this.renderPreview(node.attrs.content || "");
+    this.renderPreview(this.currentLatex);
+
+    this.dom.addEventListener("click", this.handleClick);
   }
 
   private renderPreview(content: string): void {
@@ -63,8 +70,38 @@ class MathInlineAtomView implements NodeView {
 
   update(node: PMNode): boolean {
     if (node.type.name !== "math_inline") return false;
-    this.renderPreview(node.attrs.content || "");
+    this.currentLatex = String(node.attrs.content || "");
+    this.renderPreview(this.currentLatex);
     return true;
+  }
+
+  destroy(): void {
+    this.dom.removeEventListener("click", this.handleClick);
+  }
+
+  private handleClick = () => {
+    if (!this.getPos) return;
+    const pos = this.getPos();
+    if (pos === undefined) return;
+    const rect = this.dom.getBoundingClientRect();
+    const latex = this.currentLatex;
+    useMathPopupStore.getState().openPopup(
+      {
+        top: rect.top,
+        left: rect.left,
+        bottom: rect.bottom,
+        right: rect.right,
+      },
+      latex,
+      pos
+    );
+  };
+
+  stopEvent(event: Event): boolean {
+    if (event.type === "mousedown" || event.type === "click") {
+      return true;
+    }
+    return false;
   }
 }
 
@@ -99,6 +136,6 @@ export const mathInlineExtension = Node.create({
   },
 
   addNodeView() {
-    return ({ node }) => new MathInlineAtomView(node as PMNode);
+    return ({ node, getPos }) => new MathInlineAtomView(node as PMNode, getPos);
   },
 });
