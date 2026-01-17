@@ -9,6 +9,27 @@ import WebSocket from 'ws';
 import type { Bridge, BridgeRequest, BridgeResponse } from './types.js';
 
 /**
+ * Logger interface for WebSocketBridge.
+ * Compatible with console, pino, winston, etc.
+ */
+export interface Logger {
+  debug: (message: string, ...args: unknown[]) => void;
+  info: (message: string, ...args: unknown[]) => void;
+  warn: (message: string, ...args: unknown[]) => void;
+  error: (message: string, ...args: unknown[]) => void;
+}
+
+/**
+ * Default no-op logger (silent).
+ */
+const nullLogger: Logger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+};
+
+/**
  * Configuration for WebSocketBridge.
  */
 export interface WebSocketBridgeConfig {
@@ -26,6 +47,8 @@ export interface WebSocketBridgeConfig {
   reconnectDelay?: number;
   /** Maximum reconnection delay in ms (default: 30000) */
   maxReconnectDelay?: number;
+  /** Optional logger for debugging (default: silent) */
+  logger?: Logger;
 }
 
 /**
@@ -57,6 +80,7 @@ export class WebSocketBridge implements Bridge {
   private readonly maxReconnectAttempts: number;
   private readonly reconnectDelay: number;
   private readonly maxReconnectDelay: number;
+  private readonly logger: Logger;
 
   private ws: WebSocket | null = null;
   private connected = false;
@@ -76,6 +100,7 @@ export class WebSocketBridge implements Bridge {
     this.maxReconnectAttempts = config.maxReconnectAttempts ?? 10;
     this.reconnectDelay = config.reconnectDelay ?? 1000;
     this.maxReconnectDelay = config.maxReconnectDelay ?? 30000;
+    this.logger = config.logger ?? nullLogger;
   }
 
   /**
@@ -256,13 +281,13 @@ export class WebSocketBridge implements Bridge {
       const message = JSON.parse(data.toString()) as WsMessage;
 
       if (message.type !== 'response') {
-        console.warn('Received non-response message:', message.type);
+        this.logger.warn('Received non-response message:', message.type);
         return;
       }
 
       const pending = this.pendingRequests.get(message.id);
       if (!pending) {
-        console.warn('Received response for unknown request:', message.id);
+        this.logger.warn('Received response for unknown request:', message.id);
         return;
       }
 
@@ -270,7 +295,7 @@ export class WebSocketBridge implements Bridge {
       this.pendingRequests.delete(message.id);
       pending.resolve(message.payload as BridgeResponse);
     } catch (error) {
-      console.error('Failed to parse WebSocket message:', error);
+      this.logger.error('Failed to parse WebSocket message:', error);
     }
   }
 
@@ -317,14 +342,22 @@ export class WebSocketBridge implements Bridge {
     );
 
     this.reconnectAttempts++;
+    this.logger.debug(
+      `Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`
+    );
 
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectTimer = null;
 
       try {
         await this.connect();
-      } catch {
-        // Connection failed, handleDisconnect will schedule next attempt
+        this.logger.info('Reconnected successfully');
+      } catch (error) {
+        this.logger.debug(
+          `Reconnect attempt ${this.reconnectAttempts} failed:`,
+          error instanceof Error ? error.message : error
+        );
+        // handleDisconnect will schedule next attempt if attempts remain
       }
     }, delay);
   }
@@ -337,7 +370,7 @@ export class WebSocketBridge implements Bridge {
       try {
         callback(connected);
       } catch (error) {
-        console.error('Connection callback error:', error);
+        this.logger.error('Connection callback error:', error);
       }
     }
   }
