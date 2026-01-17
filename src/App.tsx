@@ -216,8 +216,8 @@ function MainLayout() {
             <div style={{ flex: 1, minHeight: 0, minWidth: 0 }}>
               <Editor />
             </div>
-            {/* Bottom bar container - StatusBar always present, FindBar/Toolbar overlay it */}
-            <div style={{ position: "relative", flexShrink: 0 }}>
+            {/* Bottom bar container - fixed 40px height, all bars overlay within */}
+            <div style={{ position: "relative", height: 40, flexShrink: 0 }}>
               <StatusBar />
               <UniversalToolbar />
               <FindBar />
