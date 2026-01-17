@@ -69,10 +69,8 @@ export function StatusBar() {
     isDocumentWindow ? state.activeTabId[windowLabel] : null
   );
 
-  // Status bar visibility:
-  // - When autoHideStatusBar is OFF (default): always visible
-  // - When autoHideStatusBar is ON: only show on hover (no visible class, relies on CSS :hover)
-  const statusBarVisible = !(autoHideStatusBar ?? false);
+  // Status bar visibility controlled by Cmd+J (toggles autoHideStatusBar)
+  const isHidden = autoHideStatusBar ?? false;
 
   const [contextMenu, setContextMenu] = useState<{
     position: ContextMenuPosition;
@@ -145,9 +143,12 @@ export function StatusBar() {
   const showTabs = isDocumentWindow && tabs.length >= 1;
   const showNewTabButton = isDocumentWindow;
 
+  // When hidden (Cmd+J toggled), don't render
+  if (isHidden) return null;
+
   return (
     <>
-      <div className={`status-bar-container ${statusBarVisible ? "visible" : ""}`}>
+      <div className="status-bar-container visible">
         <div className="status-bar">
           {/* Left section: tabs */}
           <div className="status-bar-left">
