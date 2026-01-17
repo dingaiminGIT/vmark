@@ -14,6 +14,7 @@ import {
   FileText,
   FlaskConical,
   Keyboard,
+  Sparkles,
 } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -25,6 +26,7 @@ import { isImeKeyEvent } from "@/utils/imeGuard";
 import { AppearanceSettings } from "./settings/AppearanceSettings";
 import { CJKFormattingSettings } from "./settings/CJKFormattingSettings";
 import { MarkdownSettings } from "./settings/MarkdownSettings";
+import { AiSettings } from "./settings/AiSettings";
 import { ShortcutsSettings } from "./settings/ShortcutsSettings";
 import { GeneralSettings } from "./settings/GeneralSettings";
 import { FilesSettings } from "./settings/FilesSettings";
@@ -70,6 +72,7 @@ type Section =
   | "appearance"
   | "formatting"
   | "markdown"
+  | "ai"
   | "shortcuts"
   | "general"
   | "files"
@@ -104,6 +107,7 @@ const navConfig = [
   { id: "appearance" as const, icon: Palette, label: "Appearance" },
   { id: "formatting" as const, icon: Languages, label: "CJK Formatting" },
   { id: "markdown" as const, icon: FileText, label: "Markdown" },
+  { id: "ai" as const, icon: Sparkles, label: "AI" },
   { id: "shortcuts" as const, icon: Keyboard, label: "Shortcuts" },
   { id: "general" as const, icon: Settings, label: "General" },
   { id: "files" as const, icon: FolderOpen, label: "Files" },
@@ -113,6 +117,7 @@ const navConfig = [
 export function SettingsPage() {
   const [section, setSection] = useState<Section>("appearance");
   const showDevSection = useSettingsStore((state) => state.showDevSection);
+  const commandMenuEnabled = useSettingsStore((state) => state.advanced.enableCommandMenu);
 
   // Apply theme to this window
   useTheme();
@@ -128,12 +133,20 @@ export function SettingsPage() {
     }
   }, [showDevSection, section]);
 
+  useEffect(() => {
+    if (!commandMenuEnabled && section === "ai") {
+      setSection("advanced");
+    }
+  }, [commandMenuEnabled, section]);
+
   const navItems = [
-    ...navConfig.map((item) => ({
-      id: item.id,
-      icon: <item.icon className="w-4 h-4" />,
-      label: item.label,
-    })),
+    ...navConfig
+      .filter((item) => item.id !== "ai" || commandMenuEnabled)
+      .map((item) => ({
+        id: item.id,
+        icon: <item.icon className="w-4 h-4" />,
+        label: item.label,
+      })),
     ...(showDevSection
       ? [
           {
@@ -179,6 +192,7 @@ export function SettingsPage() {
           {section === "appearance" && <AppearanceSettings />}
           {section === "formatting" && <CJKFormattingSettings />}
           {section === "markdown" && <MarkdownSettings />}
+          {section === "ai" && commandMenuEnabled && <AiSettings />}
           {section === "shortcuts" && <ShortcutsSettings />}
           {section === "general" && <GeneralSettings />}
           {section === "files" && <FilesSettings />}

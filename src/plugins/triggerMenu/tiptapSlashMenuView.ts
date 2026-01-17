@@ -285,7 +285,11 @@ export class SlashMenuView {
   private runItem(item: SlashMenuItem) {
     if (!this.match) return;
     this.editor.chain().focus().deleteRange(this.match.range).run();
-    void item.action?.();
+    void item.action?.({
+      editor: this.editor,
+      query: this.match.query,
+      range: this.match.range,
+    });
     this.hide();
   }
 

@@ -63,8 +63,8 @@
 
 /* Selected item - accent background, white text/icons */
 .trigger-menu-item.selected {
-  background: var(--primary-color, #0066cc);
-  color: white;
+  background: var(--accent-bg);
+  color: var(--accent-primary);
 }
 
 /* Icon container */
@@ -92,7 +92,7 @@
 /* Selected icon - full opacity white */
 .trigger-menu-item.selected .trigger-menu-item-icon {
   opacity: 1;
-  color: white;
+  color: inherit;
 }
 
 /* Label */
@@ -124,7 +124,7 @@
 
 .trigger-menu-item.selected .trigger-menu-item-chevron {
   opacity: 1;
-  color: white;
+  color: inherit;
 }
 
 /* Empty state */

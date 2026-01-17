@@ -1,5 +1,6 @@
 import type { EditorView } from "@tiptap/pm/view";
-import { parseSlashTrigger } from "./tiptapSlashMenuUtils";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { parseTrigger } from "./tiptapSlashMenuUtils";
 
 export type SlashMatch = {
   query: string;
@@ -18,6 +19,8 @@ function isInCodeBlock(view: EditorView): boolean {
 
 export function findSlashMenuMatch(view: EditorView): SlashMatch | null {
   const { state } = view;
+  const commandMenuEnabled = useSettingsStore.getState().advanced?.enableCommandMenu ?? false;
+  if (!commandMenuEnabled) return null;
   if (!state.selection.empty) return null;
   if (isInCodeBlock(view)) return null;
 
@@ -25,12 +28,12 @@ export function findSlashMenuMatch(view: EditorView): SlashMatch | null {
   if (!$from.parent.isTextblock) return null;
 
   const textBefore = $from.parent.textBetween(0, $from.parentOffset, "\n", "\n");
-  const parsed = parseSlashTrigger(textBefore);
+  const trigger = useSettingsStore.getState().ai?.commandTrigger ?? "// ";
+  const parsed = parseTrigger(textBefore, trigger);
   if (!parsed) return null;
 
-  const from = $from.start() + parsed.slashIndex;
+  const from = $from.start() + parsed.triggerIndex;
   const to = $from.pos;
 
   return { query: parsed.query, range: { from, to }, coords: view.coordsAtPos(to) };
 }
-

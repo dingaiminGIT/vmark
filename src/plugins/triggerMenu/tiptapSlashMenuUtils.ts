@@ -1,23 +1,58 @@
+import type { Editor as TiptapEditor } from "@tiptap/core";
+
+export type SlashMenuActionContext = {
+  editor: TiptapEditor;
+  query: string;
+  range: { from: number; to: number };
+};
+
 export interface SlashMenuItem {
   label: string;
   icon: string;
   group?: string;
   keywords?: string[];
-  action?: () => void | boolean | Promise<void>;
+  action?: (context: SlashMenuActionContext) => void | boolean | Promise<void>;
   children?: SlashMenuItem[];
 }
 
-export function parseSlashTrigger(textBeforeCursor: string): { query: string; slashIndex: number } | null {
-  const match = /(?:^|\s)\/([^\s]*)$/.exec(textBeforeCursor);
-  if (!match) return null;
+export function parseTrigger(
+  textBeforeCursor: string,
+  trigger: string
+): { query: string; triggerIndex: number } | null {
+  const triggerIndex = textBeforeCursor.lastIndexOf(trigger);
+  if (triggerIndex === -1) return null;
 
-  const slashIndexInMatch = match[0].indexOf("/");
-  if (slashIndexInMatch === -1) return null;
+  const query = textBeforeCursor.slice(triggerIndex + trigger.length);
+  if (/\s/.test(query)) return null;
 
-  return {
-    query: match[1] ?? "",
-    slashIndex: match.index + slashIndexInMatch,
-  };
+  if (shouldIgnoreTrigger(textBeforeCursor, trigger, triggerIndex)) return null;
+
+  return { query, triggerIndex };
+}
+
+function shouldIgnoreTrigger(
+  textBeforeCursor: string,
+  trigger: string,
+  triggerIndex: number
+): boolean {
+  const charBefore = triggerIndex > 0 ? textBeforeCursor[triggerIndex - 1] : "";
+
+  switch (trigger) {
+    case "// ": {
+      if (charBefore === "/" || charBefore === ":") return true; // Avoid "/// " and "http:// "
+      return false;
+    }
+    case ";; ": {
+      if (charBefore === ";") return true; // Avoid ";;; "
+      return false;
+    }
+    case ",, ": {
+      if (charBefore === ",") return true; // Avoid ",,, "
+      return false;
+    }
+    default:
+      return false;
+  }
 }
 
 function flattenLeafItems(items: SlashMenuItem[], group?: string): SlashMenuItem[] {

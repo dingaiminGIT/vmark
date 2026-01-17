@@ -157,6 +157,12 @@ export type HtmlRenderingMode = "hidden" | "sanitized" | "sanitizedWithStyles";
 
 export type MarkdownPasteMode = "auto" | "off";
 
+export type AiCommandTrigger = ";; " | ",, " | "// ";
+
+export interface AdvancedSettingsState {
+  enableCommandMenu: boolean;
+}
+
 export interface MarkdownSettings {
   preserveLineBreaks: boolean; // Don't collapse blank lines
   showBrTags: boolean; // Display <br> tags visibly
@@ -173,6 +179,10 @@ export interface MarkdownSettings {
   // Spell check
   spellCheckEnabled: boolean;
   spellCheckLanguages: SpellCheckLanguage[];
+}
+
+export interface AiSettings {
+  commandTrigger: AiCommandTrigger;
 }
 
 export interface GeneralSettings {
@@ -193,6 +203,8 @@ interface SettingsState {
   appearance: AppearanceSettings;
   cjkFormatting: CJKFormattingSettings;
   markdown: MarkdownSettings;
+  ai: AiSettings;
+  advanced: AdvancedSettingsState;
   // UI state
   showDevSection: boolean;
 }
@@ -213,6 +225,14 @@ interface SettingsActions {
   updateMarkdownSetting: <K extends keyof MarkdownSettings>(
     key: K,
     value: MarkdownSettings[K]
+  ) => void;
+  updateAiSetting: <K extends keyof AiSettings>(
+    key: K,
+    value: AiSettings[K]
+  ) => void;
+  updateAdvancedSetting: <K extends keyof AdvancedSettingsState>(
+    key: K,
+    value: AdvancedSettingsState[K]
   ) => void;
   toggleDevSection: () => void;
   resetSettings: () => void;
@@ -281,11 +301,17 @@ const initialState: SettingsState = {
     spellCheckEnabled: false,
     spellCheckLanguages: ["en"],
   },
+  ai: {
+    commandTrigger: "// ",
+  },
+  advanced: {
+    enableCommandMenu: false,
+  },
   showDevSection: false,
 };
 
 // Object sections that can be updated with createSectionUpdater
-type ObjectSections = "general" | "appearance" | "cjkFormatting" | "markdown";
+type ObjectSections = "general" | "appearance" | "cjkFormatting" | "markdown" | "ai" | "advanced";
 
 // Helper to create section updaters - reduces duplication
 const createSectionUpdater = <T extends ObjectSections>(
@@ -305,6 +331,8 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
       updateAppearanceSetting: createSectionUpdater(set, "appearance"),
       updateCJKFormattingSetting: createSectionUpdater(set, "cjkFormatting"),
       updateMarkdownSetting: createSectionUpdater(set, "markdown"),
+      updateAiSetting: createSectionUpdater(set, "ai"),
+      updateAdvancedSetting: createSectionUpdater(set, "advanced"),
 
       toggleDevSection: () => set((state) => ({ showDevSection: !state.showDevSection })),
       resetSettings: () => set(structuredClone(initialState)),

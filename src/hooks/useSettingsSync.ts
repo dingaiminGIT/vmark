@@ -38,6 +38,22 @@ export function useSettingsSync() {
             }
           }
 
+          // Sync AI settings
+          if (parsed.state?.ai) {
+            const newAi = parsed.state.ai;
+            if (JSON.stringify(currentState.ai) !== JSON.stringify(newAi)) {
+              updates.ai = newAi;
+            }
+          }
+
+          // Sync advanced settings
+          if (parsed.state?.advanced) {
+            const newAdvanced = parsed.state.advanced;
+            if (JSON.stringify(currentState.advanced) !== JSON.stringify(newAdvanced)) {
+              updates.advanced = newAdvanced;
+            }
+          }
+
           // Apply updates if any
           if (Object.keys(updates).length > 0) {
             useSettingsStore.setState(updates);

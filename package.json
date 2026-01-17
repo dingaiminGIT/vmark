@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "eslint src",
-    "check:all": "pnpm lint && pnpm test && pnpm build"
+    "lint:selection-styles": "node scripts/check-selection-styles.mjs",
+    "check:all": "pnpm lint && pnpm lint:selection-styles && pnpm test && pnpm build"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
