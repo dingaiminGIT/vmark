@@ -99,4 +99,12 @@ VMark is available for macOS, Windows, and Linux. Download the latest version an
 
 [Get VMark →](/download)
 
+---
+
+## About the Author
+
+VMark is created by **[@xiaolai](https://x.com/xiaolai)**, a writer and developer passionate about building tools for better writing experiences.
+
+[Visit lixiaolai.com →](https://lixiaolai.com)
+
 </div>

@@ -40,11 +40,12 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/xiaolai/vmark' }
+      { icon: 'github', link: 'https://github.com/xiaolai/vmark' },
+      { icon: 'x', link: 'https://x.com/xiaolai' }
     ],
 
     footer: {
-      message: 'Built with VitePress',
+      message: 'Created by <a href="https://x.com/xiaolai" target="_blank">@xiaolai</a> · <a href="https://lixiaolai.com" target="_blank">lixiaolai.com</a>',
       copyright: 'Copyright © 2026-present VMark'
     },
 
