@@ -45,6 +45,9 @@ interface WebSocketBridgeConfig {
   reconnectDelay?: number;    // Base reconnect delay in ms (default: 1000)
   maxReconnectDelay?: number; // Max reconnect delay in ms (default: 30000)
   logger?: Logger;            // Optional custom logger
+  maxRequestsPerSecond?: number; // Rate limit (default: 100, 0 = unlimited)
+  queueWhileDisconnected?: boolean; // Queue requests during reconnection (default: false)
+  maxQueueSize?: number;      // Max queued requests (default: 100)
 }
 ```
 
@@ -166,6 +169,32 @@ const unsubscribe = bridge.onConnectionChange((connected) => {
 
 // Later: unsubscribe()
 ```
+
+## Rate Limiting
+
+The bridge includes built-in rate limiting to prevent overwhelming VMark:
+
+```typescript
+const bridge = new WebSocketBridge({
+  maxRequestsPerSecond: 50, // Limit to 50 requests/second
+});
+```
+
+Set to `0` for unlimited requests. Exceeding the rate limit throws `Error: Rate limit exceeded`.
+
+## Request Queueing
+
+Enable request queueing to buffer requests during temporary disconnections:
+
+```typescript
+const bridge = new WebSocketBridge({
+  autoReconnect: true,
+  queueWhileDisconnected: true,
+  maxQueueSize: 50,
+});
+```
+
+Queued requests are automatically sent when the connection is restored. If the queue fills, new requests throw `Error: Request queue full`.
 
 ## Error Handling
 

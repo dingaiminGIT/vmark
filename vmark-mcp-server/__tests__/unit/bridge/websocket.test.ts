@@ -364,4 +364,215 @@ describe('WebSocketBridge', () => {
       await expect(sendPromise).rejects.toThrow('Connection lost');
     });
   });
+
+  describe('rate limiting', () => {
+    it('should reject requests when rate limit exceeded', async () => {
+      const rateLimitedBridge = new WebSocketBridge({
+        port: TEST_PORT,
+        autoReconnect: false,
+        maxRequestsPerSecond: 2,
+      });
+
+      await rateLimitedBridge.connect();
+
+      // Set up server to respond
+      serverConnections[0].on('message', (data) => {
+        const message = JSON.parse(data.toString()) as WsMessage;
+        const response: WsMessage = {
+          id: message.id,
+          type: 'response',
+          payload: { success: true, data: 'ok' },
+        };
+        serverConnections[0].send(JSON.stringify(response));
+      });
+
+      // First 2 requests should succeed
+      await rateLimitedBridge.send({ type: 'test1' });
+      await rateLimitedBridge.send({ type: 'test2' });
+
+      // Third request should be rate limited
+      await expect(rateLimitedBridge.send({ type: 'test3' })).rejects.toThrow(
+        'Rate limit exceeded'
+      );
+
+      await rateLimitedBridge.disconnect();
+    });
+
+    it('should allow requests after rate limit window passes', async () => {
+      const rateLimitedBridge = new WebSocketBridge({
+        port: TEST_PORT,
+        autoReconnect: false,
+        maxRequestsPerSecond: 2,
+      });
+
+      await rateLimitedBridge.connect();
+
+      serverConnections[0].on('message', (data) => {
+        const message = JSON.parse(data.toString()) as WsMessage;
+        const response: WsMessage = {
+          id: message.id,
+          type: 'response',
+          payload: { success: true, data: 'ok' },
+        };
+        serverConnections[0].send(JSON.stringify(response));
+      });
+
+      // Exhaust rate limit
+      await rateLimitedBridge.send({ type: 'test1' });
+      await rateLimitedBridge.send({ type: 'test2' });
+
+      // Wait for token refill
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+
+      // Should work again
+      const result = await rateLimitedBridge.send({ type: 'test3' });
+      expect(result.success).toBe(true);
+
+      await rateLimitedBridge.disconnect();
+    });
+
+    it('should not rate limit when maxRequestsPerSecond is 0', async () => {
+      const unlimitedBridge = new WebSocketBridge({
+        port: TEST_PORT,
+        autoReconnect: false,
+        maxRequestsPerSecond: 0, // Unlimited
+      });
+
+      await unlimitedBridge.connect();
+
+      serverConnections[0].on('message', (data) => {
+        const message = JSON.parse(data.toString()) as WsMessage;
+        const response: WsMessage = {
+          id: message.id,
+          type: 'response',
+          payload: { success: true, data: 'ok' },
+        };
+        serverConnections[0].send(JSON.stringify(response));
+      });
+
+      // Should not rate limit
+      for (let i = 0; i < 10; i++) {
+        const result = await unlimitedBridge.send({ type: `test${i}` });
+        expect(result.success).toBe(true);
+      }
+
+      await unlimitedBridge.disconnect();
+    });
+  });
+
+  describe('request queueing', () => {
+    it('should queue requests when disconnected and queueing enabled', async () => {
+      const queueBridge = new WebSocketBridge({
+        port: TEST_PORT,
+        autoReconnect: true,
+        queueWhileDisconnected: true,
+        maxQueueSize: 10,
+        reconnectDelay: 100,
+      });
+
+      // Set up handler for all connections (including reconnects)
+      server.on('connection', (ws) => {
+        ws.on('message', (data) => {
+          const message = JSON.parse(data.toString()) as WsMessage;
+          const response: WsMessage = {
+            id: message.id,
+            type: 'response',
+            payload: { success: true, data: 'queued-response' },
+          };
+          ws.send(JSON.stringify(response));
+        });
+      });
+
+      await queueBridge.connect();
+
+      // Force disconnect
+      serverConnections[0].close();
+
+      // Wait for bridge to notice disconnect
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Send while disconnected - should queue
+      const sendPromise = queueBridge.send<string>({ type: 'queued.request' });
+
+      // Wait for reconnection and queue flush
+      const result = await sendPromise;
+      expect(result.success).toBe(true);
+      expect(result.data).toBe('queued-response');
+
+      await queueBridge.disconnect();
+    }, 10000);
+
+    it('should reject when queue is full', async () => {
+      const queueBridge = new WebSocketBridge({
+        port: TEST_PORT,
+        autoReconnect: true,
+        queueWhileDisconnected: true,
+        maxQueueSize: 2,
+        reconnectDelay: 30000, // Very long delay to prevent reconnect
+      });
+
+      await queueBridge.connect();
+
+      // Force disconnect
+      serverConnections[0].close();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Fill queue - catch to avoid unhandled rejections on disconnect
+      const p1 = queueBridge.send({ type: 'queued1' }).catch(() => {});
+      const p2 = queueBridge.send({ type: 'queued2' }).catch(() => {});
+
+      // Third request should fail
+      await expect(queueBridge.send({ type: 'queued3' })).rejects.toThrow('Request queue full');
+
+      await queueBridge.disconnect();
+      // Wait for queued promises to reject
+      await Promise.all([p1, p2]);
+    });
+
+    it('should reject queued requests on intentional disconnect', async () => {
+      const queueBridge = new WebSocketBridge({
+        port: TEST_PORT,
+        autoReconnect: true,
+        queueWhileDisconnected: true,
+        maxQueueSize: 10,
+        reconnectDelay: 30000, // Very long delay to prevent reconnect during test
+      });
+
+      await queueBridge.connect();
+
+      // Force disconnect from server side
+      serverConnections[0].close();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Queue a request (don't await)
+      const sendPromise = queueBridge.send({ type: 'queued.request' });
+
+      // Give it a moment to queue
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Intentionally disconnect - should reject queued request
+      await queueBridge.disconnect();
+
+      await expect(sendPromise).rejects.toThrow('Connection closed');
+    });
+
+    it('should not queue when queueWhileDisconnected is false', async () => {
+      const noQueueBridge = new WebSocketBridge({
+        port: TEST_PORT,
+        autoReconnect: true,
+        queueWhileDisconnected: false,
+      });
+
+      await noQueueBridge.connect();
+
+      // Force disconnect
+      serverConnections[0].close();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should reject immediately
+      await expect(noQueueBridge.send({ type: 'test' })).rejects.toThrow('Not connected');
+
+      await noQueueBridge.disconnect();
+    });
+  });
 });

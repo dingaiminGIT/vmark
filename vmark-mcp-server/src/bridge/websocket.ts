@@ -49,6 +49,12 @@ export interface WebSocketBridgeConfig {
   maxReconnectDelay?: number;
   /** Optional logger for debugging (default: silent) */
   logger?: Logger;
+  /** Max requests per second for rate limiting (default: 100, 0 = unlimited) */
+  maxRequestsPerSecond?: number;
+  /** Queue requests while disconnected if autoReconnect is enabled (default: false) */
+  queueWhileDisconnected?: boolean;
+  /** Maximum queue size when disconnected (default: 100) */
+  maxQueueSize?: number;
 }
 
 /**
@@ -58,6 +64,15 @@ interface PendingRequest {
   resolve: (response: BridgeResponse) => void;
   reject: (error: Error) => void;
   timer: ReturnType<typeof setTimeout>;
+}
+
+/**
+ * Queued request waiting for reconnection.
+ */
+interface QueuedRequest {
+  request: BridgeRequest;
+  resolve: (response: BridgeResponse) => void;
+  reject: (error: Error) => void;
 }
 
 /**
@@ -81,6 +96,9 @@ export class WebSocketBridge implements Bridge {
   private readonly reconnectDelay: number;
   private readonly maxReconnectDelay: number;
   private readonly logger: Logger;
+  private readonly maxRequestsPerSecond: number;
+  private readonly queueWhileDisconnected: boolean;
+  private readonly maxQueueSize: number;
 
   private ws: WebSocket | null = null;
   private connected = false;
@@ -92,6 +110,13 @@ export class WebSocketBridge implements Bridge {
   private connectionCallbacks: Set<(connected: boolean) => void> = new Set();
   private intentionalDisconnect = false;
 
+  // Rate limiting state (token bucket)
+  private rateLimitTokens: number;
+  private rateLimitLastRefill: number;
+
+  // Request queue for disconnected state
+  private requestQueue: QueuedRequest[] = [];
+
   constructor(config: WebSocketBridgeConfig = {}) {
     this.host = config.host ?? 'localhost';
     this.port = config.port ?? 9224;
@@ -101,6 +126,13 @@ export class WebSocketBridge implements Bridge {
     this.reconnectDelay = config.reconnectDelay ?? 1000;
     this.maxReconnectDelay = config.maxReconnectDelay ?? 30000;
     this.logger = config.logger ?? nullLogger;
+    this.maxRequestsPerSecond = config.maxRequestsPerSecond ?? 100;
+    this.queueWhileDisconnected = config.queueWhileDisconnected ?? false;
+    this.maxQueueSize = config.maxQueueSize ?? 100;
+
+    // Initialize rate limiter
+    this.rateLimitTokens = this.maxRequestsPerSecond;
+    this.rateLimitLastRefill = Date.now();
   }
 
   /**
@@ -115,6 +147,37 @@ export class WebSocketBridge implements Bridge {
    */
   private nextRequestId(): string {
     return `req_${++this.requestId}_${Date.now()}`;
+  }
+
+  /**
+   * Check rate limit and consume a token if available.
+   * Returns true if request can proceed, false if rate limited.
+   */
+  private checkRateLimit(): boolean {
+    // Rate limiting disabled
+    if (this.maxRequestsPerSecond <= 0) {
+      return true;
+    }
+
+    const now = Date.now();
+    const elapsed = now - this.rateLimitLastRefill;
+
+    // Refill tokens based on elapsed time
+    if (elapsed >= 1000) {
+      const refillCount = Math.floor(elapsed / 1000) * this.maxRequestsPerSecond;
+      this.rateLimitTokens = Math.min(
+        this.maxRequestsPerSecond,
+        this.rateLimitTokens + refillCount
+      );
+      this.rateLimitLastRefill = now - (elapsed % 1000);
+    }
+
+    if (this.rateLimitTokens > 0) {
+      this.rateLimitTokens--;
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -162,6 +225,12 @@ export class WebSocketBridge implements Bridge {
           this.connecting = false;
           this.reconnectAttempts = 0;
           this.notifyConnectionChange(true);
+
+          // Flush queued requests after reconnection
+          this.flushRequestQueue().catch((error) => {
+            this.logger.error('Failed to flush request queue:', error);
+          });
+
           resolve();
         });
 
@@ -199,14 +268,20 @@ export class WebSocketBridge implements Bridge {
       this.reconnectTimer = null;
     }
 
-    if (this.ws) {
-      // Reject all pending requests
-      for (const [id, pending] of this.pendingRequests) {
-        clearTimeout(pending.timer);
-        pending.reject(new Error('Connection closed'));
-        this.pendingRequests.delete(id);
-      }
+    // Reject all pending requests
+    for (const [id, pending] of this.pendingRequests) {
+      clearTimeout(pending.timer);
+      pending.reject(new Error('Connection closed'));
+      this.pendingRequests.delete(id);
+    }
 
+    // Reject all queued requests
+    for (const queued of this.requestQueue) {
+      queued.reject(new Error('Connection closed'));
+    }
+    this.requestQueue = [];
+
+    if (this.ws) {
       if (this.ws.readyState === WebSocket.OPEN) {
         this.ws.close();
       }
@@ -231,10 +306,50 @@ export class WebSocketBridge implements Bridge {
   async send<T = unknown>(
     request: BridgeRequest
   ): Promise<BridgeResponse & { data: T }> {
+    // Check rate limit
+    if (!this.checkRateLimit()) {
+      throw new Error('Rate limit exceeded');
+    }
+
+    // Queue if disconnected and queueing is enabled
     if (!this.isConnected()) {
+      if (this.queueWhileDisconnected && this.autoReconnect && !this.intentionalDisconnect) {
+        return this.queueRequest(request);
+      }
       throw new Error('Not connected to VMark');
     }
 
+    return this.sendImmediate(request);
+  }
+
+  /**
+   * Queue a request for later when reconnected.
+   */
+  private queueRequest<T = unknown>(
+    request: BridgeRequest
+  ): Promise<BridgeResponse & { data: T }> {
+    return new Promise((resolve, reject) => {
+      if (this.requestQueue.length >= this.maxQueueSize) {
+        reject(new Error('Request queue full'));
+        return;
+      }
+
+      this.requestQueue.push({
+        request,
+        resolve: resolve as (response: BridgeResponse) => void,
+        reject,
+      });
+
+      this.logger.debug(`Request queued (queue size: ${this.requestQueue.length})`);
+    });
+  }
+
+  /**
+   * Send a request immediately (internal use).
+   */
+  private sendImmediate<T = unknown>(
+    request: BridgeRequest
+  ): Promise<BridgeResponse & { data: T }> {
     const id = this.nextRequestId();
 
     return new Promise((resolve, reject) => {
@@ -263,6 +378,28 @@ export class WebSocketBridge implements Bridge {
         reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
+  }
+
+  /**
+   * Flush queued requests after reconnection.
+   */
+  private async flushRequestQueue(): Promise<void> {
+    if (this.requestQueue.length === 0) {
+      return;
+    }
+
+    this.logger.debug(`Flushing ${this.requestQueue.length} queued requests`);
+    const queue = [...this.requestQueue];
+    this.requestQueue = [];
+
+    for (const { request, resolve, reject } of queue) {
+      try {
+        const response = await this.sendImmediate(request);
+        resolve(response);
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    }
   }
 
   /**

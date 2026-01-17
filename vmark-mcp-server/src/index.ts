@@ -12,8 +12,18 @@
  */
 
 // Re-export public API
-export { VMarkMcpServer, resolveWindowId, validateNonNegativeInteger } from './server.js';
-export type { VMarkMcpServerConfig } from './server.js';
+export {
+  VMarkMcpServer,
+  resolveWindowId,
+  validateNonNegativeInteger,
+  getStringArg,
+  requireStringArg,
+  getNumberArg,
+  requireNumberArg,
+  getBooleanArg,
+  getWindowIdArg,
+} from './server.js';
+export type { VMarkMcpServerConfig, ToolArgs } from './server.js';
 
 // Bridge implementations
 export { WebSocketBridge } from './bridge/websocket.js';

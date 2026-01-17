@@ -226,3 +226,65 @@ export function validateNonNegativeInteger(
   }
   return null;
 }
+
+// ============ Typed Arg Extractors ============
+
+/**
+ * Tool arguments record type.
+ */
+export type ToolArgs = Record<string, unknown>;
+
+/**
+ * Extract a string argument, returning undefined if not present or not a string.
+ */
+export function getStringArg(args: ToolArgs, key: string): string | undefined {
+  const value = args[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+/**
+ * Extract a required string argument.
+ * Throws if not present or empty.
+ */
+export function requireStringArg(args: ToolArgs, key: string): string {
+  const value = getStringArg(args, key);
+  if (value === undefined || value.length === 0) {
+    throw new Error(`${key} must be a non-empty string`);
+  }
+  return value;
+}
+
+/**
+ * Extract a number argument, returning undefined if not present or not a number.
+ */
+export function getNumberArg(args: ToolArgs, key: string): number | undefined {
+  const value = args[key];
+  return typeof value === 'number' ? value : undefined;
+}
+
+/**
+ * Extract a required number argument.
+ * Throws if not present.
+ */
+export function requireNumberArg(args: ToolArgs, key: string): number {
+  const value = getNumberArg(args, key);
+  if (value === undefined) {
+    throw new Error(`${key} must be a number`);
+  }
+  return value;
+}
+
+/**
+ * Extract a boolean argument, returning undefined if not present or not a boolean.
+ */
+export function getBooleanArg(args: ToolArgs, key: string): boolean | undefined {
+  const value = args[key];
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+/**
+ * Extract windowId argument with 'focused' as default.
+ */
+export function getWindowIdArg(args: ToolArgs): WindowId {
+  return resolveWindowId(getStringArg(args, 'windowId'));
+}
