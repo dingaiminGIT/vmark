@@ -1,32 +1,28 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { useWorkspaceStore, type WorkspaceConfig } from "@/stores/workspaceStore";
-import { useTabStore } from "@/stores/tabStore";
-import { persistWorkspaceSession } from "@/hooks/workspaceSession";
+import { updateWorkspaceConfig, toggleShowHiddenFiles } from "@/hooks/workspaceConfig";
 
-const WINDOW_LABEL = "main";
-
-function resetStores() {
+function resetWorkspace() {
   useWorkspaceStore.setState({
     rootPath: null,
     config: null,
     isWorkspaceMode: false,
   });
-  useTabStore.getState().removeWindow(WINDOW_LABEL);
 }
 
-describe("persistWorkspaceSession", () => {
+describe("workspaceConfig", () => {
   beforeEach(() => {
-    resetStores();
+    resetWorkspace();
     vi.clearAllMocks();
   });
 
-  it("does nothing when not in workspace mode", async () => {
-    await persistWorkspaceSession(WINDOW_LABEL);
+  it("does nothing when workspace is not active", async () => {
+    await updateWorkspaceConfig({ showHiddenFiles: true });
     expect(invoke).not.toHaveBeenCalled();
   });
 
-  it("persists lastOpenTabs when workspace is active", async () => {
+  it("persists updates when workspace is active", async () => {
     const config: WorkspaceConfig = {
       version: 1,
       excludeFolders: [".git"],
@@ -40,23 +36,19 @@ describe("persistWorkspaceSession", () => {
       isWorkspaceMode: true,
     });
 
-    const tabId = useTabStore.getState().createTab(WINDOW_LABEL, "/project/a.md");
-    useTabStore.getState().createTab(WINDOW_LABEL, "/project/b.md");
-    // Update active tab for consistency
-    useTabStore.getState().setActiveTab(WINDOW_LABEL, tabId);
-
-    await persistWorkspaceSession(WINDOW_LABEL);
+    await updateWorkspaceConfig({ showHiddenFiles: true });
 
     expect(invoke).toHaveBeenCalledWith("write_workspace_config", {
       rootPath: "/project",
       config: {
         ...config,
-        lastOpenTabs: ["/project/a.md", "/project/b.md"],
+        showHiddenFiles: true,
       },
     });
+    expect(useWorkspaceStore.getState().config?.showHiddenFiles).toBe(true);
   });
 
-  it("skips untitled tabs when persisting", async () => {
+  it("toggles hidden files", async () => {
     const config: WorkspaceConfig = {
       version: 1,
       excludeFolders: [".git"],
@@ -70,16 +62,13 @@ describe("persistWorkspaceSession", () => {
       isWorkspaceMode: true,
     });
 
-    useTabStore.getState().createTab(WINDOW_LABEL, "/project/a.md");
-    useTabStore.getState().createTab(WINDOW_LABEL, null);
-
-    await persistWorkspaceSession(WINDOW_LABEL);
+    await toggleShowHiddenFiles();
 
     expect(invoke).toHaveBeenCalledWith("write_workspace_config", {
       rootPath: "/project",
       config: {
         ...config,
-        lastOpenTabs: ["/project/a.md"],
+        showHiddenFiles: true,
       },
     });
   });

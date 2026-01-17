@@ -42,6 +42,9 @@ pub struct WorkspaceSettings {
     /// Folders to exclude from file tree (VMark extension)
     #[serde(rename = "vmark.excludeFolders", default)]
     pub exclude_folders: Vec<String>,
+    /// Show hidden files in file explorer (VMark extension)
+    #[serde(rename = "vmark.showHiddenFiles", default)]
+    pub show_hidden_files: bool,
     /// Last open tabs for session restore (VMark extension)
     #[serde(rename = "vmark.lastOpenTabs", default)]
     pub last_open_tabs: Vec<String>,
@@ -65,6 +68,7 @@ impl Default for WorkspaceFile {
                     "node_modules".to_string(),
                     ".vmark".to_string(),
                 ],
+                show_hidden_files: false,
                 last_open_tabs: vec![],
                 ai: None,
                 identity: None,
@@ -94,6 +98,8 @@ pub struct WorkspaceConfig {
     pub version: u32,
     #[serde(rename = "excludeFolders")]
     pub exclude_folders: Vec<String>,
+    #[serde(rename = "showHiddenFiles", default)]
+    pub show_hidden_files: bool,
     #[serde(rename = "lastOpenTabs")]
     pub last_open_tabs: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -111,6 +117,7 @@ impl Default for WorkspaceConfig {
                 "node_modules".to_string(),
                 ".vmark".to_string(),
             ],
+            show_hidden_files: false,
             last_open_tabs: vec![],
             ai: None,
             identity: None,
@@ -123,6 +130,7 @@ impl From<WorkspaceFile> for WorkspaceConfig {
         Self {
             version: 1,
             exclude_folders: file.settings.exclude_folders,
+            show_hidden_files: file.settings.show_hidden_files,
             last_open_tabs: file.settings.last_open_tabs,
             ai: file.settings.ai,
             identity: file.settings.identity,
@@ -138,6 +146,7 @@ impl From<WorkspaceConfig> for WorkspaceFile {
             }],
             settings: WorkspaceSettings {
                 exclude_folders: config.exclude_folders,
+                show_hidden_files: config.show_hidden_files,
                 last_open_tabs: config.last_open_tabs,
                 ai: config.ai,
                 identity: config.identity,
@@ -151,6 +160,7 @@ impl From<LegacyWorkspaceConfig> for WorkspaceConfig {
         Self {
             version: legacy.version,
             exclude_folders: legacy.exclude_folders,
+            show_hidden_files: false,
             last_open_tabs: legacy.last_open_tabs,
             ai: legacy.ai,
             identity: None, // Legacy configs don't have identity
@@ -326,6 +336,7 @@ mod tests {
         assert_eq!(ws.folders.len(), 1);
         assert_eq!(ws.folders[0].path, ".");
         assert!(ws.settings.exclude_folders.contains(&".git".to_string()));
+        assert!(!ws.settings.show_hidden_files);
     }
 
     #[test]
@@ -333,6 +344,7 @@ mod tests {
         let config = WorkspaceConfig {
             version: 1,
             exclude_folders: vec!["test".to_string()],
+            show_hidden_files: true,
             last_open_tabs: vec!["file.md".to_string()],
             ai: None,
             identity: None,
@@ -342,6 +354,7 @@ mod tests {
         let back: WorkspaceConfig = file.into();
 
         assert_eq!(back.exclude_folders, config.exclude_folders);
+        assert_eq!(back.show_hidden_files, config.show_hidden_files);
         assert_eq!(back.last_open_tabs, config.last_open_tabs);
     }
 
@@ -361,6 +374,7 @@ mod tests {
         let config = WorkspaceConfig {
             version: 1,
             exclude_folders: vec!["custom".to_string()],
+            show_hidden_files: false,
             last_open_tabs: vec!["doc.md".to_string()],
             ai: None,
             identity: None,

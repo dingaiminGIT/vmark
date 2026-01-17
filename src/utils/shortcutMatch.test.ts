@@ -35,4 +35,9 @@ describe("matchesShortcutEvent", () => {
     const event = makeEvent({ key: "?", shiftKey: true, metaKey: true });
     expect(matchesShortcutEvent(event, "Mod-Shift-/", "mac")).toBe(true);
   });
+
+  it("matches shifted . to >", () => {
+    const event = makeEvent({ key: ">", shiftKey: true, metaKey: true });
+    expect(matchesShortcutEvent(event, "Mod-Shift-.", "mac")).toBe(true);
+  });
 });

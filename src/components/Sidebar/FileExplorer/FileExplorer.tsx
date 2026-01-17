@@ -39,6 +39,9 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(
   const excludeFolders = useWorkspaceStore(
     (s) => s.config?.excludeFolders ?? EMPTY_FOLDERS
   );
+  const showHiddenFiles = useWorkspaceStore(
+    (s) => s.config?.showHiddenFiles ?? false
+  );
   const windowLabel = useWindowLabel();
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -56,6 +59,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, FileExplorerProps>(
 
   const { tree, isLoading, refresh } = useFileTree(rootPath, {
     excludeFolders,
+    showHidden: showHiddenFiles,
     watchId: windowLabel,
   });
   const {

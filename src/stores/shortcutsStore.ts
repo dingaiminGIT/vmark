@@ -27,6 +27,8 @@ export interface ShortcutDefinition {
   label: string;
   category: ShortcutCategory;
   defaultKey: string;
+  defaultKeyMac?: string;
+  defaultKeyOther?: string;
   description?: string;
   /** Menu item ID in Rust (for menu sync) */
   menuId?: string;
@@ -93,6 +95,7 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "typewriterMode", label: "Typewriter Mode", category: "view", defaultKey: "F9", menuId: "typewriter-mode" },
   { id: "wordWrap", label: "Toggle Word Wrap", category: "view", defaultKey: "Alt-z", menuId: "word-wrap" },
   { id: "viewHistory", label: "View History", category: "view", defaultKey: "Mod-Shift-h", menuId: "view-history" },
+  { id: "toggleHiddenFiles", label: "Toggle Hidden Files", category: "view", defaultKey: "Mod-Shift-.", defaultKeyOther: "Ctrl-h", description: "Show or hide hidden files in the file explorer" },
 
   // === File ===
   { id: "newFile", label: "New File", category: "file", defaultKey: "Mod-n", menuId: "new" },
@@ -129,6 +132,13 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
 
 // Build lookup map for quick access
 const shortcutMap = new Map(DEFAULT_SHORTCUTS.map(s => [s.id, s]));
+
+function resolveDefaultKey(def: ShortcutDefinition): string {
+  const isMac = isMacPlatform();
+  if (isMac && def.defaultKeyMac) return def.defaultKeyMac;
+  if (!isMac && def.defaultKeyOther) return def.defaultKeyOther;
+  return def.defaultKey;
+}
 
 // ============================================================================
 // Presets
@@ -198,14 +208,14 @@ export const useShortcutsStore = create<ShortcutsState & ShortcutsActions>()(
         const { customBindings } = get();
         if (customBindings[id]) return customBindings[id];
         const def = shortcutMap.get(id);
-        return def?.defaultKey ?? "";
+        return def ? resolveDefaultKey(def) : "";
       },
 
       getAllShortcuts: () => {
         const { customBindings } = get();
         const result: Record<string, string> = {};
         for (const def of DEFAULT_SHORTCUTS) {
-          result[def.id] = customBindings[def.id] ?? def.defaultKey;
+          result[def.id] = customBindings[def.id] ?? resolveDefaultKey(def);
         }
         return result;
       },
@@ -237,7 +247,7 @@ export const useShortcutsStore = create<ShortcutsState & ShortcutsActions>()(
 
         for (const def of DEFAULT_SHORTCUTS) {
           if (def.id === excludeId) continue;
-          const effectiveKey = customBindings[def.id] ?? def.defaultKey;
+          const effectiveKey = customBindings[def.id] ?? resolveDefaultKey(def);
           if (normalizeKey(effectiveKey) === normalizedKey) {
             return def;
           }
@@ -330,7 +340,7 @@ async function syncMenuShortcuts(shortcuts: Record<string, string>) {
     const menuShortcuts: Record<string, string> = {};
     for (const def of DEFAULT_SHORTCUTS) {
       if (def.menuId) {
-        const key = shortcuts[def.id] ?? def.defaultKey;
+        const key = shortcuts[def.id] ?? resolveDefaultKey(def);
         // Convert from ProseMirror format to Tauri format
         menuShortcuts[def.menuId] = prosemirrorToTauri(key);
       }

@@ -4,6 +4,7 @@ mod quit;
 mod watcher;
 mod window_manager;
 mod workspace;
+mod file_tree;
 
 use serde::Serialize;
 use std::sync::Mutex;
@@ -57,6 +58,7 @@ pub fn run() {
             watcher::stop_watching,
             watcher::stop_all_watchers,
             watcher::list_watchers,
+            file_tree::list_directory_entries,
             workspace::open_folder_dialog,
             workspace::read_workspace_config,
             workspace::write_workspace_config,

@@ -15,6 +15,7 @@ export interface WorkspaceConfig {
   version: 1;
   excludeFolders: string[];
   lastOpenTabs: string[]; // File paths for session restore
+  showHiddenFiles: boolean;
   ai?: Record<string, unknown>; // Future AI settings
   identity?: WorkspaceIdentity; // Workspace identity and trust info
 }
@@ -56,6 +57,7 @@ const DEFAULT_CONFIG: WorkspaceConfig = {
   version: 1,
   excludeFolders: DEFAULT_EXCLUDED_FOLDERS,
   lastOpenTabs: [],
+  showHiddenFiles: false,
 };
 
 export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
@@ -66,8 +68,8 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       isWorkspaceMode: false,
 
       openWorkspace: (rootPath, config = null) => {
-        // Clone config to avoid mutating the passed argument
-        const finalConfig = config ? { ...config } : { ...DEFAULT_CONFIG };
+        // Merge defaults to ensure new fields are populated
+        const finalConfig = { ...DEFAULT_CONFIG, ...(config ?? {}) };
         // Ensure workspace has an identity
         if (!finalConfig.identity) {
           finalConfig.identity = createWorkspaceIdentity();
@@ -93,7 +95,7 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
         if (!rootPath || !isWorkspaceMode) return;
 
         set({
-          config: config ?? { ...DEFAULT_CONFIG },
+          config: config ? { ...DEFAULT_CONFIG, ...config } : { ...DEFAULT_CONFIG },
         });
       },
 

@@ -5,6 +5,13 @@ export interface FileNode {
   children?: FileNode[];
 }
 
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  isHidden: boolean;
+}
+
 /**
  * File system change event from watcher.
  * Includes watchId to scope events to their originating watcher.

@@ -30,6 +30,7 @@ function matchesShiftedSymbol(event: KeyboardEvent, token: string): boolean {
   if (normalized === "/" && event.key === "?") return true;
   if (normalized === "=" && event.key === "+") return true;
   if (normalized === "-" && event.key === "_") return true;
+  if (normalized === "." && event.key === ">") return true;
   return false;
 }
 
