@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: VMark
-  text: A Local-First Markdown Editor
+  text: A Markdown Editor
   tagline: Write beautifully with dual editing modes, CJK formatting, and seamless rich text / source switching
   image:
     src: /logo.png
@@ -17,39 +17,48 @@ hero:
       link: /guide/
 
 features:
-  - icon: ✍️
+  - icon:
+      src: /icons/edit.svg
     title: Dual Editing Modes
     details: Switch seamlessly between rich text (WYSIWYG) and source mode. Edit naturally with formatting preview or dive into raw Markdown.
 
-  - icon: 💾
+  - icon:
+      src: /icons/hard-drive.svg
     title: Local-First
     details: All your data stays on your machine. No cloud dependencies, no accounts required. Your files, your privacy.
 
-  - icon: 🈳
+  - icon:
+      src: /icons/languages.svg
     title: CJK Formatting
     details: Built-in Chinese/Japanese/Korean text formatting with 19 configurable rules for perfect typography.
 
-  - icon: 📊
+  - icon:
+      src: /icons/git-branch.svg
     title: Mermaid Diagrams
     details: Render flowcharts, sequence diagrams, Gantt charts, and more directly in your documents.
 
-  - icon: 🧮
+  - icon:
+      src: /icons/sigma.svg
     title: LaTeX Math
     details: KaTeX-powered mathematical equations with full syntax support and live preview.
 
-  - icon: 🎯
+  - icon:
+      src: /icons/focus.svg
     title: Focus & Typewriter Modes
     details: Distraction-free writing with focus mode and typewriter scrolling for deep work sessions.
 
-  - icon: 📁
+  - icon:
+      src: /icons/folder-open.svg
     title: Workspace Support
     details: Open folders as workspaces with file tree navigation and easy file switching.
 
-  - icon: ⌨️
+  - icon:
+      src: /icons/keyboard.svg
     title: Keyboard-First
     details: Comprehensive keyboard shortcuts for everything. Customizable to match your workflow.
 
-  - icon: 🎨
+  - icon:
+      src: /icons/palette.svg
     title: Beautiful Themes
     details: Five built-in themes including White, Paper, Mint, Sepia, and Night mode for comfortable writing.
 ---

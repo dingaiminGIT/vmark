@@ -7,7 +7,7 @@ export default defineConfig({
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     ['meta', { name: 'theme-color', content: '#4a6fa5' }],
-    ['meta', { name: 'apple-mobile-web-app-capable', content: 'yes' }],
+    ['meta', { name: 'mobile-web-app-capable', content: 'yes' }],
     ['meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'black' }],
   ],
 
@@ -37,8 +37,7 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'Made by <a href="https://x.com/xiaolai">@xiaolai</a> with <a href="https://claude.ai/code">Claude</a>, <a href="https://github.com/openai/codex">Codex</a>, <a href="https://github.com/google-gemini/gemini-cli">Gemini</a>',
-      copyright: 'Copyright © 2025 VMark'
+      copyright: 'Copyright © 2026 VMark'
     },
 
     search: {

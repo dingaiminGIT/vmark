@@ -270,6 +270,44 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
+/* Feature icon inline with title */
+.VPFeature .box {
+  display: block;
+}
+
+.VPFeature .box .VPImage {
+  display: inline-block;
+  vertical-align: middle;
+  width: 16px !important;
+  height: 16px !important;
+  margin-right: 6px;
+  margin-bottom: 0;
+  opacity: 0.7;
+}
+
+.VPFeature .box .title {
+  display: inline;
+  vertical-align: middle;
+}
+
+/* Theme-aware icon colors using CSS filter */
+[data-vmark-theme="white"] .VPFeature .box .VPImage,
+[data-vmark-theme="paper"] .VPFeature .box .VPImage {
+  filter: brightness(0) saturate(100%) invert(42%) sepia(15%) saturate(1095%) hue-rotate(178deg) brightness(92%) contrast(87%);
+}
+
+[data-vmark-theme="mint"] .VPFeature .box .VPImage {
+  filter: brightness(0) saturate(100%) invert(35%) sepia(25%) saturate(800%) hue-rotate(100deg) brightness(95%) contrast(90%);
+}
+
+[data-vmark-theme="sepia"] .VPFeature .box .VPImage {
+  filter: brightness(0) saturate(100%) invert(30%) sepia(40%) saturate(600%) hue-rotate(350deg) brightness(95%) contrast(90%);
+}
+
+[data-vmark-theme="night"] .VPFeature .box .VPImage {
+  filter: brightness(0) saturate(100%) invert(65%) sepia(30%) saturate(600%) hue-rotate(180deg) brightness(105%) contrast(95%);
+}
+
 /* Nav icons container */
 .nav-icons {
   display: flex;
