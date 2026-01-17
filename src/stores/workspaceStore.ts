@@ -194,10 +194,11 @@ export const useWorkspaceStore = create<WorkspaceState & WorkspaceActions>()(
       name: "vmark-workspace",
       // Use window-scoped storage for per-window workspace persistence
       storage: createJSONStorage(() => windowScopedStorage),
-      // Only persist workspace path, not config (config comes from .vmark file)
+      // Persist workspace state including config for seamless reload
       partialize: (state) => ({
         rootPath: state.rootPath,
         isWorkspaceMode: state.isWorkspaceMode,
+        config: state.config,
       }),
       // CRITICAL: Skip auto-hydration on store creation.
       // WindowContext will call setCurrentWindowLabel() first, then rehydrate()

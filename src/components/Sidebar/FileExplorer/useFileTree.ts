@@ -34,15 +34,13 @@ async function loadDirectoryRecursive(
 
       if (isFolder) {
         const children = await loadDirectoryRecursive(fullPath, options);
-        // Only include folders that have matching children
-        if (children.length > 0) {
-          nodes.push({
-            id: fullPath,
-            name,
-            isFolder: true,
-            children,
-          });
-        }
+        // Always include folders so users can right-click to add files
+        nodes.push({
+          id: fullPath,
+          name,
+          isFolder: true,
+          children,
+        });
       } else {
         nodes.push({
           id: fullPath,
