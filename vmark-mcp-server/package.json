@@ -1,0 +1,50 @@
+{
+  "name": "@vmark/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for VMark - expose Tiptap editor APIs to AI assistants",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "vmark-mcp-server": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "mcp",
+    "vmark",
+    "tiptap",
+    "editor",
+    "ai",
+    "claude",
+    "codex"
+  ],
+  "author": "VMark",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ws": "^8.18.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/ws": "^8.5.13",
+    "@vitest/coverage-v8": "^4.0.16",
+    "typescript": "~5.8.3",
+    "vitest": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}
