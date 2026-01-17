@@ -90,7 +90,13 @@
 
 .link-reference-dialog-field input:focus {
   outline: none;
-  border-color: var(--accent-color);
+  border-color: var(--border-color);
+  box-shadow: none;
+}
+
+.link-reference-dialog-field input:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .link-reference-dialog-preview {

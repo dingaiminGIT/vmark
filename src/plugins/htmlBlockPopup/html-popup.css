@@ -31,7 +31,14 @@
 }
 
 .html-popup-input:focus {
-  border-color: var(--primary-color, #0a84ff);
+  outline: none;
+  box-shadow: none;
+  border-color: var(--border-color);
+}
+
+.html-popup-input:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .html-popup-warning {

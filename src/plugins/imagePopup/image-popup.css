@@ -66,6 +66,12 @@
   box-shadow: none;
 }
 
+.image-popup-src:focus-visible,
+.image-popup-alt:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .image-popup-src::placeholder,
 .image-popup-alt::placeholder {
   color: var(--text-secondary);

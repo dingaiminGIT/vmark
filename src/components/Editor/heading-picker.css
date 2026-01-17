@@ -75,7 +75,13 @@
 
 .heading-picker-filter:focus {
   outline: none;
-  border-color: var(--accent-color);
+  border-color: var(--border-color);
+  box-shadow: none;
+}
+
+.heading-picker-filter:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .heading-picker-list {

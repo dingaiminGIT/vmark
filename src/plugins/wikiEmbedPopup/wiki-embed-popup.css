@@ -28,7 +28,14 @@
 }
 
 .wiki-embed-popup-target:focus {
-  border-color: var(--primary-color, #0a84ff);
+  outline: none;
+  box-shadow: none;
+  border-color: var(--border-color);
+}
+
+.wiki-embed-popup-target:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .wiki-embed-popup-preview {

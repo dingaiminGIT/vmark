@@ -31,7 +31,14 @@
 }
 
 .math-popup-input:focus {
-  border-color: var(--primary-color, #0a84ff);
+  outline: none;
+  box-shadow: none;
+  border-color: var(--border-color);
+}
+
+.math-popup-input:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .math-popup-preview {

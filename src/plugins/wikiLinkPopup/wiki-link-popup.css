@@ -30,7 +30,15 @@
 
 .wiki-link-popup-target:focus,
 .wiki-link-popup-alias:focus {
-  border-color: var(--primary-color, #0a84ff);
+  outline: none;
+  box-shadow: none;
+  border-color: var(--border-color);
+}
+
+.wiki-link-popup-target:focus-visible,
+.wiki-link-popup-alias:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .wiki-link-popup-preview {
