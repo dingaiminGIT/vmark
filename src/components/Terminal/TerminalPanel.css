@@ -1,0 +1,41 @@
+.terminal-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--terminal-bg, #1e1e1e);
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.terminal-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+  z-index: 10;
+  background: transparent;
+}
+
+.terminal-resize-handle:hover {
+  background-color: var(--primary-color);
+  opacity: 0.5;
+}
+
+.terminal-resize-handle:active {
+  background-color: var(--primary-color);
+  opacity: 0.8;
+}
+
+.terminal-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px 8px;
+}
+
+/* Dark theme - terminal is already dark by default */
+.dark-theme .terminal-panel {
+  border-top-color: var(--border-color);
+}

@@ -8,6 +8,7 @@
 import { useEffect } from "react";
 import { useEditorStore } from "@/stores/editorStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
+import { useTerminalStore } from "@/stores/terminalStore";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { matchesShortcutEvent } from "@/utils/shortcutMatch";
@@ -50,6 +51,13 @@ export function useViewShortcuts() {
       if (matchesShortcutEvent(e, wordWrapKey)) {
         e.preventDefault();
         useEditorStore.getState().toggleWordWrap();
+        return;
+      }
+
+      const terminalKey = shortcuts.getShortcut("toggleTerminal");
+      if (matchesShortcutEvent(e, terminalKey)) {
+        e.preventDefault();
+        useTerminalStore.getState().toggle();
       }
     };
 

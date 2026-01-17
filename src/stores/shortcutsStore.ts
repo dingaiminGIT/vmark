@@ -96,6 +96,7 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "wordWrap", label: "Toggle Word Wrap", category: "view", defaultKey: "Alt-z", menuId: "word-wrap" },
   { id: "viewHistory", label: "View History", category: "view", defaultKey: "Mod-Shift-h", menuId: "view-history" },
   { id: "toggleHiddenFiles", label: "Toggle Hidden Files", category: "view", defaultKey: "Mod-Shift-.", defaultKeyOther: "Ctrl-h", description: "Show or hide hidden files in the file explorer" },
+  { id: "toggleTerminal", label: "Toggle Terminal", category: "view", defaultKey: "Ctrl-`", menuId: "terminal", description: "Show or hide the integrated terminal" },
 
   // === File ===
   { id: "newFile", label: "New File", category: "file", defaultKey: "Mod-n", menuId: "new" },

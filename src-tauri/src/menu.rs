@@ -433,6 +433,13 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
                 true,
                 Some("Alt+CmdOrCtrl+1"),
             )?,
+            &MenuItem::with_id(
+                app,
+                "terminal",
+                "Toggle Terminal",
+                true,
+                Some("Ctrl+`"),
+            )?,
         ],
     )?;
 
@@ -850,6 +857,7 @@ fn create_menu_with_shortcuts(
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "sidebar", "Toggle Sidebar", true, get_accel("sidebar", "CmdOrCtrl+Shift+B"))?,
             &MenuItem::with_id(app, "outline", "Toggle Outline", true, get_accel("outline", "Alt+CmdOrCtrl+1"))?,
+            &MenuItem::with_id(app, "terminal", "Toggle Terminal", true, get_accel("terminal", "Ctrl+`"))?,
         ],
     )?;
 

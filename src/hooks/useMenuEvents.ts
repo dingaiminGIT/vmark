@@ -6,6 +6,7 @@ import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useEditorStore } from "@/stores/editorStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useTerminalStore } from "@/stores/terminalStore";
 import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { useTabStore } from "@/stores/tabStore";
 import { clearAllHistory } from "@/hooks/useHistoryRecovery";
@@ -79,6 +80,13 @@ export function useMenuEvents() {
       });
       if (cancelled) { unlistenWordWrap(); return; }
       unlistenRefs.current.push(unlistenWordWrap);
+
+      const unlistenTerminal = await currentWindow.listen<string>("menu:terminal", (event) => {
+        if (event.payload !== windowLabel) return;
+        useTerminalStore.getState().toggle();
+      });
+      if (cancelled) { unlistenTerminal(); return; }
+      unlistenRefs.current.push(unlistenTerminal);
 
       const convertLineEndings = (target: "lf" | "crlf") => {
         const tabId = useTabStore.getState().activeTabId[windowLabel];

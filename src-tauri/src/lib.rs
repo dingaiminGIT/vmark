@@ -2,6 +2,7 @@ mod mcp_bridge;
 mod mcp_server;
 mod menu;
 mod menu_events;
+mod pty;
 mod quit;
 mod watcher;
 mod window_manager;
@@ -71,9 +72,15 @@ pub fn run() {
             mcp_server::mcp_server_stop,
             mcp_server::mcp_server_status,
             mcp_bridge::mcp_bridge_respond,
+            pty::pty_spawn,
+            pty::pty_write,
+            pty::pty_resize,
+            pty::pty_kill,
+            pty::pty_list,
             #[cfg(debug_assertions)]
             debug_log,
         ])
+        .manage(pty::PtyState::new())
         .setup(|app| {
             let menu = menu::create_menu(app.handle())?;
             app.set_menu(menu)?;

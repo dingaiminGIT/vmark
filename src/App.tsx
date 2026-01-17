@@ -6,6 +6,7 @@ import { StatusBar } from "@/components/StatusBar";
 import { FindBar } from "@/components/FindBar";
 import { TitleBar } from "@/components/TitleBar";
 import { UniversalToolbar } from "@/components/Editor/UniversalToolbar";
+import { TerminalPanel } from "@/components/Terminal";
 import { SettingsPage } from "@/pages/Settings";
 import { PrintPreviewPage } from "@/pages/PrintPreview";
 import { WindowProvider, useIsDocumentWindow, useWindowLabel } from "@/contexts/WindowContext";
@@ -188,6 +189,7 @@ function MainLayout() {
         <div style={{ flex: 1, minHeight: 0, minWidth: 0, marginBottom: TITLEBAR_HEIGHT }}>
           <Editor />
         </div>
+        <TerminalPanel />
         <UniversalToolbar />
         <FindBar />
         <StatusBar />
