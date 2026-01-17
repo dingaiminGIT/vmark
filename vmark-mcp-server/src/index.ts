@@ -15,6 +15,10 @@
 export { VMarkMcpServer, resolveWindowId, validateNonNegativeInteger } from './server.js';
 export type { VMarkMcpServerConfig } from './server.js';
 
+// Bridge implementations
+export { WebSocketBridge } from './bridge/websocket.js';
+export type { WebSocketBridgeConfig } from './bridge/websocket.js';
+
 // Tool registrations
 export { registerDocumentTools } from './tools/document.js';
 export { registerSelectionTools } from './tools/selection.js';
