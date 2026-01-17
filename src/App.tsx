@@ -74,6 +74,7 @@ import { useExternalFileChanges } from "@/hooks/useExternalFileChanges";
 import { useSidebarResize } from "@/hooks/useSidebarResize";
 import { useUniversalToolbar } from "@/hooks/useUniversalToolbar";
 import { useMcpAutoStart } from "@/hooks/useMcpAutoStart";
+import { useMcpBridge } from "@/hooks/useMcpBridge";
 import { useFileExplorerShortcuts } from "@/hooks/useFileExplorerShortcuts";
 
 /** Height of the title bar area in pixels */
@@ -91,6 +92,7 @@ function DocumentWindowHooks() {
 // Main window specific hooks (only for "main" window, not doc-*)
 function MainWindowHooks() {
   useMcpAutoStart(); // Auto-start MCP server if enabled
+  useMcpBridge(); // Handle MCP bridge requests from AI assistants
   return null;
 }
 

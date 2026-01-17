@@ -4,8 +4,11 @@
  * Manages the VMark MCP server sidecar process lifecycle.
  * The MCP server runs as a bundled Node.js executable that allows
  * AI assistants to control the editor via WebSocket.
+ *
+ * Also manages the MCP bridge WebSocket server that the sidecar connects to.
  */
 
+use crate::mcp_bridge;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::{command, AppHandle, Emitter};
@@ -36,6 +39,12 @@ pub async fn mcp_server_start(app: AppHandle, port: u16) -> Result<McpServerStat
         }
     }
 
+    // Start the bridge WebSocket server FIRST (so sidecar can connect)
+    mcp_bridge::start_bridge(app.clone(), port).await?;
+
+    // Small delay to ensure bridge is ready
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
     // Spawn the sidecar process
     let shell = app.shell();
     let sidecar = shell
@@ -43,9 +52,13 @@ pub async fn mcp_server_start(app: AppHandle, port: u16) -> Result<McpServerStat
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .args(["--port", &port.to_string()]);
 
-    let (mut rx, child) = sidecar
-        .spawn()
-        .map_err(|e| format!("Failed to spawn MCP server: {}", e))?;
+    let (mut rx, child) = sidecar.spawn().map_err(|e| {
+        // If sidecar fails to spawn, stop the bridge
+        tauri::async_runtime::spawn(async {
+            mcp_bridge::stop_bridge().await;
+        });
+        format!("Failed to spawn MCP server: {}", e)
+    })?;
 
     // Store the child process
     {
@@ -101,10 +114,16 @@ pub async fn mcp_server_start(app: AppHandle, port: u16) -> Result<McpServerStat
 /// Stop the MCP server sidecar process.
 #[command]
 pub async fn mcp_server_stop(app: AppHandle) -> Result<McpServerStatus, String> {
+    // Stop the bridge first
+    mcp_bridge::stop_bridge().await;
+
+    // Then stop the sidecar
     let mut guard = MCP_SERVER.lock().map_err(|e| e.to_string())?;
 
     if let Some(child) = guard.take() {
-        child.kill().map_err(|e| format!("Failed to kill MCP server: {}", e))?;
+        child
+            .kill()
+            .map_err(|e| format!("Failed to kill MCP server: {}", e))?;
     }
 
     // Emit stopped event
@@ -129,6 +148,12 @@ pub fn mcp_server_status() -> Result<McpServerStatus, String> {
 
 /// Cleanup function to kill the MCP server on app exit.
 pub fn cleanup() {
+    // Stop the bridge
+    tauri::async_runtime::spawn(async {
+        mcp_bridge::stop_bridge().await;
+    });
+
+    // Stop the sidecar
     if let Ok(mut guard) = MCP_SERVER.lock() {
         if let Some(child) = guard.take() {
             let _ = child.kill();

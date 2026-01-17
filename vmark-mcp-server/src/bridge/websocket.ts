@@ -118,8 +118,8 @@ export class WebSocketBridge implements Bridge {
   private requestQueue: QueuedRequest[] = [];
 
   constructor(config: WebSocketBridgeConfig = {}) {
-    this.host = config.host ?? 'localhost';
-    this.port = config.port ?? 9224;
+    this.host = config.host ?? '127.0.0.1'; // Use IPv4 explicitly to avoid IPv6 issues
+    this.port = config.port ?? 9223;
     this.timeout = config.timeout ?? 30000;
     this.autoReconnect = config.autoReconnect ?? true;
     this.maxReconnectAttempts = config.maxReconnectAttempts ?? 10;

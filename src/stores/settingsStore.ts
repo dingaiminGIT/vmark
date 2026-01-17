@@ -160,7 +160,7 @@ export type MarkdownPasteMode = "auto" | "off";
 export type AiCommandTrigger = ";; " | ",, " | "// ";
 
 export interface McpServerSettings {
-  port: number;        // Default: 9224
+  port: number;        // Default: 9223 (must match MCP bridge plugin port)
   autoStart: boolean;  // Start on app launch
 }
 
@@ -313,7 +313,7 @@ const initialState: SettingsState = {
   advanced: {
     enableCommandMenu: false,
     mcpServer: {
-      port: 9224,
+      port: 9223,
       autoStart: false,
     },
   },

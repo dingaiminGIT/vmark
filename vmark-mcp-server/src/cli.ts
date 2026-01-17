@@ -20,7 +20,7 @@ import { z } from 'zod';
  */
 function parseArgs(): { port: number } {
   const args = process.argv.slice(2);
-  let port = 9224; // Default port
+  let port = 9223; // Default port (must match MCP bridge plugin)
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--port' && args[i + 1]) {
@@ -36,20 +36,18 @@ function parseArgs(): { port: number } {
 }
 
 /**
- * Create a console logger for the bridge.
+ * Create a quiet logger for the bridge (only errors go to stderr).
+ * Info/debug messages are suppressed to avoid confusing Claude Code
+ * which prefixes all stderr with "[MCP Server Error]".
  */
 const logger = {
-  debug: (message: string, ...args: unknown[]) => {
-    console.error('[DEBUG]', message, ...args);
-  },
-  info: (message: string, ...args: unknown[]) => {
-    console.error('[INFO]', message, ...args);
-  },
+  debug: () => {},
+  info: () => {},
   warn: (message: string, ...args: unknown[]) => {
-    console.error('[WARN]', message, ...args);
+    console.error('[VMark MCP] WARN:', message, ...args);
   },
   error: (message: string, ...args: unknown[]) => {
-    console.error('[ERROR]', message, ...args);
+    console.error('[VMark MCP] ERROR:', message, ...args);
   },
 };
 
@@ -80,8 +78,6 @@ function toMcpContents(items: Array<{ uri: string; text?: string; mimeType?: str
  */
 async function main(): Promise<void> {
   const { port } = parseArgs();
-
-  console.error(`[VMark MCP Server] Starting on port ${port}...`);
 
   // Create WebSocket bridge to connect to VMark
   const bridge = new WebSocketBridge({
@@ -146,29 +142,24 @@ async function main(): Promise<void> {
     );
   }
 
-  // Connect to VMark first
+  // Connect to VMark first (errors logged by bridge)
   try {
     await bridge.connect();
-    console.error('[VMark MCP Server] Connected to VMark');
   } catch {
-    console.error('[VMark MCP Server] Initial connection failed, will retry in background');
+    // Will retry in background via autoReconnect
   }
 
   // Start the MCP server with stdio transport
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
 
-  console.error('[VMark MCP Server] MCP server started');
-
   // Handle graceful shutdown
   process.on('SIGINT', async () => {
-    console.error('[VMark MCP Server] Shutting down...');
     await bridge.disconnect();
     process.exit(0);
   });
 
   process.on('SIGTERM', async () => {
-    console.error('[VMark MCP Server] Shutting down...');
     await bridge.disconnect();
     process.exit(0);
   });

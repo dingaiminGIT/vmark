@@ -2,8 +2,8 @@
 /**
  * Build script for VMark MCP Server sidecar binary.
  *
- * Compiles the Node.js MCP server into standalone executables for each platform
- * and renames them to match Tauri's sidecar naming convention.
+ * 1. Bundles the TypeScript code with esbuild into a single CJS file
+ * 2. Packages the bundle with pkg into standalone executables
  *
  * Output format: vmark-mcp-server-{target-triple}
  *   - vmark-mcp-server-aarch64-apple-darwin (M1/M2 Mac)
@@ -14,7 +14,7 @@
 
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import { rename, mkdir, rm, access } from 'node:fs/promises';
+import { mkdir, access, rm } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { platform, arch } from 'node:os';
@@ -24,6 +24,7 @@ const execAsync = promisify(exec);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, '..');
 const TAURI_BINARIES_DIR = join(PROJECT_ROOT, '..', 'src-tauri', 'binaries');
+const BUNDLE_OUTPUT = join(PROJECT_ROOT, 'dist', 'cli.bundle.cjs');
 
 /**
  * Map platform/arch to Tauri target triple and pkg target.
@@ -56,6 +57,35 @@ function getCurrentTargetKey() {
 }
 
 /**
+ * Bundle the code with esbuild into a single CJS file.
+ */
+async function bundleWithEsbuild() {
+  console.log('Bundling with esbuild...');
+
+  const esbuildCmd = [
+    'npx',
+    'esbuild',
+    join(PROJECT_ROOT, 'src', 'cli.ts'),
+    '--bundle',
+    '--platform=node',
+    '--target=node18',
+    '--format=cjs',
+    `--outfile=${BUNDLE_OUTPUT}`,
+    '--external:fsevents', // Optional macOS dependency
+  ].join(' ');
+
+  console.log(`Running: ${esbuildCmd}`);
+  const { stdout, stderr } = await execAsync(esbuildCmd, { cwd: PROJECT_ROOT });
+
+  if (stdout) console.log(stdout);
+  if (stderr && !stderr.includes('Done')) console.error(stderr);
+
+  // Verify bundle exists
+  await access(BUNDLE_OUTPUT);
+  console.log(`Bundle created: ${BUNDLE_OUTPUT}\n`);
+}
+
+/**
  * Build sidecar for a specific target.
  */
 async function buildForTarget(targetKey) {
@@ -75,11 +105,11 @@ async function buildForTarget(targetKey) {
     // Create binaries directory if it doesn't exist
     await mkdir(TAURI_BINARIES_DIR, { recursive: true });
 
-    // Run pkg to create the binary
+    // Run pkg to create the binary from the bundle
     const pkgCmd = [
       'npx',
       '@yao-pkg/pkg',
-      join(PROJECT_ROOT, 'dist', 'cli.js'),
+      BUNDLE_OUTPUT,
       '--target', target.pkg,
       '--output', outputPath,
       '--compress', 'GZip',
@@ -110,8 +140,12 @@ async function main() {
   const buildAll = args.includes('--all');
 
   console.log('VMark MCP Server Sidecar Builder');
-  console.log('================================');
+  console.log('================================\n');
 
+  // Step 1: Bundle with esbuild
+  await bundleWithEsbuild();
+
+  // Step 2: Package with pkg
   if (buildAll) {
     // Build for all platforms
     console.log('Building for all platforms...\n');
@@ -135,6 +169,14 @@ async function main() {
     if (!success) {
       process.exit(1);
     }
+  }
+
+  // Clean up bundle file
+  try {
+    await rm(BUNDLE_OUTPUT);
+    console.log('\nCleaned up bundle file');
+  } catch {
+    // Ignore cleanup errors
   }
 
   console.log('\nDone!');

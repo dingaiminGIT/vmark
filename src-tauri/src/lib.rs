@@ -1,3 +1,4 @@
+mod mcp_bridge;
 mod mcp_server;
 mod menu;
 mod menu_events;
@@ -69,6 +70,7 @@ pub fn run() {
             mcp_server::mcp_server_start,
             mcp_server::mcp_server_stop,
             mcp_server::mcp_server_status,
+            mcp_bridge::mcp_bridge_respond,
             #[cfg(debug_assertions)]
             debug_log,
         ])
