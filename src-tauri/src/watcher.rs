@@ -9,8 +9,8 @@ use tauri::{AppHandle, Emitter};
 static WATCHERS: Mutex<Option<HashMap<String, WatcherEntry>>> = Mutex::new(None);
 
 struct WatcherEntry {
-    watcher: RecommendedWatcher,
-    root_path: String,
+    /// Stored to keep the watcher alive; dropping stops watching
+    _watcher: RecommendedWatcher,
 }
 
 /// File system change event with watch context.
@@ -87,8 +87,7 @@ pub fn start_watching(app: AppHandle, watch_id: String, path: String) -> Result<
 
     let app_handle = app.clone();
     let watch_id_clone = watch_id.clone();
-    let root_path = path.clone();
-    let root_path_clone = root_path.clone();
+    let root_path_clone = path.clone();
 
     let mut watcher = RecommendedWatcher::new(
         move |res: Result<Event, notify::Error>| {
@@ -106,13 +105,7 @@ pub fn start_watching(app: AppHandle, watch_id: String, path: String) -> Result<
 
     let mut guard = WATCHERS.lock().map_err(|e| format!("Lock error: {e}"))?;
     let watchers = guard.get_or_insert_with(HashMap::new);
-    watchers.insert(
-        watch_id,
-        WatcherEntry {
-            watcher,
-            root_path,
-        },
-    );
+    watchers.insert(watch_id, WatcherEntry { _watcher: watcher });
 
     Ok(())
 }

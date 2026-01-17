@@ -339,6 +339,7 @@ pub async fn mcp_bridge_respond(payload: McpResponsePayload) -> Result<(), Strin
 }
 
 /// Check if the bridge has a connected client.
+#[allow(dead_code)]
 pub async fn is_client_connected() -> bool {
     let state = get_bridge_state();
     let guard = state.lock().await;
