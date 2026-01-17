@@ -6,13 +6,12 @@ import type { EditorView } from "@tiptap/pm/view";
 import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { MultiSelection } from "@/plugins/multiCursor/MultiSelection";
+import type { MarkdownPasteMode } from "@/stores/settingsStore";
 import {
   createMarkdownPasteTransaction,
   shouldHandleMarkdownPaste,
-  pastePlainTextCommand,
+  triggerPastePlainText,
 } from "./tiptap";
-
-type PasteMode = "auto" | "off";
 
 const schema = getSchema([StarterKit]);
 
@@ -90,6 +89,25 @@ describe("markdownPasteExtension", () => {
     expect(result).toBe(false);
   });
 
+  it("skips markdown parsing inside inline code marks", () => {
+    const codeMark = schema.marks.code;
+    const paragraph = schema.nodes.paragraph.create(
+      null,
+      schema.text("code", codeMark ? [codeMark.create()] : undefined)
+    );
+    const doc = schema.nodes.doc.create(null, [paragraph]);
+    const state = EditorState.create({
+      doc,
+      selection: TextSelection.create(doc, 2),
+    });
+
+    const result = shouldHandleMarkdownPaste(state, "- item", {
+      pasteMode: "auto",
+      hasHtml: false,
+    });
+    expect(result).toBe(false);
+  });
+
   it("skips markdown parsing for multi-selection", () => {
     const doc = createParagraphDoc("hello world");
     const state = createMultiSelectionState(doc, [
@@ -116,7 +134,7 @@ describe("markdownPasteExtension", () => {
   it("respects paste mode off", () => {
     const state = createState(createParagraphDoc(""));
     const result = shouldHandleMarkdownPaste(state, "# Title\nText", {
-      pasteMode: "off" as PasteMode,
+      pasteMode: "off" as MarkdownPasteMode,
       hasHtml: false,
     });
     expect(result).toBe(false);
@@ -134,10 +152,7 @@ describe("markdownPasteExtension", () => {
       },
     } as unknown as EditorView;
 
-    const handled = pastePlainTextCommand(view);
-    expect(handled).toBe(true);
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await triggerPastePlainText(view);
     expect(state.doc.textContent).toBe("Plain");
   });
 });

@@ -10,6 +10,8 @@ import { useSettingsStore, type MarkdownPasteMode } from "@/stores/settingsStore
 
 const markdownPastePluginKey = new PluginKey("markdownPaste");
 
+const MAX_MARKDOWN_PASTE_CHARS = 200_000;
+
 export interface MarkdownPasteDecision {
   pasteMode: MarkdownPasteMode;
   hasHtml: boolean;
@@ -89,6 +91,7 @@ export function shouldHandleMarkdownPaste(
 ): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
+  if (trimmed.length > MAX_MARKDOWN_PASTE_CHARS) return false;
   if (decision.pasteMode === "off") return false;
   if (decision.hasHtml) return false;
   if (isMultiSelection(state)) return false;
@@ -146,18 +149,14 @@ function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
 }
 
 
-export function pastePlainTextCommand(view: EditorView): boolean {
-  if (view.state.selection.ranges.length > 1) return false;
+export async function triggerPastePlainText(view: EditorView): Promise<void> {
+  if (view.state.selection.ranges.length > 1) return;
 
-  void (async () => {
-    const text = await readClipboardPlainText();
-    if (!text) return;
-    const { from, to } = view.state.selection;
-    const tr = view.state.tr.insertText(text, from, to);
-    view.dispatch(tr.scrollIntoView());
-  })();
-
-  return true;
+  const text = await readClipboardPlainText();
+  if (!text) return;
+  const { from, to } = view.state.selection;
+  const tr = view.state.tr.insertText(text, from, to);
+  view.dispatch(tr.scrollIntoView());
 }
 
 export const markdownPasteExtension = Extension.create({

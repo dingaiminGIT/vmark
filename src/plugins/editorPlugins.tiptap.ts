@@ -17,7 +17,7 @@ import { getWysiwygMultiSelectionContext } from "@/plugins/toolbarActions/multiS
 import { expandedToggleMark } from "@/plugins/editorPlugins/expandedToggleMark";
 import { findAnyMarkRangeAtCursor } from "@/plugins/syntaxReveal/marks";
 import { resolveHardBreakStyle } from "@/utils/linebreaks";
-import { pastePlainTextCommand } from "@/plugins/markdownPaste/tiptap";
+import { triggerPastePlainText } from "@/plugins/markdownPaste/tiptap";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 
@@ -163,7 +163,8 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
 
   bindIfKey(bindings, shortcuts.getShortcut("pastePlainText"), (_state, _dispatch, view) => {
     if (!view) return false;
-    return pastePlainTextCommand(view);
+    void triggerPastePlainText(view);
+    return true;
   });
 
   bindIfKey(bindings, shortcuts.getShortcut("sourcePeek"), (_state, _dispatch, view) => {
