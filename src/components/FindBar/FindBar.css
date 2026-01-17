@@ -11,18 +11,6 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  animation: find-bar-slide-up 0.15s ease-out;
-}
-
-@keyframes find-bar-slide-up {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
 }
 
 .find-bar-row {

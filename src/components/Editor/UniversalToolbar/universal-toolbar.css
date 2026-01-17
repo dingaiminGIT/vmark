@@ -27,25 +27,11 @@
   gap: 8px;
 
   background-color: var(--bg-color);
-
-  /* Slide-up animation matching FindBar */
-  animation: universal-toolbar-slide-up 0.15s ease-out;
 }
 
 /* Hide toolbar when FindBar is open to prevent overlap */
 .find-bar-open .universal-toolbar {
   display: none;
-}
-
-@keyframes universal-toolbar-slide-up {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
 }
 
 /* Button row container (28px height like FindBar) */
