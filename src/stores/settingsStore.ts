@@ -155,11 +155,14 @@ export type AutoPairCJKStyle = "off" | "auto";
 
 export type HtmlRenderingMode = "hidden" | "sanitized" | "sanitizedWithStyles";
 
+export type MarkdownPasteMode = "auto" | "off";
+
 export interface MarkdownSettings {
   preserveLineBreaks: boolean; // Don't collapse blank lines
   showBrTags: boolean; // Display <br> tags visibly
   revealInlineSyntax: boolean; // Show markdown markers when cursor in formatted text
   enableRegexSearch: boolean; // Enable regex in Find & Replace
+  pasteMarkdownInWysiwyg: MarkdownPasteMode; // Convert pasted markdown into rich text
   mediaBorderStyle: MediaBorderStyle; // Border style for images and diagrams
   htmlRenderingMode: HtmlRenderingMode; // Rich text display for raw HTML
   hardBreakStyleOnSave: HardBreakStyleOnSave; // Preserve or normalize hard break output
@@ -268,6 +271,7 @@ const initialState: SettingsState = {
     showBrTags: false,
     revealInlineSyntax: false,
     enableRegexSearch: true,
+    pasteMarkdownInWysiwyg: "auto",
     mediaBorderStyle: "none",
     htmlRenderingMode: "hidden",
     hardBreakStyleOnSave: "preserve",

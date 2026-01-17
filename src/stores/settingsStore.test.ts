@@ -10,6 +10,7 @@ describe("settingsStore line break defaults", () => {
     const state = useSettingsStore.getState();
     expect(state.general.lineEndingsOnSave).toBe("preserve");
     expect(state.markdown.hardBreakStyleOnSave).toBe("preserve");
+    expect(state.markdown.pasteMarkdownInWysiwyg).toBe("auto");
   });
 
   it("updates line ending preference", () => {
@@ -22,5 +23,11 @@ describe("settingsStore line break defaults", () => {
     const state = useSettingsStore.getState();
     state.updateMarkdownSetting("hardBreakStyleOnSave", "twoSpaces");
     expect(useSettingsStore.getState().markdown.hardBreakStyleOnSave).toBe("twoSpaces");
+  });
+
+  it("updates markdown paste preference", () => {
+    const state = useSettingsStore.getState();
+    state.updateMarkdownSetting("pasteMarkdownInWysiwyg", "off");
+    expect(useSettingsStore.getState().markdown.pasteMarkdownInWysiwyg).toBe("off");
   });
 });

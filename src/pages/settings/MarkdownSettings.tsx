@@ -3,6 +3,7 @@ import {
   type MediaBorderStyle,
   type AutoPairCJKStyle,
   type HtmlRenderingMode,
+  type MarkdownPasteMode,
 } from "@/stores/settingsStore";
 import { SettingRow, Toggle, SettingsGroup, Select } from "./components";
 
@@ -40,6 +41,20 @@ export function MarkdownSettings() {
           <Toggle
             checked={markdown.enableRegexSearch}
             onChange={(v) => updateSetting("enableRegexSearch", v)}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Smart paste Markdown"
+          description="Convert pasted Markdown text into rich content in WYSIWYG"
+        >
+          <Select<MarkdownPasteMode>
+            value={markdown.pasteMarkdownInWysiwyg}
+            options={[
+              { value: "auto", label: "Auto (detect Markdown)" },
+              { value: "off", label: "Off" },
+            ]}
+            onChange={(v) => updateSetting("pasteMarkdownInWysiwyg", v)}
           />
         </SettingRow>
       </SettingsGroup>

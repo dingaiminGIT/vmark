@@ -1,15 +1,14 @@
 import { Extension } from "@tiptap/core";
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import { Plugin, PluginKey, type EditorState, type Transaction } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { Fragment, Slice, type NodeType } from "@tiptap/pm/model";
 import { parseMarkdown } from "@/utils/markdownPipeline";
 import type { MarkdownPipelineOptions } from "@/utils/markdownPipeline/types";
 import { isMarkdownPasteCandidate } from "@/utils/markdownPasteDetection";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { useSettingsStore, type MarkdownPasteMode } from "@/stores/settingsStore";
 
 const markdownPastePluginKey = new PluginKey("markdownPaste");
-
-export type MarkdownPasteMode = "auto" | "off";
 
 export interface MarkdownPasteDecision {
   pasteMode: MarkdownPasteMode;
@@ -98,6 +97,26 @@ export function shouldHandleMarkdownPaste(
   return isMarkdownPasteCandidate(trimmed);
 }
 
+
+async function readClipboardPlainText(): Promise<string> {
+  try {
+    const text = await readText();
+    if (text) return text;
+  } catch (error) {
+    console.error("[MarkdownPaste] Failed to read clipboard:", error);
+  }
+
+  if (typeof navigator !== "undefined" && navigator.clipboard?.readText) {
+    try {
+      return await navigator.clipboard.readText();
+    } catch (error) {
+      console.error("[MarkdownPaste] Failed to read web clipboard:", error);
+    }
+  }
+
+  return "";
+}
+
 function hasHtmlClipboardData(event: ClipboardEvent): boolean {
   const html = event.clipboardData?.getData("text/html");
   return Boolean(html && html.trim());
@@ -108,9 +127,7 @@ function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
   if (!text) return false;
 
   const settings = useSettingsStore.getState();
-  const pasteMode =
-    (settings.markdown as { pasteMarkdownInWysiwyg?: MarkdownPasteMode })
-      .pasteMarkdownInWysiwyg ?? "auto";
+  const pasteMode = settings.markdown.pasteMarkdownInWysiwyg ?? "auto";
   const hasHtml = hasHtmlClipboardData(event);
 
   if (!shouldHandleMarkdownPaste(view.state, text, { pasteMode, hasHtml })) {
@@ -125,6 +142,21 @@ function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
 
   event.preventDefault();
   view.dispatch(tr.scrollIntoView());
+  return true;
+}
+
+
+export function pastePlainTextCommand(view: EditorView): boolean {
+  if (view.state.selection.ranges.length > 1) return false;
+
+  void (async () => {
+    const text = await readClipboardPlainText();
+    if (!text) return;
+    const { from, to } = view.state.selection;
+    const tr = view.state.tr.insertText(text, from, to);
+    view.dispatch(tr.scrollIntoView());
+  })();
+
   return true;
 }
 

@@ -1,12 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import StarterKit from "@tiptap/starter-kit";
 import { getSchema } from "@tiptap/core";
 import { EditorState, TextSelection, SelectionRange } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
+import { readText } from "@tauri-apps/plugin-clipboard-manager";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { MultiSelection } from "@/plugins/multiCursor/MultiSelection";
 import {
   createMarkdownPasteTransaction,
   shouldHandleMarkdownPaste,
+  pastePlainTextCommand,
 } from "./tiptap";
 
 type PasteMode = "auto" | "off";
@@ -117,5 +120,24 @@ describe("markdownPasteExtension", () => {
       hasHtml: false,
     });
     expect(result).toBe(false);
+  });
+
+  it("pastes plain text from clipboard", async () => {
+    vi.mocked(readText).mockResolvedValue("Plain");
+    let state = createState(createParagraphDoc(""));
+    const view = {
+      get state() {
+        return state;
+      },
+      dispatch(tr) {
+        state = state.apply(tr);
+      },
+    } as unknown as EditorView;
+
+    const handled = pastePlainTextCommand(view);
+    expect(handled).toBe(true);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(state.doc.textContent).toBe("Plain");
   });
 });
