@@ -9,7 +9,6 @@ import "./editor.css";
 import "./heading-picker.css";
 import "./link-reference-dialog.css";
 import "./source-peek.css";
-import "@/plugins/cursorAware/cursor-aware.css";
 import "@/plugins/linkPopup/link-popup.css";
 import "@/plugins/imagePopup/image-popup.css";
 import "@/plugins/mathPopup/math-popup.css";
@@ -36,7 +35,6 @@ export function Editor() {
   const documentId = useDocumentId();
   const mediaBorderStyle = useSettingsStore((s) => s.markdown.mediaBorderStyle);
   const htmlRenderingMode = useSettingsStore((s) => s.markdown.htmlRenderingMode);
-  const revealInlineSyntax = useSettingsStore((s) => s.markdown.revealInlineSyntax);
 
   const editorKey = `doc-${documentId}`;
   const containerClass = `editor-container media-border-${mediaBorderStyle}`;
@@ -45,7 +43,6 @@ export function Editor() {
     <div
       className={containerClass}
       data-html-rendering-mode={htmlRenderingMode}
-      data-reveal-inline-syntax={revealInlineSyntax ? "true" : "false"}
     >
       <div className="editor-content">
         {sourceMode ? <SourceEditor key={editorKey} /> : <TiptapEditorInner key={editorKey} />}

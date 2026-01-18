@@ -26,15 +26,6 @@ export function MarkdownSettings() {
 
       <SettingsGroup title="Editing">
         <SettingRow
-          label="Reveal inline syntax"
-          description="Show markdown markers (**, *, `) when cursor is in formatted text"
-        >
-          <Toggle
-            checked={markdown.revealInlineSyntax}
-            onChange={(v) => updateSetting("revealInlineSyntax", v)}
-          />
-        </SettingRow>
-        <SettingRow
           label="Enable regex in search"
           description="Show regex toggle button in Find & Replace bar"
         >

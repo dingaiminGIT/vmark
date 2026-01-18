@@ -31,7 +31,7 @@ import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { smartPasteExtension } from "@/plugins/smartPaste/tiptap";
 import { markdownPasteExtension } from "@/plugins/markdownPaste/tiptap";
 import { linkPopupExtension } from "@/plugins/linkPopup/tiptap";
-import { cursorAwareExtension } from "@/plugins/cursorAware/tiptap";
+import { inlineNodeEditingExtension } from "@/plugins/inlineNodeEditing/tiptap";
 import { searchExtension } from "@/plugins/search/tiptap";
 import { spellCheckExtension } from "@/plugins/spellCheck/tiptap";
 import { autoPairExtension } from "@/plugins/autoPair/tiptap";
@@ -175,7 +175,7 @@ export function TiptapEditorInner() {
       compositionGuardExtension,
       blockImageExtension,
       imageViewExtension,
-      cursorAwareExtension,
+      inlineNodeEditingExtension,
       footnotePopupExtension,
       smartPasteExtension,
       markdownPasteExtension,

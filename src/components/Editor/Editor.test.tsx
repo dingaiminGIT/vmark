@@ -71,7 +71,6 @@ vi.mock("@/stores/settingsStore", () => {
     markdown: {
       mediaBorderStyle: "none",
       htmlRenderingMode: "hidden",
-      revealInlineSyntax: true,
     },
   };
 
@@ -97,10 +96,4 @@ describe("Editor", () => {
     expect(content).toBeInTheDocument();
   });
 
-  it("reflects revealInlineSyntax setting on the container", () => {
-    renderWithProvider(<Editor />);
-
-    const container = document.querySelector(".editor-container");
-    expect(container).toHaveAttribute("data-reveal-inline-syntax", "true");
-  });
 });
