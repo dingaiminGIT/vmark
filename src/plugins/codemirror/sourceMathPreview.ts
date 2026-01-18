@@ -1,17 +1,21 @@
 /**
  * Source Mode Math Preview Plugin
  *
- * Shows a floating preview of inline math when cursor is inside $...$.
+ * Shows a floating preview of math when cursor is inside:
+ * - Inline math: $...$
+ * - Block math: $$...$$ or ```latex...```
+ *
  * Reuses the MathPreviewView singleton from the latex plugin.
  */
 
 import { EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { getMathPreviewView } from "@/plugins/mathPreview/MathPreviewView";
-import { findInlineMathAtCursor } from "@/plugins/toolbarActions/sourceAdapterLinks";
+import { findInlineMathAtCursor, findBlockMathAtCursor } from "@/plugins/toolbarActions/sourceAdapterLinks";
 
 class SourceMathPreviewPlugin {
   private view: EditorView;
   private currentMathRange: { from: number; to: number; content: string } | null = null;
+  private isBlockMath = false;
   private pendingUpdate = false;
 
   constructor(view: EditorView) {
@@ -44,14 +48,25 @@ class SourceMathPreviewPlugin {
       return;
     }
 
-    const mathRange = findInlineMathAtCursor(this.view, from);
-
-    if (mathRange) {
-      this.currentMathRange = mathRange;
-      this.showPreview(mathRange.content);
-    } else {
-      this.hidePreview();
+    // Check for block math first ($$...$$ or ```latex...```)
+    const blockMathRange = findBlockMathAtCursor(this.view, from);
+    if (blockMathRange) {
+      this.currentMathRange = blockMathRange;
+      this.isBlockMath = true;
+      this.showPreview(blockMathRange.content);
+      return;
     }
+
+    // Then check for inline math ($...$)
+    const inlineMathRange = findInlineMathAtCursor(this.view, from);
+    if (inlineMathRange) {
+      this.currentMathRange = inlineMathRange;
+      this.isBlockMath = false;
+      this.showPreview(inlineMathRange.content);
+      return;
+    }
+
+    this.hidePreview();
   }
 
   private showPreview(content: string) {
@@ -68,12 +83,26 @@ class SourceMathPreviewPlugin {
       return;
     }
 
-    const anchorRect = {
-      top: Math.min(fromCoords.top, toCoords.top),
-      left: Math.min(fromCoords.left, toCoords.left),
-      bottom: Math.max(fromCoords.bottom, toCoords.bottom),
-      right: Math.max(toCoords.right, fromCoords.right),
-    };
+    let anchorRect: { top: number; left: number; bottom: number; right: number };
+
+    if (this.isBlockMath) {
+      // For block math, center horizontally using editor bounds
+      const editorRect = this.view.dom.getBoundingClientRect();
+      anchorRect = {
+        top: Math.min(fromCoords.top, toCoords.top),
+        left: editorRect.left,
+        bottom: Math.max(fromCoords.bottom, toCoords.bottom),
+        right: editorRect.right,
+      };
+    } else {
+      // For inline math, use the actual text coordinates
+      anchorRect = {
+        top: Math.min(fromCoords.top, toCoords.top),
+        left: Math.min(fromCoords.left, toCoords.left),
+        bottom: Math.max(fromCoords.bottom, toCoords.bottom),
+        right: Math.max(toCoords.right, fromCoords.right),
+      };
+    }
 
     if (preview.isVisible()) {
       // Update existing preview

@@ -29,8 +29,8 @@ function createStateWithCodeBlock(language: string, text: string) {
 describe("codePreviewExtension", () => {
   it("adds preview-only class for mermaid code blocks", () => {
     const { state, plugins } = createStateWithCodeBlock("mermaid", "graph TD; A-->B");
-    const decorations = plugins[0].getState(state);
-    const matches = decorations.find().filter((decoration: { type?: { attrs?: Record<string, string> } }) => {
+    const pluginState = plugins[0].getState(state);
+    const matches = pluginState.decorations.find().filter((decoration: { type?: { attrs?: Record<string, string> } }) => {
       const attrs = decoration.type?.attrs;
       return attrs?.class?.includes("code-block-preview-only");
     });
@@ -39,8 +39,8 @@ describe("codePreviewExtension", () => {
 
   it("does not add preview-only class for non-preview languages", () => {
     const { state, plugins } = createStateWithCodeBlock("js", "const a = 1;");
-    const decorations = plugins[0].getState(state);
-    const matches = decorations.find().filter((decoration: { type?: { attrs?: Record<string, string> } }) => {
+    const pluginState = plugins[0].getState(state);
+    const matches = pluginState.decorations.find().filter((decoration: { type?: { attrs?: Record<string, string> } }) => {
       const attrs = decoration.type?.attrs;
       return attrs?.class?.includes("code-block-preview-only");
     });
@@ -49,8 +49,8 @@ describe("codePreviewExtension", () => {
 
   it("marks preview-only code blocks as non-editable", () => {
     const { state, plugins } = createStateWithCodeBlock("latex", "\\frac{1}{2}");
-    const decorations = plugins[0].getState(state);
-    const match = decorations.find().find((decoration: { type?: { attrs?: Record<string, string> } }) => {
+    const pluginState = plugins[0].getState(state);
+    const match = pluginState.decorations.find().find((decoration: { type?: { attrs?: Record<string, string> } }) => {
       const attrs = decoration.type?.attrs;
       return attrs?.class?.includes("code-block-preview-only");
     });

@@ -44,6 +44,7 @@ import { imagePopupExtension } from "@/plugins/imagePopup/tiptap";
 import { imageHandlerExtension } from "@/plugins/imageHandler/tiptap";
 import { codePreviewExtension } from "@/plugins/codePreview/tiptap";
 import { floatingMathPreviewExtension } from "@/plugins/codePreview/floatingMathPreview";
+import { blockMathKeymapExtension } from "@/plugins/codePreview/blockMathKeymap";
 import { listContinuationExtension } from "@/plugins/listContinuation/tiptap";
 import { tableUIExtension } from "@/plugins/tableUI/tiptap";
 import { extractTiptapContext } from "@/plugins/formatToolbar/tiptapContext";
@@ -190,6 +191,7 @@ export function TiptapEditorInner() {
       imagePopupExtension,
       codePreviewExtension,
       floatingMathPreviewExtension,
+      blockMathKeymapExtension,
       listContinuationExtension,
       editorKeymapExtension,
       tabIndentExtension,

@@ -1,14 +1,15 @@
 /**
  * Floating Math Preview for WYSIWYG Mode
  *
- * Shows a floating preview when cursor is inside a latex/math code block.
- * Complements the inline code preview by providing live feedback while editing.
+ * Shows a floating preview when editing a latex/math code block.
+ * Only shows when block is in editing mode (via blockMathEditingStore).
  * Handles both "latex" (from code fences) and "$$math$$" (from $$ syntax).
  */
 
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { getMathPreviewView } from "@/plugins/mathPreview/MathPreviewView";
+import { useBlockMathEditingStore } from "@/stores/blockMathEditingStore";
 
 const floatingMathPreviewKey = new PluginKey("floatingMathPreview");
 
@@ -38,35 +39,33 @@ export const floatingMathPreviewExtension = Extension.create({
           };
 
           const checkMathAtCursor = () => {
+            const { editingPos } = useBlockMathEditingStore.getState();
+
+            // Only show preview when in editing mode
+            if (editingPos === null) {
+              hidePreview();
+              return;
+            }
+
             const { state } = editorView;
-            const { selection } = state;
-            const { $from } = selection;
+            const node = state.doc.nodeAt(editingPos);
 
-            // Find if we're inside a code block
-            let codeBlockNode = null;
-            let codeBlockPos = -1;
-
-            for (let depth = $from.depth; depth >= 0; depth--) {
-              const node = $from.node(depth);
-              if (node.type.name === "codeBlock" || node.type.name === "code_block") {
-                codeBlockNode = node;
-                codeBlockPos = $from.before(depth);
-                break;
-              }
+            if (!node || (node.type.name !== "codeBlock" && node.type.name !== "code_block")) {
+              hidePreview();
+              return;
             }
 
-            // Check if it's a latex/math code block
-            if (codeBlockNode) {
-              const language = (codeBlockNode.attrs.language ?? "").toLowerCase();
-              if (isLatexLanguage(language)) {
-                currentCodeBlockPos = codeBlockPos;
-                showPreview(codeBlockNode.textContent, codeBlockPos, codeBlockPos + codeBlockNode.nodeSize);
-                return;
-              }
+            const language = (node.attrs.language ?? "").toLowerCase();
+
+            // Only show floating preview for latex (mermaid is async and complex)
+            if (!isLatexLanguage(language)) {
+              hidePreview();
+              return;
             }
 
-            // Not in a latex code block
-            hidePreview();
+            currentCodeBlockPos = editingPos;
+            const nodeEnd = editingPos + node.nodeSize;
+            showPreview(node.textContent, editingPos, nodeEnd);
           };
 
           const showPreview = (content: string, from: number, to: number) => {
@@ -77,11 +76,13 @@ export const floatingMathPreviewExtension = Extension.create({
               const fromCoords = editorView.coordsAtPos(from);
               const toCoords = editorView.coordsAtPos(to);
 
+              // Use editor bounds for horizontal centering
+              const editorRect = editorView.dom.getBoundingClientRect();
               const anchorRect = {
                 top: fromCoords.top,
-                left: fromCoords.left,
+                left: editorRect.left,
                 bottom: toCoords.bottom,
-                right: Math.max(fromCoords.right, toCoords.right),
+                right: editorRect.right,
               };
 
               if (preview.isVisible()) {

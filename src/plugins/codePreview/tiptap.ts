@@ -1,10 +1,11 @@
 import { Extension } from "@tiptap/core";
-import { NodeSelection, Plugin, PluginKey } from "@tiptap/pm/state";
+import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { renderLatex } from "../latex";
 import { renderMermaid, updateMermaidTheme } from "../mermaid";
 import { sanitizeKatex, sanitizeSvg } from "@/utils/sanitize";
+import { useBlockMathEditingStore } from "@/stores/blockMathEditingStore";
 
 const codePreviewPluginKey = new PluginKey("codePreview");
 const PREVIEW_ONLY_LANGUAGES = new Set(["latex", "mermaid", "$$math$$"]);
@@ -58,7 +59,9 @@ function createPreviewElement(
   onSelect?: () => void
 ): HTMLElement {
   const wrapper = document.createElement("div");
-  wrapper.className = `code-block-preview ${language}-preview`;
+  // Use "latex" class for both "latex" and "$$math$$" languages
+  const previewClass = isLatexLanguage(language) ? "latex" : language;
+  wrapper.className = `code-block-preview ${previewClass}-preview`;
   const sanitized = language === "mermaid" ? sanitizeSvg(rendered) : sanitizeKatex(rendered);
   wrapper.innerHTML = sanitized;
   installSelectHandlers(wrapper, onSelect);
@@ -71,10 +74,20 @@ function createPreviewPlaceholder(
   onSelect?: () => void
 ): HTMLElement {
   const wrapper = document.createElement("div");
-  wrapper.className = `code-block-preview ${language}-preview code-block-preview-placeholder`;
+  // Use "latex" class for both "latex" and "$$math$$" languages
+  const previewClass = isLatexLanguage(language) ? "latex" : language;
+  wrapper.className = `code-block-preview ${previewClass}-preview code-block-preview-placeholder`;
   wrapper.textContent = label;
   installSelectHandlers(wrapper, onSelect);
   return wrapper;
+}
+
+/** Meta key to signal editing state change */
+const EDITING_STATE_CHANGED = "codePreviewEditingChanged";
+
+interface CodePreviewState {
+  decorations: DecorationSet;
+  editingPos: number | null;
 }
 
 export const codePreviewExtension = Extension.create({
@@ -84,15 +97,23 @@ export const codePreviewExtension = Extension.create({
       new Plugin({
         key: codePreviewPluginKey,
         state: {
-          init() {
-            return DecorationSet.empty;
+          init(): CodePreviewState {
+            return { decorations: DecorationSet.empty, editingPos: null };
           },
-          apply(tr, decorations, _oldState, newState) {
-            if (!tr.docChanged && decorations !== DecorationSet.empty) {
-              return decorations.map(tr.mapping, tr.doc);
+          apply(tr, state, _oldState, newState): CodePreviewState {
+            const storeEditingPos = useBlockMathEditingStore.getState().editingPos;
+            const editingChanged = tr.getMeta(EDITING_STATE_CHANGED) || state.editingPos !== storeEditingPos;
+
+            // Only recompute if doc changed or editing state changed
+            if (!tr.docChanged && !editingChanged && state.decorations !== DecorationSet.empty) {
+              return {
+                decorations: state.decorations.map(tr.mapping, tr.doc),
+                editingPos: state.editingPos,
+              };
             }
 
             const newDecorations: Decoration[] = [];
+            const currentEditingPos = storeEditingPos;
 
             newState.doc.descendants((node, pos) => {
               if (node.type.name !== "codeBlock" && node.type.name !== "code_block") return;
@@ -104,11 +125,32 @@ export const codePreviewExtension = Extension.create({
               const cacheKey = `${language}:${content}`;
               const nodeStart = pos;
               const nodeEnd = pos + node.nodeSize;
+
+              // Check if this block is being edited
+              const isEditing = currentEditingPos === nodeStart;
+
+              if (isEditing) {
+                // Add editing class, keep contenteditable
+                newDecorations.push(
+                  Decoration.node(nodeStart, nodeEnd, {
+                    class: "code-block-editing",
+                    "data-language": language,
+                  })
+                );
+                // No widget preview when editing
+                return;
+              }
+
               const handleSelect = (view: EditorView | null | undefined) => {
                 if (!view) return;
-                const tr = view.state.tr.setSelection(NodeSelection.create(view.state.doc, nodeStart));
+                // Enter editing mode: set cursor inside the code block
+                const $pos = view.state.doc.resolve(nodeStart + 1);
+                const tr = view.state.tr.setSelection(TextSelection.near($pos));
+                tr.setMeta(EDITING_STATE_CHANGED, true);
                 view.dispatch(tr);
                 view.focus();
+                // Update store
+                useBlockMathEditingStore.getState().startEditing(nodeStart, content);
               };
 
               newDecorations.push(
@@ -213,18 +255,24 @@ export const codePreviewExtension = Extension.create({
               }
             });
 
-            return DecorationSet.create(newState.doc, newDecorations);
+            return {
+              decorations: DecorationSet.create(newState.doc, newDecorations),
+              editingPos: currentEditingPos,
+            };
           },
         },
         props: {
           decorations(state) {
-            return this.getState(state);
+            return this.getState(state)?.decorations ?? DecorationSet.empty;
           },
         },
       }),
     ];
   },
 });
+
+/** Export plugin key for other extensions */
+export { codePreviewPluginKey, EDITING_STATE_CHANGED };
 
 export function clearPreviewCache() {
   renderCache.clear();

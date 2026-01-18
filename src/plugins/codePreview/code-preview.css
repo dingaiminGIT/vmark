@@ -5,28 +5,29 @@
  */
 
 .code-block-preview {
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
+  margin: 1rem 0;
   padding: 1rem;
   border-radius: 6px;
-  background-color: var(--bg-secondary, #f6f8fa);
-  border: 1px solid var(--border-color, #d1d5da);
+  background-color: var(--block-bg-subtle, rgba(0, 0, 0, 0.02));
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
-/* LaTeX preview */
+.code-block-preview:hover {
+  background-color: var(--block-bg-subtle-hover, rgba(0, 0, 0, 0.04));
+}
+
+/* LaTeX preview - match .math-block-preview layout */
 .code-block-preview.latex-preview {
-  text-align: center;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow-x: auto;
 }
 
 .code-block-preview.latex-preview .katex-display {
   margin: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-
-.code-block-preview.latex-preview .katex {
-  font-size: 1.1em;
 }
 
 /* Mermaid preview */
@@ -82,4 +83,22 @@
 .tiptap-editor pre.code-block-preview-only.ProseMirror-selectednode + .code-block-preview {
   outline: 2px solid var(--primary-color, #0a84ff);
   outline-offset: 2px;
+}
+
+/* Editing state: show source code */
+.tiptap-editor pre.code-block-editing {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 6px;
+  background-color: var(--block-bg-subtle, rgba(0, 0, 0, 0.02));
+  text-align: left;
+}
+
+.tiptap-editor pre.code-block-editing code {
+  display: block;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.9em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
 }

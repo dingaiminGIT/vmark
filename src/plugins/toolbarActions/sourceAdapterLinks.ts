@@ -262,6 +262,11 @@ export function findInlineMathAtCursor(view: EditorView, pos: number): { from: n
   const lineText = line.text;
   const lineStart = line.from;
 
+  // Skip if line is just $$ (block math delimiter)
+  if (lineText.trim() === "$$") {
+    return null;
+  }
+
   // Find all $...$ pairs in the line (including empty $$)
   let i = 0;
   while (i < lineText.length) {
@@ -296,6 +301,104 @@ export function findInlineMathAtCursor(view: EditorView, pos: number): { from: n
     }
   }
   return null;
+}
+
+/**
+ * Block math range result.
+ */
+export interface BlockMathRange {
+  from: number;
+  to: number;
+  content: string;
+  type: "dollarBlock" | "latexFence";
+}
+
+/**
+ * Find block math at cursor position.
+ * Detects:
+ * - $$....$$ blocks (multi-line dollar blocks)
+ * - ```latex ... ``` blocks (fenced code blocks)
+ *
+ * Returns null if:
+ * - Not inside a block math
+ * - Cursor is on a delimiter-only line (just $$ or ```latex or ```)
+ */
+export function findBlockMathAtCursor(view: EditorView, pos: number): BlockMathRange | null {
+  const doc = view.state.doc;
+  const totalLines = doc.lines;
+  const cursorLine = doc.lineAt(pos);
+  const cursorLineNum = cursorLine.number;
+  const cursorLineText = cursorLine.text;
+
+  // Check if cursor is on a delimiter-only line
+  const trimmedLine = cursorLineText.trim();
+  if (trimmedLine === "$$" || trimmedLine === "```latex" || trimmedLine === "```") {
+    return null;
+  }
+
+  // Search backwards for opening delimiter
+  let openLine: { num: number; type: "dollarBlock" | "latexFence" } | null = null;
+  for (let lineNum = cursorLineNum; lineNum >= 1; lineNum--) {
+    const line = doc.line(lineNum);
+    const text = line.text.trim();
+
+    if (text === "$$") {
+      openLine = { num: lineNum, type: "dollarBlock" };
+      break;
+    }
+    if (text === "```latex" || text === "```math") {
+      openLine = { num: lineNum, type: "latexFence" };
+      break;
+    }
+    // Stop if we hit another fence that's not latex/math (likely a different code block)
+    if (text.startsWith("```") && text !== "```latex" && text !== "```math") {
+      break;
+    }
+  }
+
+  if (!openLine) return null;
+
+  // Search forwards for closing delimiter
+  const closeDelimiter = openLine.type === "dollarBlock" ? "$$" : "```";
+  let closeLine: number | null = null;
+  for (let lineNum = cursorLineNum; lineNum <= totalLines; lineNum++) {
+    const line = doc.line(lineNum);
+    const text = line.text.trim();
+
+    if (text === closeDelimiter && lineNum > openLine.num) {
+      closeLine = lineNum;
+      break;
+    }
+    // For fenced blocks, also check if we hit another opening fence
+    if (openLine.type === "latexFence" && text.startsWith("```") && text !== "```" && lineNum > openLine.num) {
+      break;
+    }
+  }
+
+  if (!closeLine) return null;
+
+  // Verify cursor is actually inside the block (not on open/close line)
+  if (cursorLineNum <= openLine.num || cursorLineNum >= closeLine) {
+    return null;
+  }
+
+  // Extract content (lines between delimiters)
+  const contentLines: string[] = [];
+  for (let lineNum = openLine.num + 1; lineNum < closeLine; lineNum++) {
+    contentLines.push(doc.line(lineNum).text);
+  }
+  const content = contentLines.join("\n");
+
+  // Calculate range (from start of open line to end of close line)
+  const from = doc.line(openLine.num).from;
+  const to = doc.line(closeLine).to;
+
+  return {
+    from,
+    to,
+    content,
+    type: openLine.type,
+  };
 }
 
 /**
