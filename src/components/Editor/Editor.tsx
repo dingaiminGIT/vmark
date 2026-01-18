@@ -29,6 +29,7 @@ import "@/plugins/subSuperscript/sub-super.css";
 import "@/plugins/highlight/highlight.css";
 import "@/plugins/underline/underline.css";
 import "@/plugins/markdownArtifacts/markdown-artifacts.css";
+import "@/plugins/imagePasteToast/image-paste-toast.css";
 import "katex/dist/katex.min.css";
 
 export function Editor() {

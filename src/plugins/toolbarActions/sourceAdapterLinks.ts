@@ -18,7 +18,7 @@ import { insertText } from "./sourceAdapterHelpers";
  * Find word boundaries at cursor position in CodeMirror.
  * Returns document positions for the word containing the cursor.
  */
-function findWordAtCursorSource(
+export function findWordAtCursorSource(
   view: EditorView,
   pos: number
 ): { from: number; to: number } | null {

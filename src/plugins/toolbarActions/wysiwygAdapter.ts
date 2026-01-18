@@ -8,7 +8,12 @@ import { resolveLinkPopupPayload } from "@/plugins/formatToolbar/linkPopupUtils"
 import { handleBlockquoteNest, handleBlockquoteUnnest, handleRemoveBlockquote, handleListIndent, handleListOutdent, handleRemoveList, handleToBulletList, handleToOrderedList } from "@/plugins/formatToolbar/nodeActions.tiptap";
 import { addColLeft, addColRight, addRowAbove, addRowBelow, alignColumn, deleteCurrentColumn, deleteCurrentRow, deleteCurrentTable } from "@/plugins/tableUI/tableActions.tiptap";
 import { findWordAtCursor } from "@/plugins/syntaxReveal/marks";
+import { copyImageToAssets } from "@/hooks/useImageOperations";
+import { getWindowLabel } from "@/hooks/useWindowFocus";
+import { useDocumentStore } from "@/stores/documentStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { useTabStore } from "@/stores/tabStore";
+import { readClipboardImagePath } from "@/utils/clipboardImagePath";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
 import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import type { WysiwygToolbarContext } from "./types";
@@ -16,6 +21,17 @@ import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyM
 import { insertWikiLink, insertWikiEmbed, insertBookmarkLink, insertReferenceLink } from "./wysiwygAdapterLinks";
 
 const DEFAULT_MATH_BLOCK = "c = \\pm\\sqrt{a^2 + b^2}";
+
+/**
+ * Check if an editor view is still connected and valid.
+ */
+function isViewConnected(view: EditorView): boolean {
+  try {
+    return view.dom?.isConnected ?? false;
+  } catch {
+    return false;
+  }
+}
 
 async function emitMenuEvent(eventName: string) {
   const windowLabel = getCurrentWebviewWindow().label;
@@ -51,6 +67,112 @@ function insertLinkAtCursor(view: EditorView, url: string): void {
 }
 
 /**
+ * Get the active document file path for the current window.
+ */
+function getActiveFilePath(): string | null {
+  try {
+    const windowLabel = getWindowLabel();
+    const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+    if (!tabId) return null;
+    return useDocumentStore.getState().getDocument(tabId)?.filePath ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Insert an image node with alt text.
+ */
+function insertImageWithAlt(view: EditorView, src: string, alt: string, from: number, to: number): void {
+  const { state } = view;
+  const imageType = state.schema.nodes.image;
+  if (!imageType) return;
+
+  const imageNode = imageType.create({ src, alt, title: "" });
+  const tr = state.tr.replaceWith(from, to, imageNode);
+  view.dispatch(tr);
+  view.focus();
+}
+
+/**
+ * Smart image insertion with clipboard path detection.
+ * Returns true if handled, false to fall back to file picker.
+ *
+ * Behavior:
+ * - Clipboard has image URL → insert directly
+ * - Clipboard has local path → copy to assets, insert relative path
+ * - Selection exists → use as alt text
+ * - No selection, word at cursor → use word as alt text
+ * - No clipboard image → return false (fall back to file picker)
+ */
+async function trySmartImageInsertion(view: EditorView): Promise<boolean> {
+  const clipboardResult = await readClipboardImagePath();
+
+  // No valid clipboard image
+  if (!clipboardResult?.isImage || !clipboardResult.validated) {
+    return false;
+  }
+
+  // Verify view is still connected after async clipboard read
+  if (!isViewConnected(view)) {
+    console.warn("[wysiwygAdapter] View disconnected after clipboard read");
+    return false;
+  }
+
+  // Capture selection state after async operation (may have changed)
+  const { from, to } = view.state.selection;
+
+  // Determine alt text from selection or word expansion
+  let altText = "";
+  let insertFrom = from;
+  let insertTo = to;
+
+  if (from !== to) {
+    // Has selection: use as alt text
+    altText = view.state.doc.textBetween(from, to, "");
+  } else {
+    // No selection: try word expansion
+    const $from = view.state.selection.$from;
+    const wordRange = findWordAtCursor($from);
+    if (wordRange) {
+      altText = view.state.doc.textBetween(wordRange.from, wordRange.to, "");
+      insertFrom = wordRange.from;
+      insertTo = wordRange.to;
+    }
+  }
+
+  let imagePath = clipboardResult.path;
+
+  // For local paths that need copying, copy to assets
+  if (clipboardResult.needsCopy) {
+    const docPath = getActiveFilePath();
+    if (!docPath) {
+      // Can't copy without document path, fall back to file picker
+      return false;
+    }
+
+    try {
+      const sourcePath = clipboardResult.resolvedPath ?? clipboardResult.path;
+      imagePath = await copyImageToAssets(sourcePath, docPath);
+    } catch (error) {
+      console.error("[wysiwygAdapter] Failed to copy image to assets:", error);
+      // Copy failed, fall back to file picker
+      return false;
+    }
+  }
+
+  // Re-verify view is still connected after async copy
+  if (!isViewConnected(view)) {
+    console.warn("[wysiwygAdapter] View disconnected after image copy");
+    return false;
+  }
+
+  // Insert image with the path
+  insertImageWithAlt(view, imagePath, altText, insertFrom, insertTo);
+  return true;
+}
+
+/**
  * Smart link insertion with clipboard URL detection.
  * Returns true if handled, false to fall back to popup.
  */
@@ -61,6 +183,13 @@ async function trySmartLinkInsertion(view: EditorView, inLink: boolean): Promise
   const clipboardUrl = await readClipboardUrl();
   if (!clipboardUrl) return false;
 
+  // Verify view is still connected after async clipboard read
+  if (!isViewConnected(view)) {
+    console.warn("[wysiwygAdapter] View disconnected after clipboard read");
+    return false;
+  }
+
+  // Get current selection (may have changed during async)
   const { from, to } = view.state.selection;
 
   // Has selection: apply link directly
@@ -92,6 +221,12 @@ function openLinkEditor(context: WysiwygToolbarContext): boolean {
   void trySmartLinkInsertion(view, inLink).then((handled) => {
     if (handled) return;
 
+    // Verify view is still connected before fallback
+    if (!isViewConnected(view)) {
+      console.warn("[wysiwygAdapter] View disconnected, skipping link popup");
+      return;
+    }
+
     // Fall back to popup or word expansion
     const selection = view.state.selection;
     const payload = resolveLinkPopupPayload(
@@ -120,7 +255,8 @@ function openLinkEditor(context: WysiwygToolbarContext): boolean {
         },
       });
       view.focus();
-    } catch {
+    } catch (error) {
+      console.error("[wysiwygAdapter] Failed to open link popup:", error);
       expandedToggleMarkTiptap(view, "link");
     }
   });
@@ -363,6 +499,14 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       if (view && applyMultiSelectionBlockquoteAction(view, action)) return true;
       return view ? (handleRemoveBlockquote(view), true) : false;
     case "insertImage":
+      if (view) {
+        void trySmartImageInsertion(view).then((handled) => {
+          if (!handled) {
+            void emitMenuEvent("menu:image");
+          }
+        });
+        return true;
+      }
       void emitMenuEvent("menu:image");
       return true;
     case "insertCodeBlock":

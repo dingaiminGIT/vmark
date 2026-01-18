@@ -54,6 +54,9 @@ export class BlockImageNodeView implements NodeView {
   private getPos: () => number | undefined;
   private resolveRequestId = 0;
   private destroyed = false;
+  // Store active load handlers for cleanup
+  private activeLoadHandler: (() => void) | null = null;
+  private activeErrorHandler: (() => void) | null = null;
 
   constructor(node: PMNode, getPos: () => number | undefined) {
     this.getPos = getPos;
@@ -106,28 +109,83 @@ export class BlockImageNodeView implements NodeView {
   };
 
   private updateSrc(src: string): void {
+    // Reset states
     this.img.style.opacity = "1";
+    this.dom.classList.remove("image-loading", "image-error");
+    this.img.removeAttribute("title");
 
     if (!src) {
       this.img.src = "";
+      this.showError("No image source");
       return;
     }
 
     if (isExternalUrl(src)) {
+      this.dom.classList.add("image-loading");
       this.img.src = src;
+      this.setupLoadHandlers();
       return;
     }
 
     this.img.src = "";
-    this.img.style.opacity = "0.5";
+    this.dom.classList.add("image-loading");
 
     const requestId = ++this.resolveRequestId;
 
     resolveImageSrc(src).then((resolvedSrc) => {
       if (this.destroyed || requestId !== this.resolveRequestId) return;
+      if (!resolvedSrc) {
+        this.showError("Failed to resolve path");
+        return;
+      }
       this.img.src = resolvedSrc;
-      this.img.style.opacity = "1";
+      this.setupLoadHandlers();
     });
+  }
+
+  private cleanupLoadHandlers(): void {
+    if (this.activeLoadHandler) {
+      this.img.removeEventListener("load", this.activeLoadHandler);
+      this.activeLoadHandler = null;
+    }
+    if (this.activeErrorHandler) {
+      this.img.removeEventListener("error", this.activeErrorHandler);
+      this.activeErrorHandler = null;
+    }
+  }
+
+  private setupLoadHandlers(): void {
+    // Clean up any existing handlers first
+    this.cleanupLoadHandlers();
+
+    const onLoad = () => {
+      if (this.destroyed) return;
+      this.dom.classList.remove("image-loading", "image-error");
+      this.img.style.opacity = "1";
+      this.cleanupLoadHandlers();
+    };
+
+    const onError = () => {
+      if (this.destroyed) return;
+      this.showError("Failed to load image");
+      this.cleanupLoadHandlers();
+    };
+
+    this.activeLoadHandler = onLoad;
+    this.activeErrorHandler = onError;
+    this.img.addEventListener("load", onLoad);
+    this.img.addEventListener("error", onError);
+  }
+
+  private showError(message: string): void {
+    this.dom.classList.remove("image-loading");
+    this.dom.classList.add("image-error");
+    this.img.style.opacity = "0.5";
+    // Store original title and set error tooltip
+    if (!this.img.hasAttribute("data-original-title") && this.img.title) {
+      this.img.setAttribute("data-original-title", this.img.title);
+    }
+    this.img.title = `${message}: ${this.originalSrc}`;
   }
 
   update(node: PMNode): boolean {
@@ -147,6 +205,7 @@ export class BlockImageNodeView implements NodeView {
 
   destroy(): void {
     this.destroyed = true;
+    this.cleanupLoadHandlers();
     this.img.removeEventListener("contextmenu", this.handleContextMenu);
     this.img.removeEventListener("click", this.handleClick);
   }

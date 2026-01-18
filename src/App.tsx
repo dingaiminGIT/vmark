@@ -79,6 +79,7 @@ import { useUniversalToolbar } from "@/hooks/useUniversalToolbar";
 import { useMcpAutoStart } from "@/hooks/useMcpAutoStart";
 import { useMcpBridge } from "@/hooks/useMcpBridge";
 import { useFileExplorerShortcuts } from "@/hooks/useFileExplorerShortcuts";
+import { useImagePasteToast } from "@/hooks/useImagePasteToast";
 
 /** Height of the title bar area in pixels */
 const TITLEBAR_HEIGHT = 40;
@@ -134,6 +135,7 @@ function MainLayout() {
   useReloadGuard(); // Prevent reload when dirty
   useUniversalToolbar(); // Universal toolbar toggle (shortcut configurable)
   useFileExplorerShortcuts(); // Toggle hidden files
+  useImagePasteToast(); // Image paste confirmation toast
 
   const classNames = [
     "app-layout",

@@ -1,0 +1,68 @@
+/**
+ * Image Preview Popup Styles
+ * Compact floating preview for image hover
+ * Styled to match link popup design language
+ */
+
+.image-preview-popup {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: image-preview-fade-in 0.1s ease-out;
+  max-width: 220px;
+  min-width: 60px;
+}
+
+@keyframes image-preview-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.image-preview-img {
+  max-width: 200px;
+  max-height: 150px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+}
+
+.image-preview-loading {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  font-style: italic;
+}
+
+.image-preview-error {
+  font-size: 11px;
+  color: #e53935;
+  padding: 8px 16px;
+  text-align: center;
+}
+
+.image-preview-error:empty {
+  display: none;
+}
+
+/* Dark theme */
+.dark-theme .image-preview-popup {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .image-preview-error {
+  color: #ff6b6b;
+}

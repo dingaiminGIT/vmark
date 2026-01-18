@@ -53,6 +53,7 @@ import {
   createImeGuardPlugin,
   createSourceCursorContextPlugin,
   createSourceMathPreviewPlugin,
+  createSourceImagePreviewPlugin,
 } from "@/plugins/codemirror";
 import { buildSourceShortcutKeymap } from "@/plugins/codemirror/sourceShortcuts";
 import { toggleTaskList } from "@/plugins/sourceFormatPopup/taskListActions";
@@ -281,6 +282,8 @@ export function SourceEditor() {
         createSourceCursorContextPlugin(),
         // Inline math preview
         createSourceMathPreviewPlugin(),
+        // Inline image preview
+        createSourceImagePreviewPlugin(),
       ],
     });
 

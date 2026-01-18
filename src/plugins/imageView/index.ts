@@ -80,6 +80,9 @@ export class ImageNodeView implements NodeView {
   private getPos: () => number | undefined;
   private resolveRequestId = 0; // Track async requests to ignore stale responses
   private destroyed = false;
+  // Store active load handlers for cleanup
+  private activeLoadHandler: (() => void) | null = null;
+  private activeErrorHandler: (() => void) | null = null;
 
   constructor(node: Node, getPos: () => number | undefined) {
     this.getPos = getPos;
@@ -133,24 +136,28 @@ export class ImageNodeView implements NodeView {
   };
 
   private updateSrc(src: string): void {
-    // Always reset opacity first
+    // Reset states
     this.dom.style.opacity = "1";
+    this.dom.classList.remove("image-loading", "image-error");
 
     if (!src) {
       this.dom.src = "";
+      this.showError("No image source");
       return;
     }
 
     // External URLs can be used directly
     if (isExternalUrl(src)) {
+      this.dom.classList.add("image-loading");
       this.dom.src = src;
+      this.setupLoadHandlers();
       return;
     }
 
     // Relative and absolute paths need resolution
     // Show placeholder while resolving
     this.dom.src = "";
-    this.dom.style.opacity = "0.5";
+    this.dom.classList.add("image-loading");
 
     // Increment request ID to track this specific request
     const requestId = ++this.resolveRequestId;
@@ -160,9 +167,58 @@ export class ImageNodeView implements NodeView {
       if (this.destroyed || requestId !== this.resolveRequestId) {
         return;
       }
+      if (!resolvedSrc) {
+        this.showError("Failed to resolve path");
+        return;
+      }
       this.dom.src = resolvedSrc;
-      this.dom.style.opacity = "1";
+      this.setupLoadHandlers();
     });
+  }
+
+  private cleanupLoadHandlers(): void {
+    if (this.activeLoadHandler) {
+      this.dom.removeEventListener("load", this.activeLoadHandler);
+      this.activeLoadHandler = null;
+    }
+    if (this.activeErrorHandler) {
+      this.dom.removeEventListener("error", this.activeErrorHandler);
+      this.activeErrorHandler = null;
+    }
+  }
+
+  private setupLoadHandlers(): void {
+    // Clean up any existing handlers first
+    this.cleanupLoadHandlers();
+
+    const onLoad = () => {
+      if (this.destroyed) return;
+      this.dom.classList.remove("image-loading", "image-error");
+      this.dom.style.opacity = "1";
+      this.cleanupLoadHandlers();
+    };
+
+    const onError = () => {
+      if (this.destroyed) return;
+      this.showError("Failed to load image");
+      this.cleanupLoadHandlers();
+    };
+
+    this.activeLoadHandler = onLoad;
+    this.activeErrorHandler = onError;
+    this.dom.addEventListener("load", onLoad);
+    this.dom.addEventListener("error", onError);
+  }
+
+  private showError(message: string): void {
+    this.dom.classList.remove("image-loading");
+    this.dom.classList.add("image-error");
+    this.dom.style.opacity = "0.5";
+    // Store original title and set error tooltip
+    if (!this.dom.hasAttribute("data-original-title") && this.dom.title) {
+      this.dom.setAttribute("data-original-title", this.dom.title);
+    }
+    this.dom.title = `${message}: ${this.originalSrc}`;
   }
 
   update(node: Node): boolean {
@@ -184,6 +240,7 @@ export class ImageNodeView implements NodeView {
 
   destroy(): void {
     this.destroyed = true;
+    this.cleanupLoadHandlers();
     this.dom.removeEventListener("contextmenu", this.handleContextMenu);
     this.dom.removeEventListener("click", this.handleClick);
   }

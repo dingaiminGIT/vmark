@@ -17,14 +17,137 @@ import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import type { SourceToolbarContext } from "./types";
 import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./sourceMultiSelection";
 import { insertText, applyInlineFormat, clearFormattingSelections } from "./sourceAdapterHelpers";
-import { insertLinkSync, insertWikiSyntax, insertSourceBookmarkLink, insertSourceReferenceLink, insertInlineMath } from "./sourceAdapterLinks";
+import { insertLinkSync, insertWikiSyntax, insertSourceBookmarkLink, insertSourceReferenceLink, insertInlineMath, findWordAtCursorSource } from "./sourceAdapterLinks";
+import { readClipboardImagePath } from "@/utils/clipboardImagePath";
+import { copyImageToAssets } from "@/hooks/useImageOperations";
+import { useDocumentStore } from "@/stores/documentStore";
+import { useTabStore } from "@/stores/tabStore";
+import { getWindowLabel } from "@/hooks/useWindowFocus";
 
 const TABLE_TEMPLATE = "| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n";
 
-// --- Simple insertion functions ---
+// --- Helper functions ---
 
+/**
+ * Get the active document file path for the current window.
+ */
+function getActiveFilePath(): string | null {
+  try {
+    const windowLabel = getWindowLabel();
+    const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+    if (!tabId) return null;
+    return useDocumentStore.getState().getDocument(tabId)?.filePath ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// --- Smart image insertion ---
+
+/**
+ * Insert image markdown with smart clipboard detection and word expansion.
+ *
+ * Behavior:
+ * - Clipboard has image URL → insert directly
+ * - Clipboard has local path → copy to assets, insert relative path
+ * - Selection exists → use as alt text
+ * - No selection, word at cursor → use word as alt text
+ * - No clipboard image → insert template ![](url)
+ */
+async function insertImageAsync(view: EditorView): Promise<boolean> {
+  const clipboardResult = await readClipboardImagePath();
+  const { from, to } = view.state.selection.main;
+
+  // Determine alt text from selection or word expansion
+  let altText = "";
+  let insertFrom = from;
+  let insertTo = to;
+
+  if (from !== to) {
+    // Has selection: use as alt text
+    altText = view.state.doc.sliceString(from, to);
+  } else {
+    // No selection: try word expansion
+    const wordRange = findWordAtCursorSource(view, from);
+    if (wordRange) {
+      altText = view.state.doc.sliceString(wordRange.from, wordRange.to);
+      insertFrom = wordRange.from;
+      insertTo = wordRange.to;
+    }
+  }
+
+  // Check if we have a valid clipboard image path
+  if (clipboardResult?.isImage && clipboardResult.validated) {
+    let imagePath = clipboardResult.path;
+
+    // For local paths that need copying, copy to assets
+    if (clipboardResult.needsCopy) {
+      const docPath = getActiveFilePath();
+      if (!docPath) {
+        // Can't copy without document path, fall back to template
+        insertImageTemplate(view, insertFrom, insertTo, altText);
+        return true;
+      }
+
+      try {
+        const sourcePath = clipboardResult.resolvedPath ?? clipboardResult.path;
+        imagePath = await copyImageToAssets(sourcePath, docPath);
+      } catch {
+        // Copy failed, fall back to template
+        insertImageTemplate(view, insertFrom, insertTo, altText);
+        return true;
+      }
+    }
+
+    // Insert image with the path
+    const markdown = `![${altText}](${imagePath})`;
+    view.dispatch({
+      changes: { from: insertFrom, to: insertTo, insert: markdown },
+      selection: { anchor: insertFrom + markdown.length },
+    });
+    view.focus();
+    return true;
+  }
+
+  // No valid clipboard image, insert template
+  insertImageTemplate(view, insertFrom, insertTo, altText);
+  return true;
+}
+
+/**
+ * Insert image template with cursor positioned appropriately.
+ */
+function insertImageTemplate(
+  view: EditorView,
+  from: number,
+  to: number,
+  altText: string
+): void {
+  if (altText) {
+    // Has alt text: position cursor in URL part
+    const markdown = `![${altText}](url)`;
+    const urlStart = from + altText.length + 4; // After "![alt]("
+    view.dispatch({
+      changes: { from, to, insert: markdown },
+      selection: { anchor: urlStart, head: urlStart + 3 }, // Select "url"
+    });
+  } else {
+    // No alt text: position cursor in alt text part
+    const markdown = "![](url)";
+    view.dispatch({
+      changes: { from, to, insert: markdown },
+      selection: { anchor: from + 2 }, // After "!["
+    });
+  }
+  view.focus();
+}
+
+/**
+ * Synchronous wrapper for insertImageAsync.
+ * Fires the async operation and returns immediately.
+ */
 function insertImage(view: EditorView): boolean {
-  insertText(view, "![](url)", 4);
+  void insertImageAsync(view);
   return true;
 }
 

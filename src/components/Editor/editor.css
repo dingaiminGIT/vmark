@@ -356,6 +356,29 @@
   border-bottom: 2px solid var(--primary-color);
 }
 
+/* Inline image loading state */
+.tiptap-editor img.inline-image.image-loading {
+  opacity: 0.5;
+  min-width: 40px;
+  min-height: 20px;
+  background: var(--bg-secondary);
+}
+
+/* Inline image error state */
+.tiptap-editor img.inline-image.image-error {
+  opacity: 0.3;
+  min-width: 40px;
+  min-height: 20px;
+  background: var(--bg-secondary);
+  border: 1px dashed #e53935;
+  cursor: help;
+}
+
+/* Dark theme inline image error */
+.dark-theme .tiptap-editor img.inline-image.image-error {
+  border-color: #ff6b6b;
+}
+
 /* Media border styles - applied to editor container */
 .media-border-always .tiptap-editor img,
 .media-border-always .mermaid-block,

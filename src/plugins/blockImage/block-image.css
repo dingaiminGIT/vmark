@@ -33,3 +33,45 @@
 .media-border-hover .block-image img:hover {
   border: 1px solid var(--border-color);
 }
+
+/* Loading state */
+.block-image.image-loading img {
+  opacity: 0.5;
+  min-width: 100px;
+  min-height: 60px;
+  background: var(--bg-secondary);
+}
+
+/* Error state */
+.block-image.image-error {
+  position: relative;
+}
+
+.block-image.image-error img {
+  opacity: 0.3;
+  min-width: 100px;
+  min-height: 60px;
+  background: var(--bg-secondary);
+  border: 1px dashed #e53935;
+}
+
+.block-image.image-error::before {
+  content: "⚠";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  color: #e53935;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Dark theme error */
+.dark-theme .block-image.image-error img {
+  border-color: #ff6b6b;
+}
+
+.dark-theme .block-image.image-error::before {
+  color: #ff6b6b;
+}
