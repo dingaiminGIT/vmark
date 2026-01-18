@@ -1,4 +1,5 @@
 mod mcp_bridge;
+mod mcp_config;
 mod mcp_server;
 mod menu;
 mod menu_events;
@@ -72,6 +73,10 @@ pub fn run() {
             mcp_server::mcp_server_stop,
             mcp_server::mcp_server_status,
             mcp_bridge::mcp_bridge_respond,
+            mcp_config::mcp_config_get_status,
+            mcp_config::mcp_config_preview,
+            mcp_config::mcp_config_install,
+            mcp_config::mcp_config_uninstall,
             pty::pty_spawn,
             pty::pty_write,
             pty::pty_resize,

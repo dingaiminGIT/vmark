@@ -8,6 +8,7 @@ import { useState } from "react";
 import { SettingRow, Toggle, SettingsGroup } from "./components";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useMcpServer } from "@/hooks/useMcpServer";
+import { McpConfigInstaller } from "./McpConfigInstaller";
 
 function StatusBadge({ running, loading }: { running: boolean; loading: boolean }) {
   if (loading) {
@@ -149,6 +150,10 @@ export function IntegrationsSettings() {
           </div>
         </div>
       </SettingsGroup>
+
+      <div className="mt-6">
+        <McpConfigInstaller port={mcpSettings.port} />
+      </div>
     </div>
   );
 }
