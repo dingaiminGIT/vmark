@@ -211,6 +211,16 @@ class MathInlineNodeView implements NodeView {
   private handleKeydown = (e: KeyboardEvent) => {
     if (isImeKeyEvent(e)) return;
 
+    // Toggle shortcut: Alt+Cmd+M (Mac) or Alt+Ctrl+M (Win/Linux) - unwrap math
+    // Use e.code instead of e.key because Alt changes the character on Mac
+    const isMac = navigator.platform.toLowerCase().includes("mac");
+    const modKey = isMac ? e.metaKey : e.ctrlKey;
+    if (e.code === "KeyM" && e.altKey && modKey) {
+      e.preventDefault();
+      this.unwrapToText();
+      return;
+    }
+
     if (e.key === "Enter") {
       e.preventDefault();
       this.commitAndExit();
@@ -248,6 +258,33 @@ class MathInlineNodeView implements NodeView {
     // Delete the node and exit
     const tr = state.tr.delete(pos, pos + node.nodeSize);
     dispatch(tr);
+    this.editorView.focus();
+  }
+
+  private unwrapToText() {
+    if (!this.getPos || !this.editorView) return;
+    const pos = this.getPos();
+    if (pos === undefined) return;
+
+    // Get current input value (might differ from saved)
+    const content = this.inputDom?.value ?? this.currentLatex;
+
+    const { state, dispatch } = this.editorView;
+    const node = state.doc.nodeAt(pos);
+    if (!node) return;
+
+    // Replace math node with plain text
+    const tr = state.tr.replaceWith(
+      pos,
+      pos + node.nodeSize,
+      content ? state.schema.text(content) : []
+    );
+    // Position cursor at end of inserted text
+    tr.setSelection(Selection.near(tr.doc.resolve(pos + content.length)));
+    dispatch(tr);
+
+    // Exit edit mode and focus editor
+    this.exitEditMode();
     this.editorView.focus();
   }
 
