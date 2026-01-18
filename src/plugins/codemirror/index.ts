@@ -17,3 +17,4 @@ export { createSourceFocusModePlugin } from "./focusModePlugin";
 export { createSourceTypewriterPlugin } from "./typewriterModePlugin";
 export { createImeGuardPlugin } from "./imeGuard";
 export { createSourceCursorContextPlugin } from "./sourceCursorContext";
+export { createSourceMathPreviewPlugin } from "./sourceMathPreview";

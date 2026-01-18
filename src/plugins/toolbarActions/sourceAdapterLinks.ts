@@ -256,7 +256,7 @@ export function insertSourceReferenceLink(view: EditorView): boolean {
  * Find inline math ($...$) range around cursor position.
  * Returns the range including delimiters, or null if not inside math.
  */
-function findInlineMathAtCursor(view: EditorView, pos: number): { from: number; to: number; content: string } | null {
+export function findInlineMathAtCursor(view: EditorView, pos: number): { from: number; to: number; content: string } | null {
   const doc = view.state.doc;
   const line = doc.lineAt(pos);
   const lineText = line.text;

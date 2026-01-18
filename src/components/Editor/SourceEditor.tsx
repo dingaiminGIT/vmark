@@ -52,6 +52,7 @@ import {
   createSourceTypewriterPlugin,
   createImeGuardPlugin,
   createSourceCursorContextPlugin,
+  createSourceMathPreviewPlugin,
 } from "@/plugins/codemirror";
 import { buildSourceShortcutKeymap } from "@/plugins/codemirror/sourceShortcuts";
 import { toggleTaskList } from "@/plugins/sourceFormatPopup/taskListActions";
@@ -278,6 +279,8 @@ export function SourceEditor() {
         EditorState.allowMultipleSelections.of(true),
         // Source cursor context for toolbar actions
         createSourceCursorContextPlugin(),
+        // Inline math preview
+        createSourceMathPreviewPlugin(),
       ],
     });
 
