@@ -1,4 +1,4 @@
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -33,6 +33,7 @@ struct PtyExit {
 /// Internal session state
 struct InternalSession {
     writer: Box<dyn Write + Send>,
+    master: Box<dyn MasterPty + Send>,
     _kill_tx: mpsc::Sender<()>,
 }
 
@@ -128,6 +129,9 @@ pub async fn pty_spawn(
         cmd.arg("-l");
     }
 
+    // Set TERM for proper terminal emulation
+    cmd.env("TERM", "xterm-256color");
+
     // Set working directory
     if let Some(ref dir) = cwd {
         cmd.cwd(dir);
@@ -139,7 +143,7 @@ pub async fn pty_spawn(
         .spawn_command(cmd)
         .map_err(|e| format!("Failed to spawn shell: {}", e))?;
 
-    // Get reader and writer
+    // Get reader and writer from master
     let mut reader = pair
         .master
         .try_clone_reader()
@@ -152,13 +156,14 @@ pub async fn pty_spawn(
     // Create kill channel
     let (kill_tx, mut kill_rx) = mpsc::channel::<()>(1);
 
-    // Store session
+    // Store session with master for resize support
     {
         let mut manager = state.0.lock().map_err(|e| format!("Lock error: {}", e))?;
         manager.sessions.insert(
             session_id.clone(),
             InternalSession {
                 writer,
+                master: pair.master,
                 _kill_tx: kill_tx,
             },
         );
@@ -250,16 +255,24 @@ pub fn pty_resize(
     cols: u16,
     rows: u16,
 ) -> Result<(), String> {
-    // Note: portable-pty doesn't have a direct resize method after creation
-    // For now, we acknowledge the resize request but don't actually resize
-    // A full implementation would need to track the master PTY and call resize on it
     let manager = state.0.lock().map_err(|e| format!("Lock error: {}", e))?;
-    if !manager.sessions.contains_key(&session_id) {
-        return Err(format!("Session not found: {}", session_id));
-    }
+    let session = manager
+        .sessions
+        .get(&session_id)
+        .ok_or_else(|| format!("Session not found: {}", session_id))?;
+
+    session
+        .master
+        .resize(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
+        .map_err(|e| format!("Resize error: {}", e))?;
 
     #[cfg(debug_assertions)]
-    eprintln!("[PTY] Resize requested for {}: {}x{}", session_id, cols, rows);
+    eprintln!("[PTY] Resized {}: {}x{}", session_id, cols, rows);
 
     Ok(())
 }

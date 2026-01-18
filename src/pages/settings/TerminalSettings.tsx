@@ -2,13 +2,12 @@
  * Terminal Settings Section
  *
  * Configuration for the integrated terminal panel.
+ * Note: Terminal uses the Mono Font from Appearance settings.
  */
 
 import {
   useSettingsStore,
-  TERMINAL_FONTS,
   type TerminalShell,
-  type TerminalFontFamily,
   type TerminalFontSize,
   type TerminalCursorStyle,
   type TerminalMarkdownMode,
@@ -24,9 +23,6 @@ const shellOptions: { value: TerminalShell; label: string }[] = [
   { value: "fish", label: "Fish" },
   { value: "powershell", label: "PowerShell" },
 ];
-
-const fontFamilyOptions: { value: TerminalFontFamily; label: string }[] =
-  TERMINAL_FONTS.map((font) => ({ value: font, label: font }));
 
 const fontSizeOptions: { value: string; label: string }[] = [
   { value: "12", label: "12px" },
@@ -110,16 +106,6 @@ export function TerminalSettings() {
             value={terminal.theme}
             options={themeOptions}
             onChange={(v) => updateSetting("theme", v as TerminalTheme)}
-          />
-        </SettingRow>
-        <SettingRow
-          label="Font Family"
-          description="Nerd Fonts recommended for icon support"
-        >
-          <Select
-            value={terminal.fontFamily}
-            options={fontFamilyOptions}
-            onChange={(v) => updateSetting("fontFamily", v as TerminalFontFamily)}
           />
         </SettingRow>
         <SettingRow label="Font Size">

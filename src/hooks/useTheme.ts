@@ -20,10 +20,18 @@ const fontStacks = {
   },
   mono: {
     system: 'ui-monospace, "SF Mono", Menlo, Monaco, monospace',
-    firacode: '"Fira Code", ui-monospace, monospace',
-    jetbrains: '"JetBrains Mono", ui-monospace, monospace',
-    sourcecodepro: '"Source Code Pro", ui-monospace, monospace',
+    // macOS system fonts
+    sfmono: '"SF Mono", ui-monospace, monospace',
+    monaco: 'Monaco, ui-monospace, monospace',
+    menlo: 'Menlo, ui-monospace, monospace',
+    // Cross-platform
     consolas: 'Consolas, "Courier New", monospace',
+    // Popular coding fonts (Nerd Font versions for terminal icon support)
+    jetbrains: '"JetBrains Mono", ui-monospace, monospace',
+    firacode: '"Fira Code", ui-monospace, monospace',
+    saucecodepro: '"SauceCodePro Nerd Font Mono", "SauceCodePro NFM", ui-monospace, monospace',
+    ibmplexmono: '"IBM Plex Mono", ui-monospace, monospace',
+    hack: 'Hack, ui-monospace, monospace',
     inconsolata: 'Inconsolata, ui-monospace, monospace',
   },
 };

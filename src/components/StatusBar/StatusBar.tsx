@@ -5,7 +5,7 @@ const EMPTY_TABS: never[] = [];
 import { Code2, Type, Save, Plus } from "lucide-react";
 import { countWords as alfaazCount } from "alfaaz";
 import { useEditorStore } from "@/stores/editorStore";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { useUIStore } from "@/stores/uiStore";
 import { useWindowLabel, useIsDocumentWindow } from "@/contexts/WindowContext";
 import { useTabStore, type Tab as TabType } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -58,7 +58,7 @@ export function StatusBar() {
   const content = useDocumentContent();
   const lastAutoSave = useDocumentLastAutoSave();
   const sourceMode = useEditorStore((state) => state.sourceMode);
-  const autoHideStatusBar = useSettingsStore((state) => state.appearance.autoHideStatusBar);
+  const statusBarVisible = useUIStore((state) => state.statusBarVisible);
 
   // Tab state - only for document windows
   // Use stable EMPTY_TABS to avoid infinite loop from new array reference
@@ -68,9 +68,6 @@ export function StatusBar() {
   const activeTabId = useTabStore((state) =>
     isDocumentWindow ? state.activeTabId[windowLabel] : null
   );
-
-  // Status bar visibility controlled by Cmd+J (toggles autoHideStatusBar)
-  const isHidden = autoHideStatusBar ?? false;
 
   const [contextMenu, setContextMenu] = useState<{
     position: ContextMenuPosition;
@@ -144,7 +141,7 @@ export function StatusBar() {
   const showNewTabButton = isDocumentWindow;
 
   // When hidden (Cmd+J toggled), don't render
-  if (isHidden) return null;
+  if (!statusBarVisible) return null;
 
   return (
     <>

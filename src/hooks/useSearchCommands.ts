@@ -3,7 +3,6 @@ import { type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useSearchStore } from "@/stores/searchStore";
 import { useUIStore } from "@/stores/uiStore";
-import { useSettingsStore } from "@/stores/settingsStore";
 
 export function useSearchCommands() {
   const unlistenRefs = useRef<UnlistenFn[]>([]);
@@ -26,10 +25,13 @@ export function useSearchCommands() {
       // Close other bars first for mutual exclusivity
       const unlistenFindReplace = await currentWindow.listen<string>("menu:find-replace", (event) => {
         if (event.payload !== windowLabel) return;
-        // Close UniversalToolbar and show StatusBar before opening FindBar
-        useUIStore.getState().setUniversalToolbarVisible(false);
-        useSettingsStore.getState().updateAppearanceSetting("autoHideStatusBar", false);
-        useSearchStore.getState().toggle();
+        const search = useSearchStore.getState();
+        if (!search.isOpen) {
+          // Opening FindBar: close StatusBar and UniversalToolbar
+          useUIStore.getState().setStatusBarVisible(false);
+          useUIStore.getState().setUniversalToolbarVisible(false);
+        }
+        search.toggle();
       });
       if (cancelled) { unlistenFindReplace(); return; }
       unlistenRefs.current.push(unlistenFindReplace);

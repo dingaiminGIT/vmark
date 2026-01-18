@@ -4,14 +4,13 @@
  * Handles keyboard shortcuts for tab and UI operations:
  * - Cmd+T: New tab
  * - Cmd+W: Close current tab (with dirty check)
- * - Cmd+J: Toggle status bar visibility
+ * - Cmd+J: Toggle status bar visibility (mutually exclusive with FindBar/UniversalToolbar)
  */
 
 import { useEffect } from "react";
 import { useWindowLabel, useIsDocumentWindow } from "@/contexts/WindowContext";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
-import { useSettingsStore } from "@/stores/settingsStore";
 import { useSearchStore } from "@/stores/searchStore";
 import { useUIStore } from "@/stores/uiStore";
 import { closeTabWithDirtyCheck } from "@/hooks/useTabOperations";
@@ -50,15 +49,18 @@ export function useTabShortcuts() {
         return;
       }
 
-      // Cmd+J: Toggle auto-hide status bar setting
-      // Close other bars first for mutual exclusivity
+      // Cmd+J: Toggle status bar visibility (mutually exclusive with other bottom bars)
       if (isMeta && e.key === "j") {
         e.preventDefault();
-        // Close FindBar and UniversalToolbar before showing StatusBar
-        useSearchStore.getState().close();
-        useUIStore.getState().setUniversalToolbarVisible(false);
-        const current = useSettingsStore.getState().appearance.autoHideStatusBar ?? false;
-        useSettingsStore.getState().updateAppearanceSetting("autoHideStatusBar", !current);
+        const ui = useUIStore.getState();
+        const isCurrentlyVisible = ui.statusBarVisible;
+
+        if (!isCurrentlyVisible) {
+          // Showing StatusBar: close other bars first
+          useSearchStore.getState().close();
+          ui.setUniversalToolbarVisible(false);
+        }
+        ui.setStatusBarVisible(!isCurrentlyVisible);
         return;
       }
     };

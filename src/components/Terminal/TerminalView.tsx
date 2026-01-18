@@ -163,14 +163,30 @@ interface TerminalViewProps {
   sessionToRestore?: TerminalSession;
 }
 
+/** Mono font stacks - maps appearance monoFont key to CSS font-family */
+const monoFontStacks: Record<string, string> = {
+  system: 'ui-monospace, "SF Mono", Menlo, Monaco, monospace',
+  sfmono: '"SF Mono", ui-monospace, monospace',
+  monaco: 'Monaco, ui-monospace, monospace',
+  menlo: 'Menlo, ui-monospace, monospace',
+  consolas: 'Consolas, "Courier New", monospace',
+  jetbrains: '"JetBrains Mono", ui-monospace, monospace',
+  firacode: '"Fira Code", ui-monospace, monospace',
+  saucecodepro: '"SauceCodePro Nerd Font Mono", "SauceCodePro NFM", ui-monospace, monospace',
+  ibmplexmono: '"IBM Plex Mono", ui-monospace, monospace',
+  hack: 'Hack, ui-monospace, monospace',
+  inconsolata: 'Inconsolata, ui-monospace, monospace',
+};
+
 export function TerminalView({ sessionToRestore }: TerminalViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const markdownAddonRef = useRef<MarkdownAddon | null>(null);
 
-  // Read terminal settings
+  // Read terminal settings and appearance mono font
   const terminalSettings = useSettingsStore((state) => state.terminal);
+  const monoFont = useSettingsStore((state) => state.appearance.monoFont);
   const terminalTheme = useTerminalTheme();
 
   // Session management
@@ -197,7 +213,7 @@ export function TerminalView({ sessionToRestore }: TerminalViewProps) {
     [removeSession]
   );
 
-  const { sessionId, sendInput } = useTerminalPty(
+  const { sessionId, sendInput, resizePty } = useTerminalPty(
     terminalRef,
     processData,
     handleSessionCreated,
@@ -209,11 +225,8 @@ export function TerminalView({ sessionToRestore }: TerminalViewProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Build fontFamily string - System Default uses fallback chain, specific fonts use that font + monospace fallback
-    const fontFamily =
-      terminalSettings.fontFamily === "System Default"
-        ? '"SF Mono", "Monaco", "Menlo", "Consolas", "Courier New", monospace'
-        : `"${terminalSettings.fontFamily}", monospace`;
+    // Get font family from appearance mono font setting
+    const fontFamily = monoFontStacks[monoFont] ?? monoFontStacks.system;
 
     const terminal = new Terminal({
       fontFamily,
@@ -236,6 +249,9 @@ export function TerminalView({ sessionToRestore }: TerminalViewProps) {
     terminal.open(containerRef.current);
     fitAddon.fit();
 
+    // Notify PTY of initial dimensions after fit
+    resizePty(terminal.cols, terminal.rows);
+
     // Handle user input
     terminal.onData((data) => {
       sendInput(data);
@@ -244,10 +260,12 @@ export function TerminalView({ sessionToRestore }: TerminalViewProps) {
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // Fit terminal on resize
+    // Fit terminal on resize and notify PTY of new dimensions
     const resizeObserver = new ResizeObserver(() => {
-      if (fitAddonRef.current) {
+      if (fitAddonRef.current && terminalRef.current) {
         fitAddonRef.current.fit();
+        // Notify PTY of new terminal dimensions
+        resizePty(terminalRef.current.cols, terminalRef.current.rows);
       }
     });
     resizeObserver.observe(containerRef.current);
@@ -259,7 +277,7 @@ export function TerminalView({ sessionToRestore }: TerminalViewProps) {
       fitAddonRef.current = null;
       markdownAddonRef.current = null;
     };
-  }, [sendInput]);
+  }, [sendInput, resizePty]);
 
   // Update markdown mode when it changes
   useEffect(() => {
@@ -273,11 +291,8 @@ export function TerminalView({ sessionToRestore }: TerminalViewProps) {
     const terminal = terminalRef.current;
     if (!terminal) return;
 
-    // Build fontFamily string
-    const fontFamily =
-      terminalSettings.fontFamily === "System Default"
-        ? '"SF Mono", "Monaco", "Menlo", "Consolas", "Courier New", monospace'
-        : `"${terminalSettings.fontFamily}", monospace`;
+    // Get font family from appearance mono font setting
+    const fontFamily = monoFontStacks[monoFont] ?? monoFontStacks.system;
 
     terminal.options.fontFamily = fontFamily;
     terminal.options.fontSize = terminalSettings.fontSize;
@@ -285,10 +300,11 @@ export function TerminalView({ sessionToRestore }: TerminalViewProps) {
     terminal.options.cursorStyle = terminalSettings.cursorStyle;
     terminal.options.scrollback = terminalSettings.scrollback;
 
-    // Re-fit after font change
+    // Re-fit and refresh to re-render with new font
     fitAddonRef.current?.fit();
+    terminal.refresh(0, terminal.rows - 1);
   }, [
-    terminalSettings.fontFamily,
+    monoFont,
     terminalSettings.fontSize,
     terminalSettings.cursorBlink,
     terminalSettings.cursorStyle,

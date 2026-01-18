@@ -9,7 +9,6 @@
 import { useEffect, useCallback } from "react";
 import { useUIStore } from "@/stores/uiStore";
 import { useSearchStore } from "@/stores/searchStore";
-import { useSettingsStore } from "@/stores/settingsStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { matchesShortcutEvent } from "@/utils/shortcutMatch";
 
@@ -26,10 +25,13 @@ import { matchesShortcutEvent } from "@/utils/shortcutMatch";
  */
 export function useUniversalToolbar(): void {
   const toggleToolbar = useCallback(() => {
-    // Close FindBar and show StatusBar before opening UniversalToolbar
-    useSearchStore.getState().close();
-    useSettingsStore.getState().updateAppearanceSetting("autoHideStatusBar", false);
-    useUIStore.getState().toggleUniversalToolbar();
+    const ui = useUIStore.getState();
+    if (!ui.universalToolbarVisible) {
+      // Opening UniversalToolbar: close StatusBar and FindBar
+      ui.setStatusBarVisible(false);
+      useSearchStore.getState().close();
+    }
+    ui.toggleUniversalToolbar();
   }, []);
 
   useEffect(() => {

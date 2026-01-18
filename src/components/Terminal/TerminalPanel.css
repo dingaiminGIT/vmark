@@ -83,10 +83,41 @@
 }
 
 .terminal-split-pane {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+/* Close button on each split pane */
+.terminal-pane-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: var(--terminal-chrome-bg, rgba(0, 0, 0, 0.5));
+  border: none;
+  border-radius: 4px;
+  color: var(--terminal-chrome-text, #888);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  z-index: 5;
+}
+
+.terminal-split-pane:hover .terminal-pane-close {
+  opacity: 1;
+}
+
+.terminal-pane-close:hover {
+  background: var(--terminal-chrome-hover-bg, rgba(0, 0, 0, 0.7));
+  color: var(--terminal-chrome-text-active, #fff);
 }
 
 .terminal-split-divider {

@@ -9,7 +9,7 @@ function resetUIStore() {
     outlineVisible: false,
     sidebarViewMode: "outline",
     activeHeadingLine: null,
-    statusBarPinned: false,
+    statusBarVisible: true,
     universalToolbarVisible: false,
     universalToolbarHasFocus: false,
     lastFocusedToolbarIndex: 0,

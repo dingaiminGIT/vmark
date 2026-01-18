@@ -61,6 +61,16 @@ export function useTerminalPty(
     });
   }, []);
 
+  // Resize PTY
+  const resizePty = useCallback((cols: number, rows: number) => {
+    const sessionId = sessionIdRef.current;
+    if (!sessionId) return;
+
+    invoke("pty_resize", { sessionId, cols, rows }).catch((err) => {
+      console.error("[PTY] Resize error:", err);
+    });
+  }, []);
+
   // Spawn PTY on mount
   useEffect(() => {
     let mounted = true;
@@ -74,11 +84,15 @@ export function useTerminalPty(
         // Use session cwd for restoration, otherwise use workspace root
         const cwd = sessionToRestore?.cwd || rootPath || undefined;
 
+        // Get terminal dimensions (use actual size if available, fallback to defaults)
+        const cols = terminalRef.current?.cols ?? 80;
+        const rows = terminalRef.current?.rows ?? 24;
+
         // Spawn PTY
         const session = await invoke<PtySession>("pty_spawn", {
           cwd,
-          cols: 80,
-          rows: 24,
+          cols,
+          rows,
           shell,
         });
 
@@ -158,6 +172,7 @@ export function useTerminalPty(
   return {
     sessionId: sessionIdRef.current,
     sendInput,
+    resizePty,
   };
 }
 

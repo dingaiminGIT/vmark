@@ -14,7 +14,7 @@ interface UIState {
   outlineVisible: boolean;
   sidebarViewMode: SidebarViewMode;
   activeHeadingLine: number | null; // Current heading line for outline highlight
-  statusBarPinned: boolean; // When true, status bar stays visible
+  statusBarVisible: boolean; // Simple toggle for status bar visibility (Cmd+J)
   universalToolbarVisible: boolean; // Universal formatting toolbar (shortcut configurable)
   universalToolbarHasFocus: boolean; // Keyboard focus is inside the universal toolbar
   lastFocusedToolbarIndex: number; // Last focused button index in universal toolbar
@@ -29,8 +29,7 @@ interface UIActions {
   showSidebarWithView: (mode: SidebarViewMode) => void;
   setActiveHeadingLine: (line: number | null) => void;
   setSidebarWidth: (width: number) => void;
-  toggleStatusBar: () => void;
-  setStatusBarPinned: (pinned: boolean) => void;
+  setStatusBarVisible: (visible: boolean) => void;
   toggleUniversalToolbar: () => void;
   setUniversalToolbarVisible: (visible: boolean) => void;
   setUniversalToolbarHasFocus: (hasFocus: boolean) => void;
@@ -44,7 +43,7 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   outlineVisible: false,
   sidebarViewMode: "outline",
   activeHeadingLine: null,
-  statusBarPinned: false,
+  statusBarVisible: true, // Default to visible
   universalToolbarVisible: false,
   universalToolbarHasFocus: false,
   lastFocusedToolbarIndex: 0,
@@ -59,8 +58,7 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   setSidebarWidth: (width) => set({
     sidebarWidth: Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width)),
   }),
-  toggleStatusBar: () => set((state) => ({ statusBarPinned: !state.statusBarPinned })),
-  setStatusBarPinned: (pinned) => set({ statusBarPinned: pinned }),
+  setStatusBarVisible: (visible) => set({ statusBarVisible: visible }),
   toggleUniversalToolbar: () =>
     set((state) => ({
       universalToolbarVisible: !state.universalToolbarVisible,

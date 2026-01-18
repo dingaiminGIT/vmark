@@ -8,7 +8,7 @@ const TERMINAL_DEFAULT_HEIGHT = 200;
 const TERMINAL_MIN_WIDTH = 200;
 const TERMINAL_MAX_WIDTH = 800;
 const TERMINAL_DEFAULT_WIDTH = 400;
-const MAX_SESSIONS = 3;
+const MAX_SESSIONS = 2; // Max 2 panes (1 main + 1 split)
 
 export type SplitDirection = "horizontal" | "vertical";
 

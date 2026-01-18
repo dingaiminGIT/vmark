@@ -43,10 +43,18 @@ const fontOptions = {
   ],
   mono: [
     SYSTEM_DEFAULT,
-    { value: "firacode", label: "Fira Code" },
-    { value: "jetbrains", label: "JetBrains Mono" },
-    { value: "sourcecodepro", label: "Source Code Pro" },
+    // macOS system fonts
+    { value: "sfmono", label: "SF Mono" },
+    { value: "monaco", label: "Monaco" },
+    { value: "menlo", label: "Menlo" },
+    // Cross-platform
     { value: "consolas", label: "Consolas" },
+    // Popular coding fonts (Nerd Font versions for terminal icon support)
+    { value: "jetbrains", label: "JetBrains Mono" },
+    { value: "firacode", label: "Fira Code" },
+    { value: "saucecodepro", label: "SauceCodePro NFM" },
+    { value: "ibmplexmono", label: "IBM Plex Mono" },
+    { value: "hack", label: "Hack" },
     { value: "inconsolata", label: "Inconsolata" },
   ],
 };
@@ -162,12 +170,6 @@ export function AppearanceSettings() {
           <Toggle
             checked={appearance.showFilenameInTitlebar ?? false}
             onChange={(v) => updateSetting("showFilenameInTitlebar", v)}
-          />
-        </SettingRow>
-        <SettingRow label="Auto-hide Status Bar">
-          <Toggle
-            checked={appearance.autoHideStatusBar ?? false}
-            onChange={(v) => updateSetting("autoHideStatusBar", v)}
           />
         </SettingRow>
       </SettingsGroup>
