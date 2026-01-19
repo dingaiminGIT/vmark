@@ -191,11 +191,13 @@ export function getToolbarButtonState(
 ): ToolbarButtonState {
   if (button.items && button.items.length > 0) {
     const itemStates = button.items.map((item) => getToolbarItemState(item, context));
-    const anyEnabled = itemStates.some((state) => !state.disabled);
     const anyActive = itemStates.some((state) => state.active);
     const allNotImplemented = itemStates.every((state) => state.notImplemented);
+    // Dropdown buttons are always clickable so users can see the menu,
+    // even if all items inside are currently disabled (e.g., context not ready).
+    // Only disable if all items are not implemented.
     return {
-      disabled: !anyEnabled || allNotImplemented,
+      disabled: allNotImplemented,
       notImplemented: allNotImplemented,
       active: anyActive,
       itemStates,

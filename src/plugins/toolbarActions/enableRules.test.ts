@@ -28,7 +28,7 @@ function createGroupButton(action: string, items: ToolbarActionItem[]): ToolbarG
 describe("getToolbarButtonState (source)", () => {
   const view = {} as CodeMirrorView;
 
-  it("disables inline formats without selection", () => {
+  it("keeps dropdown button clickable even when items are disabled (no selection)", () => {
     const button = createGroupButton("inline", [createItem("bold", ["textblock"])]);
     const state = getToolbarButtonState(button, {
       surface: "source",
@@ -59,7 +59,10 @@ describe("getToolbarButtonState (source)", () => {
       },
     });
 
-    expect(state.disabled).toBe(true);
+    // Dropdown buttons are always clickable so users can see the menu
+    expect(state.disabled).toBe(false);
+    // But individual items inside are disabled based on context
+    expect(state.itemStates?.[0].disabled).toBe(true);
   });
 
   it("enables inline formats with selection", () => {
