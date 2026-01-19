@@ -1,4 +1,5 @@
 .editor-container {
+  position: relative; /* For absolute-positioned children like DropZoneIndicator */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -972,4 +973,57 @@
     page-break-inside: avoid;
     word-wrap: break-word;
   }
+}
+
+/* Drop Zone Indicator */
+.drop-zone-indicator {
+  position: absolute;
+  inset: 8px;
+  z-index: 100;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--accent-rgb, 66, 133, 244), 0.08);
+  border: 2px dashed var(--accent-primary, #4285f4);
+  border-radius: 12px;
+  animation: dropZoneFadeIn 0.15s ease-out;
+}
+
+@keyframes dropZoneFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--accent-primary, #4285f4);
+}
+
+.drop-zone-content svg {
+  opacity: 0.8;
+}
+
+.drop-zone-text {
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.dark-theme .drop-zone-indicator {
+  background: rgba(90, 168, 255, 0.12);
+  border-color: var(--accent-primary, #5aa8ff);
+}
+
+.dark-theme .drop-zone-content {
+  color: var(--accent-primary, #5aa8ff);
 }

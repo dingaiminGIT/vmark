@@ -67,6 +67,7 @@ import { useTiptapFormatCommands } from "@/hooks/useTiptapFormatCommands";
 import { useTiptapParagraphCommands } from "@/hooks/useTiptapParagraphCommands";
 import { useTiptapSelectionCommands } from "@/hooks/useTiptapSelectionCommands";
 import { useTiptapTableCommands } from "@/hooks/useTiptapTableCommands";
+import { useImageDragDrop } from "@/hooks/useImageDragDrop";
 import { ImageContextMenu } from "./ImageContextMenu";
 import { SourcePeek } from "./SourcePeek";
 import { AlignedTableCell, AlignedTableHeader } from "./alignedTableNodes";
@@ -313,6 +314,13 @@ export function TiptapEditorInner() {
   useTiptapTableCommands(editor);
   useTiptapSelectionCommands(editor);
   useTiptapCJKFormatCommands(editor);
+
+  // Handle image drag-drop from Finder/Explorer
+  useImageDragDrop({
+    tiptapEditor: editor,
+    isSourceMode: false,
+    enabled: !!editor,
+  });
 
   // Cleanup all pending timers/RAFs on unmount to prevent memory leaks
   useEffect(() => {

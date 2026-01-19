@@ -59,6 +59,7 @@ import { buildSourceShortcutKeymap } from "@/plugins/codemirror/sourceShortcuts"
 import { toggleTaskList } from "@/plugins/sourceFormatPopup/taskListActions";
 import { guardCodeMirrorKeyBinding, runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
 import { computeSourceCursorContext } from "@/plugins/sourceFormatPopup/cursorContext";
+import { useImageDragDrop } from "@/hooks/useImageDragDrop";
 
 /**
  * Escape special regex characters in a string.
@@ -150,6 +151,13 @@ export function SourceEditor() {
   const wordWrap = useEditorStore((state) => state.wordWrap);
   const showBrTags = useSettingsStore((state) => state.markdown.showBrTags);
   const autoPairEnabled = useSettingsStore((state) => state.markdown.autoPairEnabled);
+
+  // Handle image drag-drop from Finder/Explorer
+  useImageDragDrop({
+    cmViewRef: viewRef,
+    isSourceMode: true,
+    enabled: true,
+  });
 
   // Create CodeMirror instance
   useEffect(() => {

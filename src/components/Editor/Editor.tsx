@@ -5,6 +5,7 @@ import { SourceEditor } from "./SourceEditor";
 import { TiptapEditorInner } from "./TiptapEditor";
 import { HeadingPicker } from "./HeadingPicker";
 import { LinkReferenceDialog } from "./LinkReferenceDialog";
+import { DropZoneIndicator } from "./DropZoneIndicator";
 import "./editor.css";
 import "./heading-picker.css";
 import "./link-reference-dialog.css";
@@ -51,6 +52,7 @@ export function Editor() {
       </div>
       <HeadingPicker />
       <LinkReferenceDialog />
+      <DropZoneIndicator />
     </div>
   );
 }

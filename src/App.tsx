@@ -95,6 +95,7 @@ function DocumentWindowHooks() {
 
 // Main window specific hooks (only for "main" window, not doc-*)
 function MainWindowHooks() {
+  console.log("[Frontend] MainWindowHooks rendering");
   useMcpAutoStart(); // Auto-start MCP server if enabled
   useMcpBridge(); // Handle MCP bridge requests from AI assistants
   return null;

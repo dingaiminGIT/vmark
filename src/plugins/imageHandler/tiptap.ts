@@ -1,5 +1,5 @@
 import { Extension } from "@tiptap/core";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Plugin, PluginKey, Selection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { message } from "@tauri-apps/plugin-dialog";
 import { copyImageToAssets, saveImageToAssets, insertBlockImageNode } from "@/hooks/useImageOperations";
@@ -7,7 +7,7 @@ import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
 import { useTabStore } from "@/stores/tabStore";
-import { detectMultipleImagePaths, type ImagePathResult } from "@/utils/imagePathDetection";
+import { detectMultipleImagePaths, hasImageExtension, type ImagePathResult } from "@/utils/imagePathDetection";
 import { parseMultiplePaths } from "@/utils/multiImageParsing";
 import { withReentryGuard } from "@/utils/reentryGuard";
 
@@ -506,6 +506,133 @@ async function processClipboardImage(view: EditorView, item: DataTransferItem): 
   });
 }
 
+const DROP_IMAGE_GUARD = "drop-image";
+
+/**
+ * Check if a file is an image based on MIME type or extension.
+ */
+function isImageFile(file: File): boolean {
+  // Check MIME type first
+  if (file.type.startsWith("image/")) {
+    return true;
+  }
+  // Fall back to extension check
+  return hasImageExtension(file.name);
+}
+
+/**
+ * Generate unique filename for dropped images.
+ */
+function generateDroppedImageFilename(originalName: string): string {
+  const ext = originalName.includes(".") ? originalName.split(".").pop() : "png";
+  const baseName = originalName.includes(".")
+    ? originalName.slice(0, originalName.lastIndexOf("."))
+    : originalName;
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).slice(2, 6);
+  return `${baseName}-${timestamp}-${random}.${ext}`;
+}
+
+/**
+ * Process dropped image files.
+ */
+async function processDroppedFiles(view: EditorView, files: File[], insertPos: number): Promise<void> {
+  const windowLabel = getWindowLabel();
+
+  await withReentryGuard(windowLabel, DROP_IMAGE_GUARD, async () => {
+    const filePath = getActiveFilePathForCurrentWindow();
+
+    if (!filePath) {
+      await showUnsavedDocWarning();
+      return;
+    }
+
+    for (const file of files) {
+      if (!isImageFile(file)) continue;
+
+      const buffer = await file.arrayBuffer();
+      const imageData = new Uint8Array(buffer);
+      const filename = generateDroppedImageFilename(file.name || "image.png");
+
+      const relativePath = await saveImageToAssets(imageData, filename, filePath);
+
+      // Verify view is still connected
+      if (!isViewConnected(view)) {
+        console.warn("[imageHandler] View disconnected after saving dropped image");
+        return;
+      }
+
+      // Insert at drop position (insertBlockImageNode inserts after current block)
+      // We need to set selection to drop position first
+      const { state, dispatch } = view;
+      const tr = state.tr.setSelection(Selection.near(state.doc.resolve(insertPos)));
+      dispatch(tr);
+
+      insertBlockImageNode(view as unknown as Parameters<typeof insertBlockImageNode>[0], relativePath);
+    }
+  });
+}
+
+/**
+ * Handle drop events for images.
+ */
+function handleDrop(view: EditorView, event: DragEvent, _slice: unknown, moved: boolean): boolean {
+  // If this is an internal move (dragging within editor), let ProseMirror handle it
+  if (moved) return false;
+
+  const dataTransfer = event.dataTransfer;
+  if (!dataTransfer) return false;
+
+  // Check for dropped files
+  const files = Array.from(dataTransfer.files);
+  const imageFiles = files.filter(isImageFile);
+
+  if (imageFiles.length > 0) {
+    event.preventDefault();
+
+    // Get drop position in document
+    const dropPos = view.posAtCoords({ left: event.clientX, top: event.clientY });
+    const insertPos = dropPos ? dropPos.pos : view.state.selection.from;
+
+    processDroppedFiles(view, imageFiles, insertPos).catch((error) => {
+      console.error("Failed to process dropped images:", error);
+      message("Failed to save dropped images.", { kind: "error" }).catch(console.error);
+    });
+
+    return true;
+  }
+
+  // Check for dropped text that might be image paths
+  const text = dataTransfer.getData("text/plain");
+  if (text) {
+    const { paths } = parseMultiplePaths(text);
+    if (paths.length > 0) {
+      const detection = detectMultipleImagePaths(paths);
+      if (detection.allImages) {
+        event.preventDefault();
+
+        // Get drop position
+        const dropPos = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        const insertPos = dropPos ? dropPos.pos : view.state.selection.from;
+
+        // Set selection to drop position
+        const { state, dispatch } = view;
+        const tr = state.tr.setSelection(Selection.near(state.doc.resolve(insertPos)));
+        dispatch(tr);
+
+        // Insert images
+        insertMultipleImages(view, detection.results, insertPos, insertPos).catch((error) => {
+          console.error("Failed to insert dropped images:", error);
+        });
+
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
   const items = event.clipboardData?.items;
   if (!items) return false;
@@ -540,6 +667,7 @@ export const imageHandlerExtension = Extension.create({
         key: imageHandlerPluginKey,
         props: {
           handlePaste,
+          handleDrop,
         },
       }),
     ];
