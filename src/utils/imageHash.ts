@@ -5,8 +5,6 @@
  * Uses Web Crypto API for hashing.
  */
 
-import { readFile } from "@tauri-apps/plugin-fs";
-
 /**
  * Compute SHA-256 hash of binary data.
  * Returns hex-encoded hash string.
@@ -15,13 +13,4 @@ export async function computeDataHash(data: Uint8Array): Promise<string> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/**
- * Compute SHA-256 hash of file contents.
- * Returns hex-encoded hash string.
- */
-export async function computeFileHash(path: string): Promise<string> {
-  const data = await readFile(path);
-  return computeDataHash(data);
 }

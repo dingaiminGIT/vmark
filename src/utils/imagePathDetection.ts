@@ -159,10 +159,11 @@ export function detectImagePath(text: string): ImagePathResult {
   }
 
   // file:// URL - treat as absolute path, needs copy
-  // Handle both file:// and file:/// (triple slash for absolute paths)
+  // file:///path/to/file -> /path/to/file (Unix)
+  // file://hostname/path -> /path (network, rare)
   if (isFileUrl(firstLine)) {
-    // Remove file:// or file:/// prefix, handling both formats
-    const path = firstLine.replace(/^file:\/\/\/?/, "");
+    // Remove "file://" prefix only, preserving the path's leading slash
+    const path = firstLine.replace(/^file:\/\//, "");
     return {
       isImage: true,
       type: "absolutePath",
