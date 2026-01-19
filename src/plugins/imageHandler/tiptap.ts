@@ -418,7 +418,8 @@ async function insertMultipleImages(
   const filePath = getActiveFilePathForCurrentWindow();
   const copyToAssets = useSettingsStore.getState().image.copyToAssets;
 
-  // Process each image
+  // First, process all images and collect final paths
+  const imagePaths: string[] = [];
   for (const detection of results) {
     let imagePath = detection.path;
 
@@ -460,15 +461,44 @@ async function insertMultipleImages(
       // For absolute paths, use as-is
     }
 
-    // Re-verify view is still connected after async operations
-    if (!isViewConnected(view)) {
-      console.warn("[imageHandler] View disconnected after async, aborting image insert");
-      return;
-    }
-
-    // Insert each image as a block node
-    insertBlockImageNode(view as unknown as Parameters<typeof insertBlockImageNode>[0], imagePath);
+    imagePaths.push(imagePath);
   }
+
+  // Re-verify view is still connected after async operations
+  if (!isViewConnected(view)) {
+    console.warn("[imageHandler] View disconnected after async, aborting image insert");
+    return;
+  }
+
+  if (imagePaths.length === 0) return;
+
+  // Insert all images in a single transaction with correct position tracking
+  const { state } = view;
+  const blockImageType = state.schema.nodes.block_image;
+  if (!blockImageType) {
+    console.warn("[imageHandler] block_image node type not found");
+    return;
+  }
+
+  // Find insertion point from current selection
+  const { $from } = state.selection;
+  let currentInsertPos = $from.end($from.depth) + 1;
+  currentInsertPos = Math.min(currentInsertPos, state.doc.content.size);
+
+  let tr = state.tr;
+  for (const imagePath of imagePaths) {
+    const imageNode = blockImageType.create({
+      src: imagePath,
+      alt: "",
+      title: "",
+    });
+
+    tr = tr.insert(currentInsertPos, imageNode);
+    // Move insert position forward by size of inserted node
+    currentInsertPos += imageNode.nodeSize;
+  }
+
+  view.dispatch(tr);
 }
 
 /**
@@ -574,6 +604,8 @@ async function processDroppedFiles(view: EditorView, files: File[], insertPos: n
       return;
     }
 
+    // First, process all files and collect relative paths
+    const imagePaths: string[] = [];
     for (const file of files) {
       if (!isImageFile(file)) continue;
 
@@ -582,21 +614,44 @@ async function processDroppedFiles(view: EditorView, files: File[], insertPos: n
       const filename = generateDroppedImageFilename(file.name || "image.png");
 
       const relativePath = await saveImageToAssets(imageData, filename, filePath);
-
-      // Verify view is still connected
-      if (!isViewConnected(view)) {
-        console.warn("[imageHandler] View disconnected after saving dropped image");
-        return;
-      }
-
-      // Insert at drop position (insertBlockImageNode inserts after current block)
-      // We need to set selection to drop position first
-      const { state, dispatch } = view;
-      const tr = state.tr.setSelection(Selection.near(state.doc.resolve(insertPos)));
-      dispatch(tr);
-
-      insertBlockImageNode(view as unknown as Parameters<typeof insertBlockImageNode>[0], relativePath);
+      imagePaths.push(relativePath);
     }
+
+    // Verify view is still connected
+    if (!isViewConnected(view)) {
+      console.warn("[imageHandler] View disconnected after saving dropped images");
+      return;
+    }
+
+    if (imagePaths.length === 0) return;
+
+    // Insert all images in a single transaction with correct position tracking
+    const { state } = view;
+    const blockImageType = state.schema.nodes.block_image;
+    if (!blockImageType) {
+      console.warn("[imageHandler] block_image node type not found");
+      return;
+    }
+
+    // Find insertion point from drop position
+    const $pos = state.doc.resolve(Math.min(insertPos, state.doc.content.size));
+    let currentInsertPos = $pos.end($pos.depth) + 1;
+    currentInsertPos = Math.min(currentInsertPos, state.doc.content.size);
+
+    let tr = state.tr;
+    for (const relativePath of imagePaths) {
+      const imageNode = blockImageType.create({
+        src: relativePath,
+        alt: "",
+        title: "",
+      });
+
+      tr = tr.insert(currentInsertPos, imageNode);
+      // Move insert position forward by size of inserted node
+      currentInsertPos += imageNode.nodeSize;
+    }
+
+    view.dispatch(tr);
   });
 }
 
