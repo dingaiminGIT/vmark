@@ -90,6 +90,8 @@ export function useImageDragDrop({
       const blockImageType = state.schema.nodes.block_image;
 
       if (blockImageType) {
+        // Insert block_image - cursor will be positioned after it
+        // Use arrow keys to navigate to image, Enter when selected to add paragraph below
         tiptapEditor
           .chain()
           .focus()
