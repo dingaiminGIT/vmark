@@ -127,7 +127,11 @@ export class ImagePasteToastView {
     if (editorDom) {
       const containerEl = editorDom.closest(".editor-container") as HTMLElement;
       if (containerEl) {
-        bounds = getBoundaryRects(editorDom, containerEl);
+        // For CodeMirror (source mode), use .cm-content for horizontal bounds
+        // because it has padding (0 2em) while .cm-editor spans full width
+        const cmContent = editorDom.querySelector(".cm-content") as HTMLElement;
+        const horizontalEl = cmContent || editorDom;
+        bounds = getBoundaryRects(horizontalEl, containerEl);
       }
     }
 
