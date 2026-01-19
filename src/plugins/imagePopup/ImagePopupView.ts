@@ -30,6 +30,7 @@ export class ImagePopupView {
   private justOpened = false;
   private wasOpen = false;
   private removeKeyboardNavigation: (() => void) | null = null;
+  private pendingCloseRaf: number | null = null;
 
   constructor(view: EditorView) {
     this.editorView = view;
@@ -52,6 +53,11 @@ export class ImagePopupView {
     // Subscribe to store changes - only show() on open transition
     this.unsubscribe = useImagePopupStore.subscribe((state) => {
       if (state.isOpen && state.anchorRect) {
+        // Cancel any pending close - popup is being (re)opened
+        if (this.pendingCloseRaf !== null) {
+          cancelAnimationFrame(this.pendingCloseRaf);
+          this.pendingCloseRaf = null;
+        }
         // Only call show() when transitioning from closed to open
         if (!this.wasOpen) {
           this.show(state.imageSrc, state.imageAlt, state.anchorRect);
@@ -281,7 +287,18 @@ export class ImagePopupView {
 
     const target = e.target as Node;
     if (!this.container.contains(target)) {
-      useImagePopupStore.getState().closePopup();
+      // Defer the close to next frame - allows click handler to fire first
+      // and potentially reopen/update the popup (e.g., clicking a different image)
+      if (this.pendingCloseRaf === null) {
+        this.pendingCloseRaf = requestAnimationFrame(() => {
+          this.pendingCloseRaf = null;
+          // Re-check if popup should still close (might have been reopened)
+          const currentState = useImagePopupStore.getState();
+          if (currentState.isOpen && !this.container.contains(document.activeElement)) {
+            useImagePopupStore.getState().closePopup();
+          }
+        });
+      }
     }
   };
 
@@ -290,6 +307,10 @@ export class ImagePopupView {
     if (this.removeKeyboardNavigation) {
       this.removeKeyboardNavigation();
       this.removeKeyboardNavigation = null;
+    }
+    if (this.pendingCloseRaf !== null) {
+      cancelAnimationFrame(this.pendingCloseRaf);
+      this.pendingCloseRaf = null;
     }
     document.removeEventListener("mousedown", this.handleClickOutside);
     this.container.remove();

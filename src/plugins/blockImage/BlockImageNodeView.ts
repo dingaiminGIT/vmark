@@ -1,6 +1,8 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { dirname, join } from "@tauri-apps/api/path";
+import type { Editor } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
+import { NodeSelection } from "@tiptap/pm/state";
 import type { NodeView } from "@tiptap/pm/view";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -52,14 +54,16 @@ export class BlockImageNodeView implements NodeView {
   private img: HTMLImageElement;
   private originalSrc: string;
   private getPos: () => number | undefined;
+  private editor: Editor;
   private resolveRequestId = 0;
   private destroyed = false;
   // Store active load handlers for cleanup
   private activeLoadHandler: (() => void) | null = null;
   private activeErrorHandler: (() => void) | null = null;
 
-  constructor(node: PMNode, getPos: () => number | undefined) {
+  constructor(node: PMNode, getPos: () => number | undefined, editor: Editor) {
     this.getPos = getPos;
+    this.editor = editor;
     this.originalSrc = String(node.attrs.src ?? "");
 
     this.dom = document.createElement("figure");
@@ -93,6 +97,16 @@ export class BlockImageNodeView implements NodeView {
   private handleClick = (_e: MouseEvent) => {
     const pos = this.getPos();
     if (pos === undefined) return;
+
+    // Set NodeSelection on this node for visual selection indicator
+    try {
+      const { view } = this.editor;
+      const selection = NodeSelection.create(view.state.doc, pos);
+      view.dispatch(view.state.tr.setSelection(selection));
+    } catch {
+      // Ignore selection errors
+    }
+
     const rect = this.img.getBoundingClientRect();
     useImagePopupStore.getState().openPopup({
       imageSrc: this.originalSrc,
@@ -215,5 +229,21 @@ export class BlockImageNodeView implements NodeView {
       return (event.target as HTMLElement) === this.img;
     }
     return false;
+  }
+
+  /**
+   * Called when this node receives NodeSelection.
+   * Add visual selection indicator.
+   */
+  selectNode(): void {
+    this.dom.classList.add("ProseMirror-selectednode");
+  }
+
+  /**
+   * Called when this node loses NodeSelection.
+   * Remove visual selection indicator.
+   */
+  deselectNode(): void {
+    this.dom.classList.remove("ProseMirror-selectednode");
   }
 }

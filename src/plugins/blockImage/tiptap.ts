@@ -59,9 +59,9 @@ export const blockImageExtension = Node.create({
   },
 
   addNodeView() {
-    return ({ node, getPos }) => {
+    return ({ node, getPos, editor }) => {
       const safeGetPos = typeof getPos === "function" ? getPos : () => undefined;
-      return new BlockImageNodeView(node, safeGetPos) as unknown as NodeView;
+      return new BlockImageNodeView(node, safeGetPos, editor) as unknown as NodeView;
     };
   },
 });

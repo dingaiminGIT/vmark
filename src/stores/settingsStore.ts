@@ -211,6 +211,21 @@ export interface AiSettings {
   commandTrigger: AiCommandTrigger;
 }
 
+// Image auto-resize options (0 = off, positive = max dimension in pixels)
+export type ImageAutoResizeOption = 0 | 800 | 1200 | 1920 | 2560;
+
+export interface ImageSettings {
+  // Auto-resize: max dimension in pixels (0 = disabled)
+  autoResizeMax: ImageAutoResizeOption;
+  // Custom max dimension (used when autoResizeMax is not in predefined options)
+  autoResizeCustom: number;
+  // Inline threshold: max image size relative to line height (1.0 = 100% of line height)
+  // Images larger than this are inserted as block images
+  inlineThreshold: number;
+  // Whether to copy images to assets folder on paste/drop
+  copyToAssets: boolean;
+}
+
 export interface GeneralSettings {
   // Auto-save
   autoSaveEnabled: boolean;
@@ -230,6 +245,7 @@ interface SettingsState {
   cjkFormatting: CJKFormattingSettings;
   markdown: MarkdownSettings;
   ai: AiSettings;
+  image: ImageSettings;
   terminal: TerminalSettings;
   advanced: AdvancedSettingsState;
   // UI state
@@ -256,6 +272,10 @@ interface SettingsActions {
   updateAiSetting: <K extends keyof AiSettings>(
     key: K,
     value: AiSettings[K]
+  ) => void;
+  updateImageSetting: <K extends keyof ImageSettings>(
+    key: K,
+    value: ImageSettings[K]
   ) => void;
   updateTerminalSetting: <K extends keyof TerminalSettings>(
     key: K,
@@ -334,6 +354,12 @@ const initialState: SettingsState = {
   ai: {
     commandTrigger: "// ",
   },
+  image: {
+    autoResizeMax: 0, // Off by default
+    autoResizeCustom: 1600,
+    inlineThreshold: 1.0, // 1.0× line height
+    copyToAssets: true,
+  },
   terminal: {
     shell: "system",
     fontSize: 15,
@@ -358,7 +384,7 @@ const initialState: SettingsState = {
 };
 
 // Object sections that can be updated with createSectionUpdater
-type ObjectSections = "general" | "appearance" | "cjkFormatting" | "markdown" | "ai" | "terminal" | "advanced";
+type ObjectSections = "general" | "appearance" | "cjkFormatting" | "markdown" | "ai" | "image" | "terminal" | "advanced";
 
 // Helper to create section updaters - reduces duplication
 const createSectionUpdater = <T extends ObjectSections>(
@@ -379,6 +405,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
       updateCJKFormattingSetting: createSectionUpdater(set, "cjkFormatting"),
       updateMarkdownSetting: createSectionUpdater(set, "markdown"),
       updateAiSetting: createSectionUpdater(set, "ai"),
+      updateImageSetting: createSectionUpdater(set, "image"),
       updateTerminalSetting: createSectionUpdater(set, "terminal"),
       updateAdvancedSetting: createSectionUpdater(set, "advanced"),
 

@@ -7,8 +7,10 @@
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { dirname, join } from "@tauri-apps/api/path";
-import type { NodeView } from "@tiptap/pm/view";
+import type { Editor } from "@tiptap/core";
 import type { Node } from "@tiptap/pm/model";
+import { NodeSelection } from "@tiptap/pm/state";
+import type { NodeView } from "@tiptap/pm/view";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useImageContextMenuStore } from "@/stores/imageContextMenuStore";
@@ -78,14 +80,16 @@ export class ImageNodeView implements NodeView {
   dom: HTMLImageElement;
   private originalSrc: string;
   private getPos: () => number | undefined;
+  private editor: Editor;
   private resolveRequestId = 0; // Track async requests to ignore stale responses
   private destroyed = false;
   // Store active load handlers for cleanup
   private activeLoadHandler: (() => void) | null = null;
   private activeErrorHandler: (() => void) | null = null;
 
-  constructor(node: Node, getPos: () => number | undefined) {
+  constructor(node: Node, getPos: () => number | undefined, editor: Editor) {
     this.getPos = getPos;
+    this.editor = editor;
     this.originalSrc = node.attrs.src ?? "";
 
     // Create img element directly as dom (no wrapper)
@@ -120,6 +124,15 @@ export class ImageNodeView implements NodeView {
   private handleClick = (_e: MouseEvent) => {
     const pos = this.getPos();
     if (pos === undefined) return;
+
+    // Set NodeSelection on this node for visual selection indicator
+    try {
+      const { view } = this.editor;
+      const selection = NodeSelection.create(view.state.doc, pos);
+      view.dispatch(view.state.tr.setSelection(selection));
+    } catch {
+      // Ignore selection errors
+    }
 
     const rect = this.dom.getBoundingClientRect();
     useImagePopupStore.getState().openPopup({

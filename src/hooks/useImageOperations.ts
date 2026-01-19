@@ -3,7 +3,7 @@
  *
  * Async functions for image file operations:
  * - Creating assets folders
- * - Saving/copying images to assets
+ * - Saving/copying images to assets (with deduplication)
  * - Inserting image nodes into ProseMirror
  *
  * Uses Tauri APIs for file system access.
@@ -19,6 +19,8 @@ import {
   getFilename,
   buildAssetRelativePath,
 } from "@/utils/imageUtils";
+import { computeDataHash, computeFileHash } from "@/utils/imageHash";
+import { findExistingImage, registerImageHash } from "@/utils/imageHashRegistry";
 
 /**
  * Get the assets folder path relative to the document.
@@ -44,6 +46,7 @@ export async function ensureAssetsFolder(documentPath: string): Promise<string> 
 
 /**
  * Save image data (from clipboard or drag) to the assets folder.
+ * Uses content-hash deduplication to avoid saving duplicates.
  * Returns the relative path for markdown insertion.
  */
 export async function saveImageToAssets(
@@ -51,29 +54,56 @@ export async function saveImageToAssets(
   originalFilename: string,
   documentPath: string
 ): Promise<string> {
+  // Compute hash for deduplication
+  const hash = await computeDataHash(imageData);
+
+  // Check if this image already exists
+  const existing = await findExistingImage(documentPath, hash);
+  if (existing) {
+    return existing; // Return existing path, no write needed
+  }
+
+  // Image is new, save it
   const assetsPath = await ensureAssetsFolder(documentPath);
   const filename = generateUniqueFilename(originalFilename);
   const destPath = await join(assetsPath, filename);
 
   await writeFile(destPath, imageData);
 
+  // Register hash for future deduplication
+  await registerImageHash(documentPath, hash, filename);
+
   return buildAssetRelativePath(filename);
 }
 
 /**
  * Copy an external image file to the assets folder.
+ * Uses content-hash deduplication to avoid saving duplicates.
  * Used by "Insert Image" menu and drag-drop of file paths.
  */
 export async function copyImageToAssets(
   sourcePath: string,
   documentPath: string
 ): Promise<string> {
+  // Compute hash for deduplication
+  const hash = await computeFileHash(sourcePath);
+
+  // Check if this image already exists
+  const existing = await findExistingImage(documentPath, hash);
+  if (existing) {
+    return existing; // Return existing path, no copy needed
+  }
+
+  // Image is new, copy it
   const assetsPath = await ensureAssetsFolder(documentPath);
   const originalName = getFilename(sourcePath);
   const filename = generateUniqueFilename(originalName);
   const destPath = await join(assetsPath, filename);
 
   await copyFile(sourcePath, destPath);
+
+  // Register hash for future deduplication
+  await registerImageHash(documentPath, hash, filename);
 
   return buildAssetRelativePath(filename);
 }
