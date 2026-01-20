@@ -138,6 +138,7 @@ async function buildForTarget(targetKey) {
 async function main() {
   const args = process.argv.slice(2);
   const buildAll = args.includes('--all');
+  const buildMacosUniversal = args.includes('--macos-universal');
 
   console.log('VMark MCP Server Sidecar Builder');
   console.log('================================\n');
@@ -146,7 +147,22 @@ async function main() {
   await bundleWithEsbuild();
 
   // Step 2: Package with pkg
-  if (buildAll) {
+  if (buildMacosUniversal) {
+    // Build both macOS architectures for universal binary
+    console.log('Building for macOS universal (arm64 + x64)...\n');
+    const macosTargets = ['darwin-arm64', 'darwin-x64'];
+    const results = [];
+    // Build sequentially to avoid race conditions
+    for (const target of macosTargets) {
+      const success = await buildForTarget(target);
+      results.push(success);
+      if (!success) {
+        console.error(`Failed to build ${target}, aborting`);
+        process.exit(1);
+      }
+    }
+    console.log(`\nBuilt ${results.filter(Boolean).length}/${macosTargets.length} macOS targets`);
+  } else if (buildAll) {
     // Build for all platforms
     console.log('Building for all platforms...\n');
     const results = await Promise.all(

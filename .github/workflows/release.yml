@@ -104,7 +104,7 @@ jobs:
         run: |
           pnpm install
           pnpm build
-          node scripts/build-sidecar.js --all
+          node scripts/build-sidecar.js --macos-universal
 
       - name: Build MCP server sidecar (Windows)
         if: matrix.platform == 'windows-latest'
