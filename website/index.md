@@ -61,6 +61,11 @@ features:
       src: /icons/palette.svg
     title: Beautiful Themes
     details: Five built-in themes including White, Paper, Mint, Sepia, and Night mode for comfortable writing.
+
+  - icon:
+      src: /icons/bot.svg
+    title: AI Integration (MCP)
+    details: Built-in MCP server lets AI assistants like Claude interact directly with your editor - read, write, and format documents.
 ---
 
 <style>
@@ -68,6 +73,44 @@ features:
   max-width: 1152px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+}
+
+.screenshots-section {
+  margin-bottom: 3rem;
+}
+
+.screenshots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.screenshot-card {
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.screenshot-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.screenshot-card img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.screenshot-card .caption {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--vp-c-text-2);
+  text-align: center;
+  font-weight: 500;
 }
 
 .tech-stack {
@@ -88,6 +131,25 @@ features:
 </style>
 
 <div class="home-content">
+
+## See It in Action
+
+<div class="screenshots-section">
+<div class="screenshots-grid">
+  <div class="screenshot-card">
+    <img src="/screenshots/editor-main.png" alt="VMark Rich Text Editor" loading="lazy" />
+    <div class="caption">Rich Text Mode</div>
+  </div>
+  <div class="screenshot-card">
+    <img src="/screenshots/source-mode.png" alt="VMark Source Mode" loading="lazy" />
+    <div class="caption">Source Mode</div>
+  </div>
+  <div class="screenshot-card">
+    <img src="/screenshots/dark-theme.png" alt="VMark Night Theme" loading="lazy" />
+    <div class="caption">Night Theme</div>
+  </div>
+</div>
+</div>
 
 ## Built With Modern Technology
 
