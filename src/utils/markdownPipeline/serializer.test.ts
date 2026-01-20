@@ -103,12 +103,11 @@ $$`;
   });
 
   describe("wiki link round-trip", () => {
-    it("round-trips wiki links and embeds", () => {
-      const input = "See [[Page|Alias]] and ![[embed]]";
+    it("round-trips wiki links", () => {
+      const input = "See [[Page|Alias]]";
       const mdast = parseMarkdownToMdast(input);
       const output = serializeMdastToMarkdown(mdast);
       expect(output).toContain("[[Page|Alias]]");
-      expect(output).toContain("![[embed]]");
     });
   });
 

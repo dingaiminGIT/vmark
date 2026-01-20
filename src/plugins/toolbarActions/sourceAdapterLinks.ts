@@ -2,13 +2,12 @@
  * Source Adapter Links
  *
  * Link-related toolbar actions for source mode.
- * Handles hyperlinks, wiki links, bookmark links, and reference links.
+ * Handles hyperlinks, wiki links, and bookmark links.
  */
 
 import type { EditorView } from "@codemirror/view";
 import { applyFormat } from "@/plugins/sourceFormatPopup";
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
-import { useLinkReferenceDialogStore } from "@/stores/linkReferenceDialogStore";
 import { generateSlug, makeUniqueSlug, type HeadingWithId } from "@/utils/headingSlug";
 import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
@@ -229,50 +228,6 @@ export function insertSourceBookmarkLink(view: EditorView): boolean {
     });
     view.focus();
   }, { anchorRect, containerBounds });
-
-  return true;
-}
-
-/**
- * Insert a reference link with definition.
- * Opens popup and inserts [text][ref] at cursor, [ref]: url at doc end.
- */
-export function insertSourceReferenceLink(view: EditorView): boolean {
-  // Capture selected text for link text fallback (not position-sensitive)
-  const { from, to } = view.state.selection.main;
-  const capturedSelectedText = from !== to ? view.state.doc.sliceString(from, to) : "";
-
-  // Get anchor rect from selection for popup positioning
-  const coords = view.coordsAtPos(from);
-  const anchorRect = coords ? {
-    top: coords.top,
-    bottom: coords.bottom,
-    left: coords.left,
-    right: coords.left + 10, // Minimal width for cursor position
-  } : undefined;
-
-  useLinkReferenceDialogStore.getState().openDialog(capturedSelectedText, (identifier, url, title) => {
-    // Re-read current state to get fresh positions (doc may have changed)
-    const { from: currentFrom, to: currentTo } = view.state.selection.main;
-    const linkText = capturedSelectedText || identifier;
-    const reference = `[${linkText}][${identifier}]`;
-    const definition = title
-      ? `[${identifier}]: ${url} "${title}"`
-      : `[${identifier}]: ${url}`;
-
-    // Insert reference at cursor, definition at end of document
-    const docLength = view.state.doc.length;
-    const needsNewline = docLength > 0 && view.state.doc.sliceString(docLength - 1) !== "\n";
-
-    view.dispatch({
-      changes: [
-        { from: currentFrom, to: currentTo, insert: reference },
-        { from: docLength, insert: `${needsNewline ? "\n" : ""}\n${definition}` },
-      ],
-      selection: { anchor: currentFrom + reference.length },
-    });
-    view.focus();
-  }, anchorRect);
 
   return true;
 }

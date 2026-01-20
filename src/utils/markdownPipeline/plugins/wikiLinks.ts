@@ -1,14 +1,14 @@
 /**
  * Wiki link remark plugin
  *
- * Parses Obsidian-style wiki links/embeds and serializes them back.
- * Supports [[Page]], [[Page|Alias]], and ![[Embed]].
+ * Parses Obsidian-style wiki links and serializes them back.
+ * Supports [[Page]] and [[Page|Alias]].
  */
 
 import type { Root } from "mdast";
 import type { Plugin } from "unified";
 import { findAndReplace } from "mdast-util-find-and-replace";
-import type { WikiLink, WikiEmbed } from "../types";
+import type { WikiLink } from "../types";
 
 interface FromMarkdownExtension {
   transforms?: Array<(tree: Root) => void>;
@@ -19,7 +19,7 @@ interface ToMarkdownExtension {
 }
 
 type WikiHandler = (
-  node: WikiLink | WikiEmbed,
+  node: WikiLink,
   parent: unknown,
   state: WikiHandlerState,
   info: { before: string; after: string }
@@ -33,7 +33,8 @@ interface WikiHandlerState {
   };
 }
 
-const WIKI_PATTERN = /(!)?\[\[([^\]]+?)\]\]/g;
+// Only match wiki links [[...]], not embeds ![[...]]
+const WIKI_LINK_PATTERN = /(?<!!)\[\[([^\]]+?)\]\]/g;
 const IGNORE_NODES = ["link", "linkReference", "definition", "inlineCode", "code", "math", "inlineMath", "yaml", "html"] as const;
 
 export const remarkWikiLinks: Plugin<[], Root> = function () {
@@ -46,20 +47,16 @@ export const remarkWikiLinks: Plugin<[], Root> = function () {
   data.toMarkdownExtensions = data.toMarkdownExtensions ?? [];
 
   data.fromMarkdownExtensions.push({ transforms: [transformWikiLinks] });
-  data.toMarkdownExtensions.push({ handlers: { wikiLink: wikiLinkHandler, wikiEmbed: wikiEmbedHandler } });
+  data.toMarkdownExtensions.push({ handlers: { wikiLink: wikiLinkHandler } });
 };
 
 function transformWikiLinks(tree: Root): void {
   findAndReplace(
     tree,
     [
-      [WIKI_PATTERN, (_value: string, bang: string | undefined, inner: string) => {
+      [WIKI_LINK_PATTERN, (_value: string, inner: string) => {
         const parsed = parseWikiTarget(inner);
         if (!parsed) return false;
-
-        if (bang) {
-          return { type: "wikiEmbed", value: parsed.value, alias: parsed.alias } as WikiEmbed;
-        }
 
         return { type: "wikiLink", value: parsed.value, alias: parsed.alias } as WikiLink;
       }],
@@ -84,13 +81,13 @@ function parseWikiTarget(raw: string): { value: string; alias?: string } | null 
   return alias ? { value, alias } : { value };
 }
 
-function buildWikiTarget(node: WikiLink | WikiEmbed): string {
+function buildWikiTarget(node: WikiLink): string {
   const alias = node.alias ? `|${node.alias}` : "";
   return `${node.value}${alias}`;
 }
 
 function wikiLinkHandler(
-  node: WikiLink | WikiEmbed,
+  node: WikiLink,
   _parent: unknown,
   state: WikiHandlerState,
   info: { before: string; after: string }
@@ -98,19 +95,6 @@ function wikiLinkHandler(
   const exit = state.enter("wikiLink");
   const tracker = state.createTracker(info);
   const value = tracker.move(`[[${buildWikiTarget(node)}]]`);
-  exit();
-  return value;
-}
-
-function wikiEmbedHandler(
-  node: WikiLink | WikiEmbed,
-  _parent: unknown,
-  state: WikiHandlerState,
-  info: { before: string; after: string }
-): string {
-  const exit = state.enter("wikiEmbed");
-  const tracker = state.createTracker(info);
-  const value = tracker.move(`![[${buildWikiTarget(node)}]]`);
   exit();
   return value;
 }

@@ -180,12 +180,7 @@ const LINK_GROUP: ToolbarGroup = {
   items: [
     { id: "link", icon: icons.link, label: "Hyperlink", shortcut: "⌘K", action: "link", enabledIn: ["selection", "textblock"] },
     { id: "bookmark", icon: icons.hash, label: "Bookmark", action: "link:bookmark", enabledIn: ["textblock"] },
-    { id: "separator1", type: "separator" },
     { id: "wikiLink", icon: icons.fileText, label: "Wiki Link", action: "link:wiki", enabledIn: ["textblock"] },
-    { id: "wikiEmbed", icon: icons.fileImage, label: "Wiki Embed", action: "link:wikiEmbed", enabledIn: ["textblock"] },
-    { id: "separator2", type: "separator" },
-    { id: "referenceLink", icon: icons.bookmarkLink, label: "Reference Link", action: "link:reference", enabledIn: ["textblock"] },
-    { id: "separator3", type: "separator" },
     { id: "footnote", icon: icons.footnote, label: "Footnote", action: "insertFootnote", enabledIn: ["textblock"] },
   ],
 };

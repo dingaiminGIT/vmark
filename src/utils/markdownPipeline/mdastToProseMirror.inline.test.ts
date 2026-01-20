@@ -45,20 +45,11 @@ describe("mdastToProseMirror inline", () => {
     expect(hasUnderline).toBe(true);
   });
 
-  it("converts wiki links and embeds", () => {
-    const doc = parseDoc("See [[Page|Alias]] and ![[embed]]");
+  it("converts wiki links", () => {
+    const doc = parseDoc("See [[Page|Alias]]");
     const para = doc.firstChild;
     const wikiLink = para?.content.content.find((child) => child.type.name === "wikiLink");
-    const wikiEmbed = para?.content.content.find((child) => child.type.name === "wikiEmbed");
     expect(wikiLink).toBeDefined();
-    expect(wikiEmbed).toBeDefined();
-  });
-
-  it("converts link references", () => {
-    const doc = parseDoc("Link [ref][id]\n\n[id]: https://example.com");
-    const para = doc.firstChild;
-    const linkRef = para?.content.content.find((child) => child.type.name === "link_reference");
-    expect(linkRef).toBeDefined();
   });
 
   it("converts inline html", () => {

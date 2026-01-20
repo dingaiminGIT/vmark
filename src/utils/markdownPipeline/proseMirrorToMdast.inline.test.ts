@@ -14,33 +14,14 @@ const pmToMarkdown = (children: ReturnType<typeof testSchema.node>[]) => {
 };
 
 describe("proseMirrorToMdast inline", () => {
-  it("serializes wiki links and embeds", () => {
+  it("serializes wiki links", () => {
     const md = pmToMarkdown([
       testSchema.node("paragraph", null, [
         testSchema.node("wikiLink", { value: "Page" }, [testSchema.text("Alias")]),
-        testSchema.text(" "),
-        testSchema.node("wikiEmbed", { value: "embed" }),
       ]),
     ]);
 
     expect(md).toContain("[[Page|Alias]]");
-    expect(md).toContain("![[embed]]");
-  });
-
-  it("serializes link references", () => {
-    const md = pmToMarkdown([
-      testSchema.node("paragraph", null, [
-        testSchema.node("link_reference", { identifier: "ref" }, [
-          testSchema.text("Link"),
-        ]),
-      ]),
-      testSchema.node("link_definition", {
-        identifier: "ref",
-        url: "https://example.com",
-      }),
-    ]);
-
-    expect(md).toContain("[Link][ref]");
   });
 
   it("serializes inline html", () => {

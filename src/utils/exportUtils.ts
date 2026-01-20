@@ -12,7 +12,7 @@ import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 import type { Options as RemarkRehypeOptions } from "remark-rehype";
 import type { Root, Blockquote, Paragraph, Text, Parent, Content } from "mdast";
-import type { Alert, AlertType, Details, WikiLink, WikiEmbed, Highlight, Underline, Subscript, Superscript } from "@/utils/markdownPipeline/types";
+import type { Alert, AlertType, Details, WikiLink, Highlight, Underline, Subscript, Superscript } from "@/utils/markdownPipeline/types";
 import { parseMarkdownToMdast } from "@/utils/markdownPipeline/parser";
 import type { MarkdownPipelineOptions } from "@/utils/markdownPipeline/types";
 
@@ -267,11 +267,6 @@ function removeFrontmatter(tree: Root): void {
   tree.children = tree.children.filter((node) => node.type !== "yaml");
 }
 
-function buildWikiLabel(node: WikiLink | WikiEmbed): string {
-  const alias = node.alias ? `|${node.alias}` : "";
-  return `${node.value}${alias}`;
-}
-
 const rehypeHandlers = {
   alert(state: { all: (node: Alert) => unknown[] }, node: Alert) {
     const alertType = node.alertType || "NOTE";
@@ -307,14 +302,6 @@ const rehypeHandlers = {
       tagName: "a",
       properties: { className: ["wiki-link"], href: `#${encodeURIComponent(node.value)}` },
       children: [{ type: "text", value: text }],
-    };
-  },
-  wikiEmbed(_state: unknown, node: WikiEmbed) {
-    return {
-      type: "element",
-      tagName: "span",
-      properties: { className: ["wiki-embed"] },
-      children: [{ type: "text", value: `![[${buildWikiLabel(node)}]]` }],
     };
   },
   highlight(state: { all: (node: Highlight) => unknown[] }, node: Highlight) {

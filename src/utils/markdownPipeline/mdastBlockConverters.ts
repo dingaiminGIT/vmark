@@ -13,7 +13,7 @@ import type {
   ThematicBreak,
 } from "mdast";
 import type { Math } from "mdast-util-math";
-import type { Alert, Details, WikiEmbed, WikiLink, Yaml } from "./types";
+import type { Alert, Details, WikiLink, Yaml } from "./types";
 import * as inlineConverters from "./mdastInlineConverters";
 export type ContentContext = "block" | "inline";
 
@@ -261,12 +261,6 @@ export function convertWikiLink(context: MdastToPmContext, node: WikiLink): PMNo
     { value: node.value, sourceLine: getSourceLine(node) },
     textNode ? [textNode] : []
   );
-}
-
-export function convertWikiEmbed(context: MdastToPmContext, node: WikiEmbed): PMNode | null {
-  const type = context.schema.nodes.wikiEmbed;
-  if (!type) return null;
-  return type.create({ value: node.value, alias: node.alias ?? null, sourceLine: getSourceLine(node) });
 }
 
 export function convertHtml(

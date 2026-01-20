@@ -19,7 +19,7 @@ import { readClipboardUrl } from "@/utils/clipboardUrl";
 import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import type { WysiwygToolbarContext } from "./types";
 import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./wysiwygMultiSelection";
-import { insertWikiLink, insertWikiEmbed, insertBookmarkLink, insertReferenceLink } from "./wysiwygAdapterLinks";
+import { insertWikiLink, insertBookmarkLink } from "./wysiwygAdapterLinks";
 
 const DEFAULT_MATH_BLOCK = "c = \\pm\\sqrt{a^2 + b^2}";
 
@@ -602,12 +602,8 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       return true;
     case "link:wiki":
       return insertWikiLink(context);
-    case "link:wikiEmbed":
-      return insertWikiEmbed(context);
     case "link:bookmark":
       return insertBookmarkLink(context);
-    case "link:reference":
-      return insertReferenceLink(context);
     default:
       return false;
   }

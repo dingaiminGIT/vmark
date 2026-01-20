@@ -27,7 +27,6 @@ import type {
   Delete,
   InlineCode,
   Link,
-  LinkReference,
   Image,
   FootnoteReference,
   FootnoteDefinition,
@@ -41,7 +40,6 @@ import type {
   Highlight,
   Underline,
   WikiLink,
-  WikiEmbed,
   Yaml,
 } from "./types";
 import * as inlineConverters from "./mdastInlineConverters";
@@ -62,7 +60,6 @@ import {
   convertParagraph,
   convertTable,
   convertThematicBreak,
-  convertWikiEmbed,
   convertWikiLink,
   type ContentContext,
   type MdastToPmContext,
@@ -199,8 +196,6 @@ class MdastToPMConverter {
         return inlineConverters.convertImage(this.schema, node as Image);
       case "break":
         return inlineConverters.convertBreak(this.schema);
-      case "linkReference":
-        return this.convertLinkReference(node as LinkReference, marks);
 
       // Custom inline marks
       case "subscript":
@@ -221,8 +216,6 @@ class MdastToPMConverter {
         return convertFootnoteDefinition(this.context, node as unknown as FootnoteDefinition, marks);
       case "wikiLink":
         return convertWikiLink(this.context, node as unknown as WikiLink);
-      case "wikiEmbed":
-        return convertWikiEmbed(this.context, node as unknown as WikiEmbed);
       case "alert":
         return convertAlert(this.context, node as Alert, marks);
       case "html":
@@ -238,20 +231,6 @@ class MdastToPMConverter {
         }
         return null;
     }
-  }
-
-  private convertLinkReference(node: LinkReference, marks: Mark[]): PMNode | null {
-    const type = this.schema.nodes.link_reference;
-    if (!type) return null;
-    const children = this.convertChildren(node.children as Content[], marks, "inline");
-    return type.create(
-      {
-        identifier: node.identifier,
-        label: node.label ?? null,
-        referenceType: node.referenceType ?? "full",
-      },
-      children
-    );
   }
 }
 

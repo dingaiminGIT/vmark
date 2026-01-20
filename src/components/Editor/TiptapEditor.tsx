@@ -76,14 +76,10 @@ import {
   htmlBlockExtension,
   htmlInlineExtension,
   linkDefinitionExtension,
-  linkReferenceExtension,
-  wikiEmbedExtension,
   wikiLinkExtension,
 } from "@/plugins/markdownArtifacts";
 import { wikiLinkPopupExtension } from "@/plugins/wikiLinkPopup";
-import { wikiEmbedPopupExtension } from "@/plugins/wikiEmbedPopup";
 import { htmlBlockPopupExtension } from "@/plugins/htmlBlockPopup";
-import { referencePopupExtension } from "@/plugins/referencePopup";
 
 /**
  * Delay before enabling cursor tracking after editor creation.
@@ -160,16 +156,12 @@ export function TiptapEditorInner() {
       detailsSummaryExtension,
       detailsBlockExtension,
       wikiLinkExtension,
-      wikiEmbedExtension,
-      linkReferenceExtension,
       linkDefinitionExtension,
       frontmatterExtension,
       htmlInlineExtension,
       htmlBlockExtension,
       wikiLinkPopupExtension,
-      wikiEmbedPopupExtension,
       htmlBlockPopupExtension,
-      referencePopupExtension,
       footnoteReferenceExtension,
       footnoteDefinitionExtension,
       TableWithSourceLine.configure({ resizable: false }),

@@ -89,13 +89,6 @@ export interface WikiLink {
   };
 }
 
-export interface WikiEmbed {
-  type: "wikiEmbed";
-  value: string; // The embedded resource path
-  alias?: string;
-  position?: UnistPosition;
-}
-
 // Alert block types (GitHub-style markdown alerts)
 export type AlertType = "NOTE" | "TIP" | "IMPORTANT" | "WARNING" | "CAUTION";
 
@@ -123,15 +116,13 @@ export type PhrasingContent =
   | Superscript
   | Highlight
   | Underline
-  | WikiLink
-  | WikiEmbed;
+  | WikiLink;
 
 // Union type for all block content
 // Note: mdast BlockContent already includes Math via mdast-util-math augmentation
 export type BlockContent =
   | import("mdast").BlockContent
   | Yaml
-  | WikiEmbed
   | Alert
   | Details;
 
@@ -140,7 +131,6 @@ export type BlockContent =
 declare module "mdast" {
   interface RootContentMap {
     yaml: Yaml;
-    wikiEmbed: WikiEmbed;
     alert: Alert;
     details: Details;
   }
@@ -151,6 +141,5 @@ declare module "mdast" {
     highlight: Highlight;
     underline: Underline;
     wikiLink: WikiLink;
-    wikiEmbed: WikiEmbed;
   }
 }

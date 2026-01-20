@@ -13,10 +13,9 @@ import type {
   Content,
   PhrasingContent,
   BlockContent,
-  LinkReference,
   Html,
 } from "mdast";
-import type { FootnoteDefinition, WikiEmbed, WikiLink } from "./types";
+import type { FootnoteDefinition, WikiLink } from "./types";
 import * as inlineConverters from "./pmInlineConverters";
 import {
   convertAlertBlock,
@@ -175,10 +174,6 @@ class PMToMdastConverter {
         result.push(inlineConverters.convertFootnoteReference(child));
       } else if (child.type.name === "wikiLink") {
         result.push(this.convertWikiLink(child));
-      } else if (child.type.name === "wikiEmbed") {
-        result.push(this.convertWikiEmbed(child));
-      } else if (child.type.name === "link_reference") {
-        result.push(this.convertLinkReference(child));
       } else if (child.type.name === "html_inline") {
         result.push(this.convertHtmlInline(child));
       }
@@ -210,16 +205,6 @@ class PMToMdastConverter {
     };
   }
 
-  private convertLinkReference(node: PMNode): LinkReference {
-    return {
-      type: "linkReference",
-      identifier: String(node.attrs.identifier ?? ""),
-      label: node.attrs.label ? String(node.attrs.label) : undefined,
-      referenceType: (node.attrs.referenceType ?? "full") as "full" | "collapsed" | "shortcut",
-      children: this.convertInlineContent(node),
-    };
-  }
-
   private convertWikiLink(node: PMNode): WikiLink {
     // Extract text content as alias
     let alias: string | undefined;
@@ -234,14 +219,6 @@ class PMToMdastConverter {
       type: "wikiLink",
       value,
       alias: alias && alias !== value ? alias : undefined,
-    };
-  }
-
-  private convertWikiEmbed(node: PMNode): WikiEmbed {
-    return {
-      type: "wikiEmbed",
-      value: String(node.attrs.value ?? ""),
-      alias: node.attrs.alias ? String(node.attrs.alias) : undefined,
     };
   }
 

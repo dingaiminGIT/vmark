@@ -17,7 +17,7 @@ import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import type { SourceToolbarContext } from "./types";
 import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./sourceMultiSelection";
 import { insertText, applyInlineFormat, clearFormattingSelections } from "./sourceAdapterHelpers";
-import { insertLinkSync, insertWikiSyntax, insertSourceBookmarkLink, insertSourceReferenceLink, insertInlineMath, findWordAtCursorSource } from "./sourceAdapterLinks";
+import { insertLinkSync, insertWikiSyntax, insertSourceBookmarkLink, insertInlineMath, findWordAtCursorSource } from "./sourceAdapterLinks";
 import { readClipboardImagePath } from "@/utils/clipboardImagePath";
 import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { encodeMarkdownUrl } from "@/utils/markdownUrl";
@@ -230,12 +230,8 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
       return insertLinkSync(view);
     case "link:wiki":
       return insertWikiSyntax(view, "[[", "]]", "page");
-    case "link:wikiEmbed":
-      return insertWikiSyntax(view, "![[", "]]", "file");
     case "link:bookmark":
       return insertSourceBookmarkLink(view);
-    case "link:reference":
-      return insertSourceReferenceLink(view);
 
     // Clear formatting
     case "clearFormatting":

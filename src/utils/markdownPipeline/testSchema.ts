@@ -88,22 +88,6 @@ export const testSchema = new Schema({
       inline: true,
       group: "inline",
     },
-    wikiEmbed: {
-      attrs: { value: { default: "" }, alias: { default: null } },
-      inline: true,
-      group: "inline",
-      atom: true,
-    },
-    link_reference: {
-      attrs: {
-        identifier: { default: "" },
-        label: { default: null },
-        referenceType: { default: "full" },
-      },
-      inline: true,
-      group: "inline",
-      content: "inline*",
-    },
     link_definition: {
       attrs: {
         identifier: { default: "" },

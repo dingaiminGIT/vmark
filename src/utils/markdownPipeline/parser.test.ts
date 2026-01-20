@@ -136,13 +136,19 @@ Content`;
   });
 
   describe("wiki links", () => {
-    it("parses wiki links and embeds", () => {
-      const result = parseMarkdownToMdast("See [[Page|Alias]] and ![[embed]]");
+    it("parses wiki links", () => {
+      const result = parseMarkdownToMdast("See [[Page|Alias]]");
       const para = result.children[0] as Paragraph;
       const hasWikiLink = para.children.some((c) => c.type === "wikiLink");
-      const hasWikiEmbed = para.children.some((c) => c.type === "wikiEmbed");
       expect(hasWikiLink).toBe(true);
-      expect(hasWikiEmbed).toBe(true);
+    });
+
+    it("does not parse wiki embeds", () => {
+      const result = parseMarkdownToMdast("See ![[embed]]");
+      const para = result.children[0] as Paragraph;
+      // Wiki embeds are no longer supported - the syntax is preserved as text
+      const hasWikiLink = para.children.some((c) => c.type === "wikiLink");
+      expect(hasWikiLink).toBe(false);
     });
   });
 

@@ -2,11 +2,10 @@
  * WYSIWYG Adapter Links
  *
  * Link-related toolbar actions for WYSIWYG mode.
- * Handles wiki links, wiki embeds, bookmark links, and reference links.
+ * Handles wiki links and bookmark links.
  */
 
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
-import { useLinkReferenceDialogStore } from "@/stores/linkReferenceDialogStore";
 import { extractHeadingsWithIds } from "@/utils/headingSlug";
 import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
 import type { WysiwygToolbarContext } from "./types";
@@ -33,30 +32,6 @@ export function insertWikiLink(context: WysiwygToolbarContext): boolean {
     { value: displayText }, // value = target, same as display by default
     [textNode]
   );
-
-  dispatch(state.tr.replaceSelectionWith(node));
-  view.focus();
-  return true;
-}
-
-/**
- * Insert a wiki embed node at the current selection.
- * Uses selected text as value or defaults to "file".
- */
-export function insertWikiEmbed(context: WysiwygToolbarContext): boolean {
-  const view = context.view;
-  if (!view) return false;
-
-  const { state, dispatch } = view;
-  const { from, to } = state.selection;
-  const selectedText = from !== to ? state.doc.textBetween(from, to) : "";
-  const wikiEmbedType = state.schema.nodes.wikiEmbed;
-  if (!wikiEmbedType) return false;
-
-  const node = wikiEmbedType.create({
-    value: selectedText || "file",
-    alias: null,
-  });
 
   dispatch(state.tr.replaceSelectionWith(node));
   view.focus();
@@ -121,74 +96,6 @@ export function insertBookmarkLink(context: WysiwygToolbarContext): boolean {
     view.dispatch(tr);
     view.focus();
   }, { anchorRect, containerBounds });
-
-  return true;
-}
-
-/**
- * Insert a reference link with definition.
- * Opens popup and inserts link_reference node at cursor, link_definition at doc end.
- */
-export function insertReferenceLink(context: WysiwygToolbarContext): boolean {
-  const view = context.view;
-  if (!view) return false;
-
-  // Capture selected text for link text fallback (not position-sensitive)
-  const { state } = view;
-  const { from, to } = state.selection;
-  const capturedSelectedText = from !== to ? state.doc.textBetween(from, to) : "";
-
-  // Get anchor rect from selection for popup positioning
-  const coords = view.coordsAtPos(from);
-  const anchorRect = {
-    top: coords.top,
-    bottom: coords.bottom,
-    left: coords.left,
-    right: coords.left + 10, // Minimal width for cursor position
-  };
-
-  useLinkReferenceDialogStore.getState().openDialog(capturedSelectedText, (identifier, url, title) => {
-    // Re-read current state to get fresh positions (doc may have changed)
-    const currentState = view.state;
-    const linkRefType = currentState.schema.nodes.link_reference;
-    const linkDefType = currentState.schema.nodes.link_definition;
-
-    if (!linkRefType || !linkDefType) return;
-
-    const { from: currentFrom, to: currentTo } = currentState.selection;
-    const tr = currentState.tr;
-    const linkText = capturedSelectedText || identifier;
-
-    // Create link reference node with the text
-    const textNode = currentState.schema.text(linkText);
-    const linkRefNode = linkRefType.create(
-      { identifier, referenceType: "full" },
-      textNode
-    );
-
-    // Insert the link reference at cursor
-    if (currentFrom === currentTo) {
-      tr.insert(currentFrom, linkRefNode);
-    } else {
-      tr.replaceWith(currentFrom, currentTo, linkRefNode);
-    }
-
-    // Find end of document to insert definition
-    const docEnd = tr.doc.content.size;
-
-    // Create link definition node
-    const linkDefNode = linkDefType.create({
-      identifier,
-      url,
-      title: title || null,
-    });
-
-    // Add newline and definition at end
-    tr.insert(docEnd, linkDefNode);
-
-    view.dispatch(tr);
-    view.focus();
-  }, anchorRect);
 
   return true;
 }
