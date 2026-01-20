@@ -229,13 +229,6 @@ class LinkPopupPluginView {
 
       if (linkRange) {
         const href = linkRange.mark.attrs.href || "";
-
-        // Skip popup for bookmark links (href starts with #)
-        // User can use Cmd+K to edit bookmark links (opens heading picker)
-        if (href.startsWith("#")) {
-          return;
-        }
-
         const startCoords = this.view.coordsAtPos(linkRange.from);
         const endCoords = this.view.coordsAtPos(linkRange.to);
 

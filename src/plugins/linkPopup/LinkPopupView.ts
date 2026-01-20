@@ -5,6 +5,7 @@
  * Shows when clicking on a link, allows editing/opening/copying/removing.
  */
 
+import { TextSelection } from "@tiptap/pm/state";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import {
   calculatePopupPosition,
@@ -12,6 +13,7 @@ import {
   getViewportBounds,
   type AnchorRect,
 } from "@/utils/popupPosition";
+import { findHeadingById } from "@/utils/headingSlug";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 
 type EditorViewLike = {
@@ -38,6 +40,8 @@ const icons = {
 export class LinkPopupView {
   private container: HTMLElement;
   private input: HTMLInputElement;
+  private openBtn: HTMLElement;
+  private saveBtn: HTMLElement;
   private unsubscribe: () => void;
   private editorView: EditorViewLike;
   private justOpened = false;
@@ -52,6 +56,12 @@ export class LinkPopupView {
     this.input = this.container.querySelector(
       ".link-popup-input"
     ) as HTMLInputElement;
+    this.openBtn = this.container.querySelector(
+      ".link-popup-btn-open"
+    ) as HTMLElement;
+    this.saveBtn = this.container.querySelector(
+      ".link-popup-btn-save"
+    ) as HTMLElement;
 
     // Append to document body (avoids interfering with editor DOM)
     document.body.appendChild(this.container);
@@ -147,6 +157,7 @@ export class LinkPopupView {
 
     // Icon buttons: open, copy, save, delete
     const openBtn = this.buildIconButton(icons.open, "Open link", this.handleOpen);
+    openBtn.classList.add("link-popup-btn-open");
     const copyBtn = this.buildIconButton(icons.copy, "Copy URL", this.handleCopy);
     const saveBtn = this.buildIconButton(icons.save, "Save", this.handleSave);
     saveBtn.classList.add("link-popup-btn-save");
@@ -177,9 +188,26 @@ export class LinkPopupView {
   }
 
   private show(href: string, anchorRect: AnchorRect) {
+    const isBookmark = href.startsWith("#");
+
     this.input.value = href;
     this.container.style.display = "flex";
     this.container.style.position = "fixed";
+
+    // Configure for bookmark vs regular link
+    if (isBookmark) {
+      // Bookmark link: disable input, hide save button, update open button
+      this.input.disabled = true;
+      this.input.classList.add("disabled");
+      this.saveBtn.style.display = "none";
+      this.openBtn.title = "Go to heading";
+    } else {
+      // Regular link: enable input, show save button
+      this.input.disabled = false;
+      this.input.classList.remove("disabled");
+      this.saveBtn.style.display = "";
+      this.openBtn.title = "Open link";
+    }
 
     // Set guard to prevent immediate close from same click event
     this.justOpened = true;
@@ -208,10 +236,14 @@ export class LinkPopupView {
     // Set up keyboard navigation
     this.setupKeyboardNavigation();
 
-    // Focus input
+    // Focus input (or first button for bookmarks)
     requestAnimationFrame(() => {
-      this.input.focus();
-      this.input.select();
+      if (isBookmark) {
+        this.openBtn.focus();
+      } else {
+        this.input.focus();
+        this.input.select();
+      }
     });
   }
 
@@ -271,14 +303,34 @@ export class LinkPopupView {
 
   private handleOpen = () => {
     const { href } = useLinkPopupStore.getState();
-    if (href) {
-      // Use Tauri opener plugin for external links
-      import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
-        openUrl(href).catch((error: unknown) => {
-          console.error("Failed to open link:", error);
-        });
-      });
+    if (!href) return;
+
+    // Handle bookmark links - navigate to heading
+    if (href.startsWith("#")) {
+      const targetId = href.slice(1);
+      const pos = findHeadingById(this.editorView.state.doc, targetId);
+      if (pos !== null) {
+        try {
+          const $pos = this.editorView.state.doc.resolve(pos + 1);
+          const selection = TextSelection.near($pos);
+          this.editorView.dispatch(
+            this.editorView.state.tr.setSelection(selection).scrollIntoView()
+          );
+          useLinkPopupStore.getState().closePopup();
+          this.editorView.focus();
+        } catch (error) {
+          console.error("[LinkPopup] Navigation failed:", error);
+        }
+      }
+      return;
     }
+
+    // External link - open in browser
+    import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
+      openUrl(href).catch((error: unknown) => {
+        console.error("Failed to open link:", error);
+      });
+    });
   };
 
   private handleCopy = async () => {
