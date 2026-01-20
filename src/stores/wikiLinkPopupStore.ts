@@ -2,6 +2,8 @@
  * Wiki Link Popup Store
  *
  * Manages state for the wiki link edit popup.
+ * Note: Alias (display text) is now edited inline in the editor,
+ * so this store only manages the target.
  */
 
 import { create } from "zustand";
@@ -11,15 +13,13 @@ interface WikiLinkPopupState {
   isOpen: boolean;
   anchorRect: AnchorRect | null;
   target: string;
-  alias: string;
   nodePos: number | null;
 }
 
 interface WikiLinkPopupActions {
-  openPopup: (rect: AnchorRect, target: string, alias: string, pos: number) => void;
+  openPopup: (rect: AnchorRect, target: string, pos: number) => void;
   closePopup: () => void;
   updateTarget: (target: string) => void;
-  updateAlias: (alias: string) => void;
 }
 
 type WikiLinkPopupStore = WikiLinkPopupState & WikiLinkPopupActions;
@@ -28,25 +28,21 @@ const initialState: WikiLinkPopupState = {
   isOpen: false,
   anchorRect: null,
   target: "",
-  alias: "",
   nodePos: null,
 };
 
 export const useWikiLinkPopupStore = create<WikiLinkPopupStore>((set) => ({
   ...initialState,
 
-  openPopup: (rect, target, alias, pos) =>
+  openPopup: (rect, target, pos) =>
     set({
       isOpen: true,
       anchorRect: rect,
       target,
-      alias,
       nodePos: pos,
     }),
 
   closePopup: () => set(initialState),
 
   updateTarget: (target) => set({ target }),
-
-  updateAlias: (alias) => set({ alias }),
 }));

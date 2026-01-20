@@ -28,55 +28,78 @@ function findLinkMarkRange(view: EditorView, pos: number): MarkRange | null {
   const parent = $pos.parent;
   const parentStart = $pos.start();
 
+  // First pass: find the link mark at the given position
   let linkMark: Mark | null = null;
+  let currentOffset = 0;
 
-  parent.forEach((child, childOffset) => {
-    const from = parentStart + childOffset;
-    const to = from + child.nodeSize;
+  for (let i = 0; i < parent.childCount; i++) {
+    const child = parent.child(i);
+    const childFrom = parentStart + currentOffset;
+    const childTo = childFrom + child.nodeSize;
 
-    if (pos >= from && pos < to && child.isText) {
+    if (pos >= childFrom && pos < childTo && child.isText) {
       const mark = child.marks.find((m) => m.type.name === "link");
       if (mark) {
         linkMark = mark;
+        break;
       }
     }
-  });
+    currentOffset += child.nodeSize;
+  }
 
   if (!linkMark) return null;
 
-  let from = -1;
-  let to = -1;
-  let foundMark: Mark | null = null;
+  // Second pass: find the continuous range with the same href that contains pos
+  // We need to find ranges and check if pos falls within them
+  const targetHref = linkMark.attrs.href;
+  currentOffset = 0;
 
-  parent.forEach((child, childOffset) => {
-    const childFrom = parentStart + childOffset;
-    const childTo = childFrom + child.nodeSize;
+  for (let i = 0; i < parent.childCount; i++) {
+    const child = parent.child(i);
+    const childFrom = parentStart + currentOffset;
 
     if (child.isText) {
       const mark = child.marks.find(
-        (m) => m.type.name === "link" && m.attrs.href === linkMark!.attrs.href
+        (m) => m.type.name === "link" && m.attrs.href === targetHref
       );
 
       if (mark) {
-        if (from === -1) {
-          from = childFrom;
-          foundMark = mark;
+        // Found start of a potential range, extend to find the end
+        const rangeFrom = childFrom;
+        let rangeTo = childFrom + child.nodeSize;
+        const foundMark = mark;
+
+        // Continue checking subsequent children for continuous marks with same href
+        let j = i + 1;
+        while (j < parent.childCount) {
+          const nextChild = parent.child(j);
+          if (nextChild.isText) {
+            const nextMark = nextChild.marks.find(
+              (m) => m.type.name === "link" && m.attrs.href === targetHref
+            );
+            if (nextMark) {
+              rangeTo += nextChild.nodeSize;
+              j++;
+            } else {
+              break;
+            }
+          } else {
+            break;
+          }
         }
-        to = childTo;
-      } else if (from !== -1) {
-        // End of continuous mark range
-        if (pos >= from && pos < to) {
-          return;
+
+        // Check if pos falls within this range
+        if (pos >= rangeFrom && pos < rangeTo) {
+          return { mark: foundMark, from: rangeFrom, to: rangeTo };
         }
-        from = -1;
-        to = -1;
-        foundMark = null;
+
+        // Skip to after this range
+        currentOffset = rangeTo - parentStart;
+        i = j - 1; // -1 because the for loop will increment
+        continue;
       }
     }
-  });
-
-  if (from !== -1 && to !== -1 && foundMark && pos >= from && pos < to) {
-    return { mark: foundMark, from, to };
+    currentOffset += child.nodeSize;
   }
 
   return null;

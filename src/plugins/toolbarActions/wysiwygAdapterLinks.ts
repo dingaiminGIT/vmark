@@ -13,7 +13,7 @@ import type { WysiwygToolbarContext } from "./types";
 
 /**
  * Insert a wiki link node at the current selection.
- * Uses selected text as value or defaults to "page".
+ * Uses selected text as display text (and value if empty).
  */
 export function insertWikiLink(context: WysiwygToolbarContext): boolean {
   const view = context.view;
@@ -25,10 +25,14 @@ export function insertWikiLink(context: WysiwygToolbarContext): boolean {
   const wikiLinkType = state.schema.nodes.wikiLink;
   if (!wikiLinkType) return false;
 
-  const node = wikiLinkType.create({
-    value: selectedText || "page",
-    alias: null,
-  });
+  // Display text: use selected text or default to "page"
+  const displayText = selectedText || "page";
+  const textNode = state.schema.text(displayText);
+
+  const node = wikiLinkType.create(
+    { value: displayText }, // value = target, same as display by default
+    [textNode]
+  );
 
   dispatch(state.tr.replaceSelectionWith(node));
   view.focus();

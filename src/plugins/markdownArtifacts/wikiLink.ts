@@ -1,18 +1,27 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import { sourceLineAttr } from "../shared/sourceLineAttr";
 
+/**
+ * Wiki Link Node
+ *
+ * Inline node for wiki-style links [[target]] or [[target|alias]].
+ * - `value` attribute: the target page/file path
+ * - Text content: the display text (alias), editable inline
+ *
+ * Unlike atom nodes, users can edit the display text directly in the editor.
+ * The target is edited via the popup.
+ */
 export const wikiLinkExtension = Node.create({
   name: "wikiLink",
   inline: true,
   group: "inline",
-  atom: true,
+  content: "text*",
   selectable: true,
 
   addAttributes() {
     return {
       ...sourceLineAttr,
       value: { default: "" },
-      alias: { default: null },
     };
   },
 
@@ -23,13 +32,12 @@ export const wikiLinkExtension = Node.create({
         getAttrs: (element) => {
           const el = element as HTMLElement;
           const dataValue = el.getAttribute("data-value");
-          // Fallback: parse from textContent if data-value is missing (e.g., after sanitization)
           if (dataValue) {
-            return { value: dataValue, alias: el.getAttribute("data-alias") };
+            return { value: dataValue };
           }
-          // textContent should be the display label (alias or value)
+          // Fallback: use textContent as value if data-value missing
           const text = el.textContent?.trim() ?? "";
-          return text ? { value: text, alias: null } : false;
+          return text ? { value: text } : false;
         },
       },
     ];
@@ -37,18 +45,15 @@ export const wikiLinkExtension = Node.create({
 
   renderHTML({ node, HTMLAttributes }) {
     const value = String(node.attrs.value ?? "");
-    const alias = node.attrs.alias ? String(node.attrs.alias) : "";
-    const label = alias || value;
 
     return [
       "span",
       mergeAttributes(HTMLAttributes, {
         "data-type": "wiki-link",
         "data-value": value,
-        "data-alias": alias || null,
         class: "wiki-link",
       }),
-      label,
+      0, // Content hole - text content goes here
     ];
   },
 });

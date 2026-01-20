@@ -17,7 +17,7 @@ describe("proseMirrorToMdast inline", () => {
   it("serializes wiki links and embeds", () => {
     const md = pmToMarkdown([
       testSchema.node("paragraph", null, [
-        testSchema.node("wikiLink", { value: "Page", alias: "Alias" }),
+        testSchema.node("wikiLink", { value: "Page" }, [testSchema.text("Alias")]),
         testSchema.text(" "),
         testSchema.node("wikiEmbed", { value: "embed" }),
       ]),

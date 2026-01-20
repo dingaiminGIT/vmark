@@ -108,7 +108,7 @@
   outline: none;
 }
 
-.popup-icon-btn:focus-visible::after {
+.popup-icon-btn:focus::after {
   content: "";
   position: absolute;
   bottom: 2px;

@@ -252,7 +252,15 @@ export function convertAlert(
 export function convertWikiLink(context: MdastToPmContext, node: WikiLink): PMNode | null {
   const type = context.schema.nodes.wikiLink;
   if (!type) return null;
-  return type.create({ value: node.value, alias: node.alias ?? null, sourceLine: getSourceLine(node) });
+
+  // Display text: use alias if present, otherwise use the target value
+  const displayText = node.alias || node.value;
+  const textNode = displayText ? context.schema.text(displayText) : null;
+
+  return type.create(
+    { value: node.value, sourceLine: getSourceLine(node) },
+    textNode ? [textNode] : []
+  );
 }
 
 export function convertWikiEmbed(context: MdastToPmContext, node: WikiEmbed): PMNode | null {

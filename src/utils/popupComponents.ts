@@ -7,7 +7,7 @@
 
 // SVG Icons (feather-style, 24x24 viewBox)
 export const popupIcons = {
-  /** Open in external browser */
+  /** Open in external browser or navigate to file */
   open: `<svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
   /** Copy to clipboard */
   copy: `<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`,
@@ -17,6 +17,8 @@ export const popupIcons = {
   delete: `<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
   /** Close/cancel X */
   close: `<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  /** Browse/folder for file selection */
+  folder: `<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
 };
 
 export type PopupIconName = keyof typeof popupIcons;
@@ -152,13 +154,15 @@ export function buildPopupInputRow(): HTMLElement {
 /**
  * Get all focusable elements within a container.
  * Used for Tab cycling in popups.
+ * Filters out hidden elements (display: none) to handle cases where
+ * some buttons may be conditionally hidden.
  */
 export function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(
     container.querySelectorAll<HTMLElement>(
       'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
     )
-  );
+  ).filter((el) => el.offsetParent !== null); // Exclude hidden elements
 }
 
 /**

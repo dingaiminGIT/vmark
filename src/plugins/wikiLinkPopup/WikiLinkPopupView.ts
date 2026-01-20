@@ -1,12 +1,16 @@
 /**
  * Wiki Link Popup View
  *
- * DOM management for editing wiki link target and alias.
- * Uses icon buttons and borderless inputs for consistent popup design.
+ * DOM management for editing wiki link target.
+ * The display text (alias) is edited inline in the editor.
+ * This popup handles the target path and provides actions.
  */
 
 import type { EditorView } from "@tiptap/pm/view";
+import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import {
   calculatePopupPosition,
   getBoundaryRects,
@@ -17,19 +21,55 @@ import { isImeKeyEvent } from "@/utils/imeGuard";
 import {
   buildPopupIconButton,
   buildPopupInput,
-  buildPopupPreview,
-  buildPopupButtonRow,
   handlePopupTabNavigation,
 } from "@/utils/popupComponents";
 
 const DEFAULT_POPUP_WIDTH = 320;
-const DEFAULT_POPUP_HEIGHT = 80;
+const DEFAULT_POPUP_HEIGHT = 32;
+
+/**
+ * Resolve a wiki link target to a full file path.
+ */
+function resolveWikiLinkPath(target: string, workspaceRoot: string | null): string | null {
+  if (!target || !workspaceRoot) return null;
+
+  // If target already looks like a path, use it directly
+  if (target.includes("/") || target.endsWith(".md")) {
+    const normalized = target.endsWith(".md") ? target : `${target}.md`;
+    return `${workspaceRoot}/${normalized}`;
+  }
+
+  // Simple target name - assume it's in workspace root with .md extension
+  return `${workspaceRoot}/${target}.md`;
+}
+
+/**
+ * Convert an absolute file path to a wiki link target (workspace-relative, without .md).
+ */
+function pathToWikiTarget(filePath: string, workspaceRoot: string | null): string {
+  if (!workspaceRoot) return filePath;
+
+  // Remove workspace root prefix
+  let relative = filePath;
+  if (filePath.startsWith(workspaceRoot)) {
+    relative = filePath.slice(workspaceRoot.length);
+    if (relative.startsWith("/")) {
+      relative = relative.slice(1);
+    }
+  }
+
+  // Remove .md extension
+  if (relative.endsWith(".md")) {
+    relative = relative.slice(0, -3);
+  }
+
+  return relative;
+}
 
 export class WikiLinkPopupView {
   private container: HTMLElement;
   private targetInput: HTMLInputElement;
-  private aliasInput: HTMLInputElement;
-  private preview: HTMLElement;
+  private openBtn: HTMLButtonElement;
   private unsubscribe: () => void;
   private editorView: EditorView;
   private justOpened = false;
@@ -43,18 +83,15 @@ export class WikiLinkPopupView {
     this.targetInput = this.container.querySelector(
       ".wiki-link-popup-target"
     ) as HTMLInputElement;
-    this.aliasInput = this.container.querySelector(
-      ".wiki-link-popup-alias"
-    ) as HTMLInputElement;
-    this.preview = this.container.querySelector(
-      ".wiki-link-popup-preview"
-    ) as HTMLElement;
+    this.openBtn = this.container.querySelector(
+      ".wiki-link-popup-btn-open"
+    ) as HTMLButtonElement;
     document.body.appendChild(this.container);
 
     this.unsubscribe = useWikiLinkPopupStore.subscribe((state) => {
       if (state.isOpen && state.anchorRect) {
         if (!this.wasOpen) {
-          this.show(state.target, state.alias, state.anchorRect);
+          this.show(state.target, state.anchorRect);
         }
         this.wasOpen = true;
       } else {
@@ -71,28 +108,32 @@ export class WikiLinkPopupView {
     container.className = "wiki-link-popup";
     container.style.display = "none";
 
-    // Row 1: Target input (full width)
+    // Single row: Input + Browse + Action buttons
     const targetInput = buildPopupInput({
       placeholder: "Target page",
-      fullWidth: true,
       className: "wiki-link-popup-target",
       onInput: this.handleTargetChange,
       onKeydown: this.handleInputKeydown,
     });
 
-    // Row 2: Alias input + buttons
-    const row2 = document.createElement("div");
-    row2.className = "wiki-link-popup-row";
-
-    const aliasInput = buildPopupInput({
-      placeholder: "Alias (optional)",
-      className: "wiki-link-popup-alias",
-      onInput: this.handleAliasChange,
-      onKeydown: this.handleInputKeydown,
+    const browseBtn = buildPopupIconButton({
+      icon: "folder",
+      title: "Browse for file",
+      onClick: this.handleBrowse,
     });
 
-    // Button row
-    const buttonRow = buildPopupButtonRow();
+    const openBtn = buildPopupIconButton({
+      icon: "open",
+      title: "Open linked file",
+      onClick: this.handleOpen,
+    });
+    openBtn.classList.add("wiki-link-popup-btn-open");
+
+    const copyBtn = buildPopupIconButton({
+      icon: "copy",
+      title: "Copy target",
+      onClick: this.handleCopy,
+    });
 
     const saveBtn = buildPopupIconButton({
       icon: "save",
@@ -108,18 +149,12 @@ export class WikiLinkPopupView {
       variant: "danger",
     });
 
-    buttonRow.appendChild(saveBtn);
-    buttonRow.appendChild(deleteBtn);
-
-    row2.appendChild(aliasInput);
-    row2.appendChild(buttonRow);
-
-    // Preview
-    const preview = buildPopupPreview("wiki-link-popup-preview");
-
     container.appendChild(targetInput);
-    container.appendChild(row2);
-    container.appendChild(preview);
+    container.appendChild(browseBtn);
+    container.appendChild(openBtn);
+    container.appendChild(copyBtn);
+    container.appendChild(saveBtn);
+    container.appendChild(deleteBtn);
 
     return container;
   }
@@ -139,11 +174,12 @@ export class WikiLinkPopupView {
     }
   }
 
-  private show(target: string, alias: string, anchorRect: AnchorRect) {
+  private show(target: string, anchorRect: AnchorRect) {
     this.targetInput.value = target;
-    this.aliasInput.value = alias;
     this.container.style.display = "flex";
     this.container.style.position = "fixed";
+
+    this.updateOpenButtonState(target);
 
     this.justOpened = true;
     requestAnimationFrame(() => {
@@ -172,9 +208,6 @@ export class WikiLinkPopupView {
     this.container.style.top = `${top}px`;
     this.container.style.left = `${left}px`;
 
-    this.updatePreview(target, alias);
-
-    // Set up keyboard navigation
     this.setupKeyboardNavigation();
 
     requestAnimationFrame(() => {
@@ -188,26 +221,15 @@ export class WikiLinkPopupView {
     this.removeKeyboardNavigation();
   }
 
-  private updatePreview(target: string, alias: string) {
-    const trimmedTarget = target.trim();
-    const trimmedAlias = alias.trim();
-    if (!trimmedTarget) {
-      this.preview.textContent = "";
-      return;
-    }
-    this.preview.textContent = trimmedAlias
-      ? `[[${trimmedTarget}|${trimmedAlias}]]`
-      : `[[${trimmedTarget}]]`;
+  private updateOpenButtonState(target: string) {
+    const hasTarget = target.trim().length > 0;
+    this.openBtn.disabled = !hasTarget;
+    this.openBtn.style.opacity = hasTarget ? "1" : "0.4";
   }
 
   private handleTargetChange = (value: string) => {
     useWikiLinkPopupStore.getState().updateTarget(value);
-    this.updatePreview(value, this.aliasInput.value);
-  };
-
-  private handleAliasChange = (value: string) => {
-    useWikiLinkPopupStore.getState().updateAlias(value);
-    this.updatePreview(this.targetInput.value, value);
+    this.updateOpenButtonState(value);
   };
 
   private handleInputKeydown = (e: KeyboardEvent) => {
@@ -223,11 +245,66 @@ export class WikiLinkPopupView {
     }
   };
 
+  private handleBrowse = async () => {
+    try {
+      const selected = await open({
+        filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
+        multiple: false,
+      });
+
+      if (!selected || Array.isArray(selected)) return;
+
+      const { rootPath } = useWorkspaceStore.getState();
+      const target = pathToWikiTarget(selected, rootPath);
+
+      this.targetInput.value = target;
+      useWikiLinkPopupStore.getState().updateTarget(target);
+      this.updateOpenButtonState(target);
+
+      this.targetInput.focus();
+    } catch (error) {
+      console.error("[WikiLinkPopup] Browse failed:", error);
+    }
+  };
+
+  private handleOpen = async () => {
+    const target = this.targetInput.value.trim();
+    if (!target) return;
+
+    const { rootPath } = useWorkspaceStore.getState();
+    const filePath = resolveWikiLinkPath(target, rootPath);
+
+    if (!filePath) {
+      console.warn("[WikiLinkPopup] Cannot resolve wiki link target:", target);
+      return;
+    }
+
+    try {
+      const currentWindow = getCurrentWebviewWindow();
+      await currentWindow.emit("open-file", { path: filePath });
+      useWikiLinkPopupStore.getState().closePopup();
+    } catch (error) {
+      console.error("[WikiLinkPopup] Failed to open file:", error);
+    }
+  };
+
+  private handleCopy = async () => {
+    const target = this.targetInput.value.trim();
+    if (target) {
+      try {
+        await navigator.clipboard.writeText(target);
+      } catch (err) {
+        console.error("[WikiLinkPopup] Failed to copy:", err);
+      }
+    }
+    useWikiLinkPopupStore.getState().closePopup();
+    this.editorView.focus();
+  };
+
   private handleSave = () => {
     const state = useWikiLinkPopupStore.getState();
     const { nodePos } = state;
     const target = this.targetInput.value.trim();
-    const alias = this.aliasInput.value.trim();
 
     if (!target || nodePos === null) {
       state.closePopup();
@@ -244,7 +321,6 @@ export class WikiLinkPopupView {
     const attrs = {
       ...node.attrs,
       value: target,
-      alias: alias || null,
     };
     const tr = editorState.tr.setNodeMarkup(nodePos, undefined, attrs);
     dispatch(tr);
@@ -269,7 +345,6 @@ export class WikiLinkPopupView {
       return;
     }
 
-    // Delete the wiki link node
     const tr = editorState.tr.delete(nodePos, nodePos + node.nodeSize);
     dispatch(tr);
 

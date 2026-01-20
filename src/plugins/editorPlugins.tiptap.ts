@@ -16,6 +16,7 @@ import { expandedToggleMark } from "@/plugins/editorPlugins/expandedToggleMark";
 import { findAnyMarkRangeAtCursor, findMarkRange, findWordAtCursor } from "@/plugins/syntaxReveal/marks";
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { extractHeadingsWithIds } from "@/utils/headingSlug";
 import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
 import { resolveHardBreakStyle } from "@/utils/linebreaks";
@@ -280,13 +281,41 @@ function openLinkPopup(
  * When link popup or heading picker is already open, blocks the shortcut.
  */
 function handleSmartLinkShortcut(view: EditorView): boolean {
-  // Block if link popup or heading picker is already open
-  if (useLinkPopupStore.getState().isOpen || useHeadingPickerStore.getState().isOpen) {
+  // Block if link popup, wiki link popup, or heading picker is already open
+  if (useLinkPopupStore.getState().isOpen ||
+      useWikiLinkPopupStore.getState().isOpen ||
+      useHeadingPickerStore.getState().isOpen) {
     return true;
   }
 
   const { from, to } = view.state.selection;
   const $from = view.state.selection.$from;
+
+  // Check if cursor is inside a wikiLink node
+  for (let d = $from.depth; d >= 0; d--) {
+    const node = $from.node(d);
+    if (node.type.name === "wikiLink") {
+      try {
+        const nodePos = $from.before(d);
+        const coords = view.coordsAtPos(nodePos);
+        const endCoords = view.coordsAtPos(nodePos + node.nodeSize);
+
+        useWikiLinkPopupStore.getState().openPopup(
+          {
+            top: coords.top,
+            left: coords.left,
+            bottom: coords.bottom,
+            right: endCoords.right,
+          },
+          String(node.attrs.value ?? ""),
+          nodePos
+        );
+        return true;
+      } catch {
+        // Fall back to normal behavior if coords fail
+      }
+    }
+  }
 
   // Check if we're inside an existing link
   const linkMarkType = view.state.schema.marks.link;

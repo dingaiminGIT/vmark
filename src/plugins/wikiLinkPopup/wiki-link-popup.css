@@ -1,6 +1,7 @@
 /**
  * Wiki Link Popup Styles
  *
+ * Single-row popup for editing wiki link target.
  * Uses shared popup styles from popup-shared.css
  */
 
@@ -8,14 +9,14 @@
   position: fixed;
   z-index: 9999;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg, 8px);
   background: var(--bg-color);
   box-shadow: var(--popup-shadow, 0 2px 8px rgba(0, 0, 0, 0.1));
-  width: 320px;
   animation: wiki-link-popup-fade-in 0.1s ease-out;
 }
 
@@ -30,24 +31,8 @@
   }
 }
 
-/* Row layout for alias + buttons */
-.wiki-link-popup-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-/* Inputs use shared .popup-input styles, add custom widths */
+/* Target input takes available space */
 .wiki-link-popup-target {
   flex: 1;
-}
-
-.wiki-link-popup-alias {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Preview uses shared .popup-preview styles */
-.wiki-link-popup-preview {
-  padding-left: 4px;
+  min-width: 160px;
 }

@@ -64,9 +64,33 @@ class WikiLinkPopupPluginView {
 
   private showPopupForLink(linkElement: HTMLElement) {
     try {
-      const pos = this.view.posAtDOM(linkElement, 0);
-      const node = this.view.state.doc.nodeAt(pos);
-      if (!node || node.type.name !== "wikiLink") return;
+      // Get position inside the content
+      const innerPos = this.view.posAtDOM(linkElement, 0);
+      const $pos = this.view.state.doc.resolve(innerPos);
+
+      // For content-based nodes, we need to find the parent wikiLink node
+      // Check if we're inside a wikiLink by looking at ancestors
+      let nodePos = -1;
+      let node = null;
+
+      // Check if current position's parent is the wikiLink
+      if ($pos.parent.type.name === "wikiLink") {
+        // $pos.before() gives us the position just before the parent node
+        nodePos = $pos.before();
+        node = $pos.parent;
+      } else {
+        // Fallback: try position - 1 (for when posAtDOM returns start of content)
+        const beforePos = innerPos - 1;
+        if (beforePos >= 0) {
+          const maybeNode = this.view.state.doc.nodeAt(beforePos);
+          if (maybeNode?.type.name === "wikiLink") {
+            nodePos = beforePos;
+            node = maybeNode;
+          }
+        }
+      }
+
+      if (!node || node.type.name !== "wikiLink" || nodePos < 0) return;
 
       const rect = linkElement.getBoundingClientRect();
       useWikiLinkPopupStore.getState().openPopup(
@@ -77,8 +101,7 @@ class WikiLinkPopupPluginView {
           right: rect.right,
         },
         String(node.attrs.value ?? ""),
-        node.attrs.alias ? String(node.attrs.alias) : "",
-        pos
+        nodePos
       );
     } catch (error) {
       if (import.meta.env.DEV) {

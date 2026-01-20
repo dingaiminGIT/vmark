@@ -221,10 +221,19 @@ class PMToMdastConverter {
   }
 
   private convertWikiLink(node: PMNode): WikiLink {
+    // Extract text content as alias
+    let alias: string | undefined;
+    if (node.content.size > 0) {
+      alias = node.textContent;
+    }
+
+    const value = String(node.attrs.value ?? "");
+
+    // Only include alias if it differs from value
     return {
       type: "wikiLink",
-      value: String(node.attrs.value ?? ""),
-      alias: node.attrs.alias ? String(node.attrs.alias) : undefined,
+      value,
+      alias: alias && alias !== value ? alias : undefined,
     };
   }
 

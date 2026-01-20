@@ -83,10 +83,10 @@ export const testSchema = new Schema({
       content: "inline*",
     },
     wikiLink: {
-      attrs: { value: { default: "" }, alias: { default: null } },
+      attrs: { value: { default: "" } },
+      content: "text*",
       inline: true,
       group: "inline",
-      atom: true,
     },
     wikiEmbed: {
       attrs: { value: { default: "" }, alias: { default: null } },

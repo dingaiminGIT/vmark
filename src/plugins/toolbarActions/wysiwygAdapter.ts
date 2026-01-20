@@ -12,6 +12,7 @@ import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { useTabStore } from "@/stores/tabStore";
 import { readClipboardImagePath } from "@/utils/clipboardImagePath";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
@@ -211,9 +212,53 @@ async function trySmartLinkInsertion(view: EditorView, inLink: boolean): Promise
   return true;
 }
 
+/**
+ * Find wiki link node at the cursor position.
+ * Returns { pos, node } if cursor is inside a wikiLink, null otherwise.
+ */
+function findWikiLinkAtCursor(view: EditorView): { pos: number; node: import("@tiptap/pm/model").Node } | null {
+  const { state } = view;
+  const { $from } = state.selection;
+
+  // Check if cursor is inside a wikiLink node by walking up the tree
+  for (let d = $from.depth; d >= 0; d--) {
+    const node = $from.node(d);
+    if (node.type.name === "wikiLink") {
+      return { pos: $from.before(d), node };
+    }
+  }
+
+  return null;
+}
+
 function openLinkEditor(context: WysiwygToolbarContext): boolean {
   const view = context.view;
   if (!view) return false;
+
+  // Check if cursor is inside a wiki link - if so, open wiki link popup
+  const wikiLink = findWikiLinkAtCursor(view);
+  if (wikiLink) {
+    try {
+      const coords = view.coordsAtPos(wikiLink.pos);
+      const nodeSize = wikiLink.node.nodeSize;
+      const endCoords = view.coordsAtPos(wikiLink.pos + nodeSize);
+
+      useWikiLinkPopupStore.getState().openPopup(
+        {
+          top: coords.top,
+          left: coords.left,
+          bottom: coords.bottom,
+          right: endCoords.right,
+        },
+        String(wikiLink.node.attrs.value ?? ""),
+        wikiLink.pos
+      );
+      view.focus();
+    } catch (error) {
+      console.error("[wysiwygAdapter] Failed to open wiki link popup:", error);
+    }
+    return true;
+  }
 
   const inLink = !!context.context?.inLink;
 
