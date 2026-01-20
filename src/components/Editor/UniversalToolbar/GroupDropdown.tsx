@@ -59,6 +59,9 @@ const GroupDropdown = forwardRef<HTMLDivElement, GroupDropdownProps>(
   ({ anchorRect, items, groupId, onSelect, onClose, onNavigateOut, onTabOut }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
 
+    // Track if this is the initial mount (to avoid stealing focus on re-renders)
+    const isInitialMount = useRef(true);
+
     // Find enabled button indices (in button-space, excludes separators)
     const enabledButtonIndices = useMemo(() => {
       const indices: number[] = [];
@@ -74,8 +77,12 @@ const GroupDropdown = forwardRef<HTMLDivElement, GroupDropdownProps>(
       return indices;
     }, [items]);
 
-    // Focus first enabled button on mount
+    // Focus first enabled button on mount only (not on re-renders)
+    // This prevents stealing focus from toolbar buttons during click events
     useEffect(() => {
+      if (!isInitialMount.current) return;
+      isInitialMount.current = false;
+
       const container = containerRef.current;
       if (!container) return;
 

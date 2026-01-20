@@ -467,6 +467,7 @@ export function UniversalToolbar() {
 
       {menuOpen && menuAnchor && openGroup && (
         <GroupDropdown
+          key={openGroup.id}
           ref={menuRef}
           anchorRect={menuAnchor}
           items={dropdownItems}
