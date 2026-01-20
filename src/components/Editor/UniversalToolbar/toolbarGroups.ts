@@ -74,7 +74,7 @@ const BLOCK_GROUP: ToolbarGroup = {
   icon: icons.heading,
   items: [
     // "Paragraph" here means "remove heading" - only available when in a heading
-    { id: "paragraph", icon: icons.paragraph, label: "Paragraph", shortcut: "⌘⇧0", action: "heading:0", enabledIn: ["heading"] },
+    { id: "paragraph", icon: icons.paragraph, label: "Paragraph", shortcut: "⌘0", action: "heading:0", enabledIn: ["heading"] },
     { id: "h1", icon: icons.heading1, label: "Heading 1", shortcut: "⌘1", action: "heading:1", enabledIn: ["textblock"] },
     { id: "h2", icon: icons.heading2, label: "Heading 2", shortcut: "⌘2", action: "heading:2", enabledIn: ["textblock"] },
     { id: "h3", icon: icons.heading3, label: "Heading 3", shortcut: "⌘3", action: "heading:3", enabledIn: ["textblock"] },
@@ -98,7 +98,7 @@ const INLINE_GROUP: ToolbarGroup = {
     { id: "superscript", icon: icons.superscript, label: "Superscript", action: "superscript", enabledIn: ["selection", "textblock"] },
     { id: "subscript", icon: icons.subscript, label: "Subscript", action: "subscript", enabledIn: ["selection", "textblock"] },
     { id: "code", icon: icons.inlineCode, label: "Inline Code", shortcut: "⌘⇧`", action: "code", enabledIn: ["selection", "textblock"] },
-    { id: "clear-formatting", icon: icons.clearFormatting, label: "Clear Formatting", action: "clearFormatting", enabledIn: ["selection"] },
+    { id: "clear-formatting", icon: icons.clearFormatting, label: "Clear Formatting", shortcut: "⌘⇧0", action: "clearFormatting", enabledIn: ["selection"] },
   ],
 };
 
