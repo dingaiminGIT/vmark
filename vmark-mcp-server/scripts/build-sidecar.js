@@ -174,11 +174,8 @@ async function main() {
       await execAsync(lipoCmd);
       await access(universalPath);
       console.log(`Successfully created universal binary: ${universalPath}`);
-
-      // Clean up arch-specific binaries (optional, but keeps things tidy)
-      await rm(arm64Path);
-      await rm(x64Path);
-      console.log('Cleaned up arch-specific binaries');
+      // Keep arch-specific binaries - Tauri needs them during universal build
+      // It builds each arch separately before combining, so both are needed
     } catch (error) {
       console.error('Failed to create universal binary:', error.message);
       process.exit(1);
