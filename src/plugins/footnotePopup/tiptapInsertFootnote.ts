@@ -29,7 +29,7 @@ export function insertFootnoteAndOpenPopup(editor: TiptapEditor): void {
   const defType = schema.nodes.footnote_definition;
   if (!refType || !defType) return;
 
-  const insertPos = state.selection.from;
+  const insertPos = state.selection.to;
   view.dispatch(state.tr.insert(insertPos, refType.create({ label: "_new_" })));
 
   const renumberTr = createRenumberTransaction(view.state, refType, defType);
