@@ -309,6 +309,7 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
       // AI operations (not implemented - require external AI service)
       case "ai.improveWriting":
       case "ai.fixGrammar":
+      case "ai.translate":
       case "ai.summarize":
       case "ai.expand":
         await handleAiNotImplemented(id, type);
