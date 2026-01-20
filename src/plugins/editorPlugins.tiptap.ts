@@ -241,8 +241,14 @@ function handleInlineMathShortcut(view: EditorView): boolean {
  * Falls back to expandedToggleMark for normal link editing.
  *
  * When cursor is inside an existing link, opens the link popup for editing.
+ * When link popup is already open, blocks the shortcut to keep focus in popup.
  */
 function handleSmartLinkShortcut(view: EditorView): boolean {
+  // Block if link popup is already open - prevent accidental link removal
+  if (useLinkPopupStore.getState().isOpen) {
+    return true;
+  }
+
   const { from, to } = view.state.selection;
   const $from = view.state.selection.$from;
 
@@ -270,7 +276,7 @@ function handleSmartLinkShortcut(view: EditorView): boolean {
               right: Math.max(start.right, end.right),
             },
           });
-          view.focus();
+          // Don't call view.focus() - let popup focus its input
           return true;
         } catch {
           // Fall back to toggle if coords fail
