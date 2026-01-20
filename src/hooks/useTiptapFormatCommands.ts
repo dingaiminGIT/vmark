@@ -6,8 +6,10 @@ import type { Editor as TiptapEditor } from "@tiptap/core";
 import type { Node as PMNode, Mark as PMMark } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { useTabStore } from "@/stores/tabStore";
 import { expandedToggleMarkTiptap } from "@/plugins/editorPlugins.tiptap";
+import { findMarkRange } from "@/plugins/syntaxReveal/marks";
 import { copyImageToAssets, insertBlockImageNode } from "@/hooks/useImageOperations";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { MultiSelection } from "@/plugins/multiCursor";
@@ -220,8 +222,59 @@ export function useTiptapFormatCommands(editor: TiptapEditor | null) {
       if (unlistenCode) unlistenRefs.current.push(unlistenCode);
       if (cancelled) return;
 
-      const unlistenLink = await createMarkListener("menu:link", "link");
-      if (unlistenLink) unlistenRefs.current.push(unlistenLink);
+      // Special handler for link - opens popup instead of toggling when inside a link
+      const unlistenLink = await currentWindow.listen<string>("menu:link", (event) => {
+        if (event.payload !== windowLabel) return;
+        if (isTerminalFocused()) return;
+
+        // Block if link popup is already open
+        if (useLinkPopupStore.getState().isOpen) return;
+
+        const editor = editorRef.current;
+        if (!editor) return;
+
+        const view = editor.view;
+        const $from = view.state.selection.$from;
+        const linkMarkType = view.state.schema.marks.link;
+
+        // Check if inside an existing link - open popup instead of toggling
+        if (linkMarkType) {
+          const marksAtCursor = $from.marks();
+          const linkMark = marksAtCursor.find((m) => m.type === linkMarkType);
+          if (linkMark) {
+            const markRange = findMarkRange($from.pos, linkMark, $from.start(), $from.parent);
+            if (markRange) {
+              try {
+                const start = view.coordsAtPos(markRange.from);
+                const end = view.coordsAtPos(markRange.to);
+                useLinkPopupStore.getState().openPopup({
+                  href: linkMark.attrs.href || "",
+                  linkFrom: markRange.from,
+                  linkTo: markRange.to,
+                  anchorRect: {
+                    top: Math.min(start.top, end.top),
+                    left: Math.min(start.left, end.left),
+                    bottom: Math.max(start.bottom, end.bottom),
+                    right: Math.max(start.right, end.right),
+                  },
+                });
+                return;
+              } catch {
+                // Fall through to toggle behavior
+              }
+            }
+          }
+        }
+
+        // Not inside a link - use standard toggle behavior
+        editor.commands.focus();
+        expandedToggleMarkTiptap(view, "link");
+      });
+      if (cancelled) {
+        unlistenLink();
+      } else {
+        unlistenRefs.current.push(unlistenLink);
+      }
       if (cancelled) return;
 
       const unlistenSubscript = await createMarkListener("menu:subscript", "subscript");
