@@ -138,6 +138,10 @@ export class LinkPopupView {
     input.type = "text";
     input.className = "link-popup-input";
     input.placeholder = "URL...";
+    input.autocapitalize = "off";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.setAttribute("autocorrect", "off");
     input.addEventListener("input", this.handleInputChange);
     input.addEventListener("keydown", this.handleInputKeydown);
 
