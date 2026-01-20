@@ -6,8 +6,11 @@ import type { Editor as TiptapEditor } from "@tiptap/core";
 import type { Node as PMNode, Mark as PMMark } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useHeadingPickerStore } from "@/stores/headingPickerStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { useTabStore } from "@/stores/tabStore";
+import { extractHeadingsWithIds } from "@/utils/headingSlug";
+import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
 import { expandedToggleMarkTiptap } from "@/plugins/editorPlugins.tiptap";
 import { findMarkRange } from "@/plugins/syntaxReveal/marks";
 import { copyImageToAssets, insertBlockImageNode } from "@/hooks/useImageOperations";
@@ -223,12 +226,13 @@ export function useTiptapFormatCommands(editor: TiptapEditor | null) {
       if (cancelled) return;
 
       // Special handler for link - opens popup instead of toggling when inside a link
+      // For bookmark links (href starts with #), opens heading picker instead
       const unlistenLink = await currentWindow.listen<string>("menu:link", (event) => {
         if (event.payload !== windowLabel) return;
         if (isTerminalFocused()) return;
 
-        // Block if link popup is already open
-        if (useLinkPopupStore.getState().isOpen) return;
+        // Block if link popup or heading picker is already open
+        if (useLinkPopupStore.getState().isOpen || useHeadingPickerStore.getState().isOpen) return;
 
         const editor = editorRef.current;
         if (!editor) return;
@@ -237,18 +241,57 @@ export function useTiptapFormatCommands(editor: TiptapEditor | null) {
         const $from = view.state.selection.$from;
         const linkMarkType = view.state.schema.marks.link;
 
-        // Check if inside an existing link - open popup instead of toggling
+        // Check if inside an existing link
         if (linkMarkType) {
           const marksAtCursor = $from.marks();
           const linkMark = marksAtCursor.find((m) => m.type === linkMarkType);
           if (linkMark) {
             const markRange = findMarkRange($from.pos, linkMark, $from.start(), $from.parent);
             if (markRange) {
+              const href = linkMark.attrs.href || "";
+
+              // Check if it's a bookmark link (href starts with #)
+              if (href.startsWith("#")) {
+                // Extract headings from document
+                const headings = extractHeadingsWithIds(view.state.doc);
+                if (headings.length > 0) {
+                  try {
+                    const start = view.coordsAtPos(markRange.from);
+                    const end = view.coordsAtPos(markRange.to);
+                    const anchorRect = {
+                      top: Math.min(start.top, end.top),
+                      left: Math.min(start.left, end.left),
+                      bottom: Math.max(start.bottom, end.bottom),
+                      right: Math.max(start.right, end.right),
+                    };
+
+                    // Get container bounds for proper popup positioning
+                    const containerEl = view.dom.closest(".editor-container") as HTMLElement;
+                    const containerBounds = containerEl
+                      ? getBoundaryRects(view.dom as HTMLElement, containerEl)
+                      : getViewportBounds();
+
+                    useHeadingPickerStore.getState().openPicker(headings, (id) => {
+                      // Update the link's href to point to the new heading
+                      const tr = view.state.tr;
+                      tr.removeMark(markRange.from, markRange.to, linkMarkType);
+                      tr.addMark(markRange.from, markRange.to, linkMarkType.create({ href: `#${id}` }));
+                      view.dispatch(tr);
+                      view.focus();
+                    }, { anchorRect, containerBounds });
+                    return;
+                  } catch {
+                    // Fall through to regular popup
+                  }
+                }
+              }
+
+              // Regular link - open link popup for editing
               try {
                 const start = view.coordsAtPos(markRange.from);
                 const end = view.coordsAtPos(markRange.to);
                 useLinkPopupStore.getState().openPopup({
-                  href: linkMark.attrs.href || "",
+                  href,
                   linkFrom: markRange.from,
                   linkTo: markRange.to,
                   anchorRect: {

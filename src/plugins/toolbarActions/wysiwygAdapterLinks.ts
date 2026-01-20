@@ -8,6 +8,7 @@
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
 import { useLinkReferenceDialogStore } from "@/stores/linkReferenceDialogStore";
 import { extractHeadingsWithIds } from "@/utils/headingSlug";
+import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
 import type { WysiwygToolbarContext } from "./types";
 
 /**
@@ -86,6 +87,12 @@ export function insertBookmarkLink(context: WysiwygToolbarContext): boolean {
     right: coords.left + 10, // Minimal width for cursor position
   };
 
+  // Get container bounds for proper popup positioning
+  const containerEl = view.dom.closest(".editor-container") as HTMLElement;
+  const containerBounds = containerEl
+    ? getBoundaryRects(view.dom as HTMLElement, containerEl)
+    : getViewportBounds();
+
   useHeadingPickerStore.getState().openPicker(headings, (id, text) => {
     // Re-read current state to get fresh positions (doc may have changed)
     const currentState = view.state;
@@ -109,7 +116,7 @@ export function insertBookmarkLink(context: WysiwygToolbarContext): boolean {
 
     view.dispatch(tr);
     view.focus();
-  }, anchorRect);
+  }, { anchorRect, containerBounds });
 
   return true;
 }

@@ -14,7 +14,10 @@ import { canRunActionInMultiSelection } from "@/plugins/toolbarActions/multiSele
 import { getWysiwygMultiSelectionContext } from "@/plugins/toolbarActions/multiSelectionContext";
 import { expandedToggleMark } from "@/plugins/editorPlugins/expandedToggleMark";
 import { findAnyMarkRangeAtCursor, findMarkRange, findWordAtCursor } from "@/plugins/syntaxReveal/marks";
+import { useHeadingPickerStore } from "@/stores/headingPickerStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { extractHeadingsWithIds } from "@/utils/headingSlug";
+import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
 import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { triggerPastePlainText } from "@/plugins/markdownPaste/tiptap";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -236,23 +239,56 @@ function handleInlineMathShortcut(view: EditorView): boolean {
 }
 
 /**
+ * Open link popup for editing a regular hyperlink.
+ */
+function openLinkPopup(
+  view: EditorView,
+  markRange: { from: number; to: number },
+  href: string
+): boolean {
+  try {
+    const start = view.coordsAtPos(markRange.from);
+    const end = view.coordsAtPos(markRange.to);
+    useLinkPopupStore.getState().openPopup({
+      href,
+      linkFrom: markRange.from,
+      linkTo: markRange.to,
+      anchorRect: {
+        top: Math.min(start.top, end.top),
+        left: Math.min(start.left, end.left),
+        bottom: Math.max(start.bottom, end.bottom),
+        right: Math.max(start.right, end.right),
+      },
+    });
+    // Don't call view.focus() - let popup focus its input
+    return true;
+  } catch {
+    // Fall back to toggle if coords fail
+    return expandedToggleMark(view, "link");
+  }
+}
+
+/**
  * Smart link insertion with clipboard URL detection for WYSIWYG mode.
  * Checks clipboard for URL and applies link directly if found.
  * Falls back to expandedToggleMark for normal link editing.
  *
- * When cursor is inside an existing link, opens the link popup for editing.
- * When link popup is already open, blocks the shortcut to keep focus in popup.
+ * When cursor is inside an existing link:
+ * - Bookmark link (href starts with #): opens heading picker
+ * - Regular link: opens the link popup for editing
+ *
+ * When link popup or heading picker is already open, blocks the shortcut.
  */
 function handleSmartLinkShortcut(view: EditorView): boolean {
-  // Block if link popup is already open - prevent accidental link removal
-  if (useLinkPopupStore.getState().isOpen) {
+  // Block if link popup or heading picker is already open
+  if (useLinkPopupStore.getState().isOpen || useHeadingPickerStore.getState().isOpen) {
     return true;
   }
 
   const { from, to } = view.state.selection;
   const $from = view.state.selection.$from;
 
-  // Check if we're inside an existing link - open popup for editing
+  // Check if we're inside an existing link
   const linkMarkType = view.state.schema.marks.link;
   if (linkMarkType) {
     const marksAtCursor = $from.marks();
@@ -261,27 +297,54 @@ function handleSmartLinkShortcut(view: EditorView): boolean {
       // Find the link's range
       const markRange = findMarkRange($from.pos, linkMark, $from.start(), $from.parent);
       if (markRange) {
-        // Open the popup with link info
-        try {
-          const start = view.coordsAtPos(markRange.from);
-          const end = view.coordsAtPos(markRange.to);
-          useLinkPopupStore.getState().openPopup({
-            href: linkMark.attrs.href || "",
-            linkFrom: markRange.from,
-            linkTo: markRange.to,
-            anchorRect: {
+        const href = linkMark.attrs.href || "";
+
+        // Check if it's a bookmark link (href starts with #)
+        if (href.startsWith("#")) {
+          // Extract headings from document
+          const headings = extractHeadingsWithIds(view.state.doc);
+          if (headings.length === 0) {
+            // No headings in document - fall back to regular popup
+            return openLinkPopup(view, markRange, href);
+          }
+
+          // Open heading picker for bookmark link
+          try {
+            const start = view.coordsAtPos(markRange.from);
+            const end = view.coordsAtPos(markRange.to);
+            const anchorRect = {
               top: Math.min(start.top, end.top),
               left: Math.min(start.left, end.left),
               bottom: Math.max(start.bottom, end.bottom),
               right: Math.max(start.right, end.right),
-            },
-          });
-          // Don't call view.focus() - let popup focus its input
-          return true;
-        } catch {
-          // Fall back to toggle if coords fail
-          return expandedToggleMark(view, "link");
+            };
+
+            // Get container bounds for proper popup positioning
+            const containerEl = view.dom.closest(".editor-container") as HTMLElement;
+            const containerBounds = containerEl
+              ? getBoundaryRects(view.dom as HTMLElement, containerEl)
+              : getViewportBounds();
+
+            useHeadingPickerStore.getState().openPicker(headings, (id) => {
+              // Update the link's href to point to the new heading
+              const { state, dispatch } = view;
+              if (!state) return;
+
+              const tr = state.tr;
+              tr.removeMark(markRange.from, markRange.to, linkMarkType);
+              tr.addMark(markRange.from, markRange.to, linkMarkType.create({ href: `#${id}` }));
+              dispatch(tr);
+              view.focus();
+            }, { anchorRect, containerBounds });
+            return true;
+          } catch {
+            // Fall back to toggle if coords fail
+            return expandedToggleMark(view, "link");
+          }
         }
+
+        // Regular link - open link popup for editing
+        return openLinkPopup(view, markRange, href);
       }
     }
   }

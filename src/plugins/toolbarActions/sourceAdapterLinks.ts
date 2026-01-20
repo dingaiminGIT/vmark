@@ -10,6 +10,7 @@ import { applyFormat } from "@/plugins/sourceFormatPopup";
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
 import { useLinkReferenceDialogStore } from "@/stores/linkReferenceDialogStore";
 import { generateSlug, makeUniqueSlug, type HeadingWithId } from "@/utils/headingSlug";
+import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
 import { findWordBoundaries } from "@/utils/wordSegmentation";
 import { insertText } from "./sourceAdapterHelpers";
@@ -210,6 +211,12 @@ export function insertSourceBookmarkLink(view: EditorView): boolean {
     right: coords.left + 10, // Minimal width for cursor position
   } : undefined;
 
+  // Get container bounds for proper popup positioning
+  const containerEl = view.dom.closest(".editor-container") as HTMLElement;
+  const containerBounds = containerEl
+    ? getBoundaryRects(view.dom as HTMLElement, containerEl)
+    : getViewportBounds();
+
   useHeadingPickerStore.getState().openPicker(headings, (id, text) => {
     // Re-read current state to get fresh positions (doc may have changed)
     const { from: currentFrom, to: currentTo } = view.state.selection.main;
@@ -221,7 +228,7 @@ export function insertSourceBookmarkLink(view: EditorView): boolean {
       selection: { anchor: currentFrom + markdown.length },
     });
     view.focus();
-  }, anchorRect);
+  }, { anchorRect, containerBounds });
 
   return true;
 }

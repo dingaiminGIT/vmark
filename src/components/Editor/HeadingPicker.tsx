@@ -8,12 +8,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
-import {
-  calculatePopupPosition,
-  getViewportBounds,
-} from "@/utils/popupPosition";
+import { calculatePopupPosition, getViewportBounds } from "@/utils/popupPosition";
 import type { HeadingWithId } from "@/utils/headingSlug";
-import { popupIcons } from "@/utils/popupComponents";
 
 const POPUP_WIDTH = 360;
 const POPUP_MAX_HEIGHT = 280;
@@ -46,6 +42,7 @@ export function HeadingPicker() {
   const isOpen = useHeadingPickerStore((s) => s.isOpen);
   const headings = useHeadingPickerStore((s) => s.headings);
   const anchorRect = useHeadingPickerStore((s) => s.anchorRect);
+  const containerBounds = useHeadingPickerStore((s) => s.containerBounds);
 
   const [filter, setFilter] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -127,7 +124,8 @@ export function HeadingPicker() {
   useEffect(() => {
     if (!isOpen) return;
 
-    const bounds = getViewportBounds();
+    // Use container bounds if provided, otherwise fall back to viewport bounds
+    const bounds = containerBounds ?? getViewportBounds();
 
     // Default anchor if none provided (center-top)
     const anchor = anchorRect ?? {
@@ -146,7 +144,7 @@ export function HeadingPicker() {
     });
 
     setPosition({ top, left });
-  }, [isOpen, anchorRect]);
+  }, [isOpen, anchorRect, containerBounds]);
 
   // Reset and clamp selection when filter changes
   useEffect(() => {
@@ -195,13 +193,6 @@ export function HeadingPicker() {
           placeholder="Filter headings..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-        />
-        <button
-          type="button"
-          className="heading-picker-close popup-icon-btn"
-          onClick={handleClose}
-          title="Close"
-          dangerouslySetInnerHTML={{ __html: popupIcons.close }}
         />
       </div>
 
