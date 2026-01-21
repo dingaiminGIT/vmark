@@ -58,6 +58,7 @@ export function estimateSourceLine(doc: PMNode, pos: number): number {
 /**
  * Find the closest node by sourceLine when exact match not found.
  * Returns the textblock node with sourceLine closest to targetLine.
+ * Prefers nodes BEFORE the target line to avoid jumping forward in the document.
  *
  * @param doc - The ProseMirror document
  * @param targetLine - The target source line to find
@@ -67,24 +68,76 @@ export function findClosestSourceLine(
   doc: PMNode,
   targetLine: number
 ): { pos: number | null; node: PMNode | null } {
-  let closestPos: number | null = null;
-  let closestNode: PMNode | null = null;
-  let closestDiff = Infinity;
+  // Track best match before and after target
+  let beforePos: number | null = null;
+  let beforeNode: PMNode | null = null;
+  let beforeLine = -Infinity;
+
+  let afterPos: number | null = null;
+  let afterNode: PMNode | null = null;
+  let afterLine = Infinity;
+
+  // Container node types that have sourceLine but aren't textblocks
+  const containerTypes = new Set(["alertBlock", "detailsBlock"]);
 
   doc.descendants((node, pos) => {
     const sourceLine = node.attrs.sourceLine as number | null | undefined;
-    if (typeof sourceLine === "number" && node.isTextblock) {
-      const diff = Math.abs(sourceLine - targetLine);
-      if (diff < closestDiff) {
-        closestDiff = diff;
-        closestPos = pos + 1;
-        closestNode = node;
+    if (typeof sourceLine !== "number") return true;
+
+    // For textblocks, use directly
+    if (node.isTextblock) {
+      if (sourceLine <= targetLine && sourceLine > beforeLine) {
+        beforeLine = sourceLine;
+        beforePos = pos + 1;
+        beforeNode = node;
+      }
+      if (sourceLine > targetLine && sourceLine < afterLine) {
+        afterLine = sourceLine;
+        afterPos = pos + 1;
+        afterNode = node;
+      }
+    }
+    // For containers, find first textblock child
+    else if (containerTypes.has(node.type.name)) {
+      let firstTextblockPos: number | null = null;
+      let firstTextblockNode: PMNode | null = null;
+      node.descendants((child, childPos) => {
+        if (firstTextblockPos !== null) return false;
+        if (child.isTextblock) {
+          firstTextblockPos = pos + 1 + childPos + 1;
+          firstTextblockNode = child;
+          return false;
+        }
+        return true;
+      });
+      if (firstTextblockPos !== null && firstTextblockNode !== null) {
+        if (sourceLine <= targetLine && sourceLine > beforeLine) {
+          beforeLine = sourceLine;
+          beforePos = firstTextblockPos;
+          beforeNode = firstTextblockNode;
+        }
+        if (sourceLine > targetLine && sourceLine < afterLine) {
+          afterLine = sourceLine;
+          afterPos = firstTextblockPos;
+          afterNode = firstTextblockNode;
+        }
       }
     }
     return true;
   });
 
-  return { pos: closestPos, node: closestNode };
+  // Prefer node before target (less jarring than jumping forward)
+  // Only use after if before is much farther away (>10 lines difference)
+  if (beforePos !== null) {
+    const beforeDiff = targetLine - beforeLine;
+    const afterDiff = afterLine - targetLine;
+    if (afterPos !== null && afterDiff < beforeDiff && beforeDiff > 10) {
+      return { pos: afterPos, node: afterNode };
+    }
+    return { pos: beforePos, node: beforeNode };
+  }
+
+  return { pos: afterPos, node: afterNode };
 }
 
 /**

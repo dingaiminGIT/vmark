@@ -14,6 +14,7 @@ import { getBlockAnchor, restoreCursorInCodeBlock, restoreCursorInTable } from "
 
 /**
  * Get node type from ancestor chain.
+ * Handles standard block nodes plus special container nodes.
  */
 function getNodeTypeFromAncestors($pos: ResolvedPos): NodeType {
   for (let d = $pos.depth; d >= 0; d--) {
@@ -22,6 +23,9 @@ function getNodeTypeFromAncestors($pos: ResolvedPos): NodeType {
     if (name === "codeBlock") return "code_block";
     if (name === "blockquote") return "blockquote";
     if (name === "tableCell" || name === "tableHeader") return "table_cell";
+    if (name === "alertBlock") return "alert_block";
+    if (name === "detailsBlock" || name === "detailsSummary") return "details_block";
+    if (name === "wikiLink") return "wiki_link";
     if (
       name === "listItem" ||
       name === "bulletList" ||
@@ -105,13 +109,39 @@ export function restoreCursorInTiptap(view: EditorView, cursorInfo: CursorInfo):
   let targetNode: PMNode | null = null;
   let found = false;
 
+  // Container node types that have sourceLine but aren't textblocks
+  const containerTypes = new Set(["alertBlock", "detailsBlock"]);
+
   state.doc.descendants((node, pos) => {
     if (found) return false; // Skip remaining nodes after finding first match
-    if (node.attrs.sourceLine === sourceLine && node.isTextblock) {
-      targetPos = pos + 1; // +1 for node opening
-      targetNode = node;
-      found = true;
-      return false;
+    if (node.attrs.sourceLine === sourceLine) {
+      // Accept textblocks directly
+      if (node.isTextblock) {
+        targetPos = pos + 1; // +1 for node opening
+        targetNode = node;
+        found = true;
+        return false;
+      }
+      // For container nodes, find their first textblock child
+      if (containerTypes.has(node.type.name)) {
+        let firstTextblockPos: number | null = null;
+        let firstTextblockNode: PMNode | null = null;
+        node.descendants((child, childPos) => {
+          if (firstTextblockPos !== null) return false;
+          if (child.isTextblock) {
+            firstTextblockPos = pos + 1 + childPos + 1;
+            firstTextblockNode = child;
+            return false;
+          }
+          return true;
+        });
+        if (firstTextblockPos !== null && firstTextblockNode !== null) {
+          targetPos = firstTextblockPos;
+          targetNode = firstTextblockNode;
+          found = true;
+          return false;
+        }
+      }
     }
     return true;
   });

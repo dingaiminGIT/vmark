@@ -12,7 +12,10 @@ export type NodeType =
   | "list_item"
   | "code_block"
   | "table_cell"
-  | "blockquote";
+  | "blockquote"
+  | "alert_block"
+  | "details_block"
+  | "wiki_link";
 
 /**
  * Block-specific anchor for tables.

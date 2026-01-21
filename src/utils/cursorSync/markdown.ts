@@ -1,7 +1,8 @@
-import type { NodeType } from "@/stores/editorStore";
+import type { NodeType } from "@/types/cursorSync";
 
 /**
- * Detect node type from markdown line
+ * Detect node type from markdown line.
+ * Handles standard markdown plus extended syntax (alerts, details, wiki links).
  */
 export function detectNodeType(line: string): NodeType {
   const trimmed = line.trimStart();
@@ -21,9 +22,19 @@ export function detectNodeType(line: string): NodeType {
     return "code_block";
   }
 
-  // Blockquote
+  // Alert block: > [!NOTE], > [!WARNING], etc.
+  if (/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i.test(trimmed)) {
+    return "alert_block";
+  }
+
+  // Blockquote (check after alert to avoid false matches)
   if (/^>\s?/.test(trimmed)) {
     return "blockquote";
+  }
+
+  // Details block: ::: details or <details>
+  if (/^:::\s*details/i.test(trimmed) || /^<details/i.test(trimmed)) {
+    return "details_block";
   }
 
   // Table row: must start with | or have | with content on both sides
@@ -34,6 +45,11 @@ export function detectNodeType(line: string): NodeType {
   // Also match table rows that start with | but don't end with |
   if (/^\|[^|]+\|/.test(trimmed)) {
     return "table_cell";
+  }
+
+  // Wiki link on its own line: [[...]]
+  if (/^\[\[[^\]]+\]\]$/.test(trimmed)) {
+    return "wiki_link";
   }
 
   return "paragraph";
