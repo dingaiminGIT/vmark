@@ -89,7 +89,8 @@ export function getAnchorRectFromRange(
 
 /**
  * Get boundary rects from the editor container.
- * Uses .editor-container for vertical bounds, editor DOM for horizontal.
+ * Uses .editor-container for vertical bounds, .cm-content inner bounds for horizontal
+ * to ensure popups respect the same padding/margins as text content.
  *
  * @param view - CodeMirror EditorView
  * @returns BoundaryRects for popup positioning
@@ -101,9 +102,27 @@ export function getEditorBounds(view: EditorView): BoundaryRects {
     return getViewportBounds();
   }
 
-  const editorRect = view.dom.getBoundingClientRect();
   const containerRect = container.getBoundingClientRect();
 
+  // Use .cm-content inner bounds (accounting for padding) to match where text appears
+  const contentEl = view.dom.querySelector(".cm-content") as HTMLElement | null;
+  if (contentEl) {
+    const contentRect = contentEl.getBoundingClientRect();
+    const style = window.getComputedStyle(contentEl);
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+
+    return {
+      horizontal: {
+        left: contentRect.left + paddingLeft,
+        right: contentRect.right - paddingRight,
+      },
+      vertical: { top: containerRect.top, bottom: containerRect.bottom },
+    };
+  }
+
+  // Fallback to editor bounds
+  const editorRect = view.dom.getBoundingClientRect();
   return {
     horizontal: { left: editorRect.left, right: editorRect.right },
     vertical: { top: containerRect.top, bottom: containerRect.bottom },

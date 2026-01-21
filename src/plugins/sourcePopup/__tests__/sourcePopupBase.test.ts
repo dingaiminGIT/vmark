@@ -73,7 +73,7 @@ describe("sourcePopupUtils", () => {
   });
 
   describe("getEditorBounds", () => {
-    it("returns editor container bounds", () => {
+    it("returns editor container bounds with content inner area (after padding)", () => {
       const containerRect = createMockRect({
         top: 50,
         left: 10,
@@ -86,10 +86,28 @@ describe("sourcePopupUtils", () => {
         bottom: 580,
         right: 780,
       });
+      // .cm-content outer bounds (before padding is subtracted)
+      const contentRect = createMockRect({
+        top: 60,
+        left: 20,
+        bottom: 580,
+        right: 780,
+      });
+
+      // Mock getComputedStyle for padding
+      const originalGetComputedStyle = window.getComputedStyle;
+      window.getComputedStyle = vi.fn(() => ({
+        paddingLeft: "32px",
+        paddingRight: "32px",
+      })) as unknown as typeof window.getComputedStyle;
+
       const mockView = {
         dom: {
           closest: vi.fn(() => ({
             getBoundingClientRect: () => containerRect,
+          })),
+          querySelector: vi.fn(() => ({
+            getBoundingClientRect: () => contentRect,
           })),
           getBoundingClientRect: () => editorRect,
         },
@@ -97,17 +115,21 @@ describe("sourcePopupUtils", () => {
 
       const bounds = getEditorBounds(mockView);
 
-      // Horizontal uses editor rect, vertical uses container rect
-      expect(bounds.horizontal.left).toBe(20);
-      expect(bounds.horizontal.right).toBe(780);
+      // Horizontal uses .cm-content inner bounds (outer - padding), vertical uses container rect
+      expect(bounds.horizontal.left).toBe(52); // 20 + 32px padding
+      expect(bounds.horizontal.right).toBe(748); // 780 - 32px padding
       expect(bounds.vertical.top).toBe(50);
       expect(bounds.vertical.bottom).toBe(600);
+
+      // Restore
+      window.getComputedStyle = originalGetComputedStyle;
     });
 
     it("falls back to viewport when no container found", () => {
       const mockView = {
         dom: {
           closest: vi.fn(() => null),
+          querySelector: vi.fn(() => null),
           getBoundingClientRect: () => createMockRect(),
         },
       } as unknown as EditorView;
