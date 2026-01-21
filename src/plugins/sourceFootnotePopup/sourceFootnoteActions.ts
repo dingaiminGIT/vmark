@@ -4,9 +4,59 @@
  * Actions for editing footnotes in Source mode (CodeMirror 6).
  */
 
+import type { Text } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { useFootnotePopupStore } from "@/stores/footnotePopupStore";
 import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
+
+const FOOTNOTE_DEF_REGEX = /^\[\^([^\]]+)\]:\s*(.*)$/;
+
+function isFootnoteContinuationLine(lineText: string): boolean {
+  return /^(\s{2,}|\t)/.test(lineText);
+}
+
+function stripFootnoteIndent(lineText: string): string {
+  if (lineText.startsWith("\t")) return lineText.slice(1);
+  if (lineText.startsWith("  ")) return lineText.slice(2);
+  return lineText.replace(/^\s+/, "");
+}
+
+function buildFootnoteDefinitionBlock(
+  doc: Text,
+  startLineNumber: number,
+  label: string,
+  firstLineContent: string
+): { from: number; to: number; content: string; label: string } {
+  const contentLines: string[] = [firstLineContent ?? ""];
+  let endLineNumber = startLineNumber;
+
+  for (let i = startLineNumber + 1; i <= doc.lines; i += 1) {
+    const lineText = doc.line(i).text;
+    if (!isFootnoteContinuationLine(lineText)) {
+      break;
+    }
+    contentLines.push(stripFootnoteIndent(lineText));
+    endLineNumber = i;
+  }
+
+  return {
+    from: doc.line(startLineNumber).from,
+    to: doc.line(endLineNumber).to,
+    content: contentLines.join("\n"),
+    label,
+  };
+}
+
+function buildFootnoteDefinitionText(label: string, content: string): string {
+  const lines = content.split(/\r?\n/);
+  const firstLine = lines[0] ?? "";
+  const rest = lines.slice(1);
+  const formatted = [`[^${label}]: ${firstLine}`];
+  for (const line of rest) {
+    formatted.push(`  ${line}`);
+  }
+  return formatted.join("\n");
+}
 
 /**
  * Save footnote content changes.
@@ -16,30 +66,24 @@ export function saveFootnoteContent(view: EditorView): void {
   const state = useFootnotePopupStore.getState();
   const { content, definitionPos, label } = state;
 
-  if (definitionPos === null) {
+  if (definitionPos === null || !label) {
     // No definition found - nothing to save
     return;
   }
 
   runOrQueueCodeMirrorAction(view, () => {
-    const doc = view.state.doc;
-    const line = doc.lineAt(definitionPos);
-    const currentText = line.text;
-
-    // Extract just the content part after [^label]:
-    const defMatch = currentText.match(/^\[\^([^\]]+)\]:\s*/);
-    if (!defMatch) {
-      console.warn("[SourceFootnote] Definition format not found");
+    const definition =
+      findFootnoteDefinitionAtPos(view, definitionPos) ?? findFootnoteDefinition(view, label);
+    if (!definition) {
+      console.warn("[SourceFootnote] Definition not found for save");
       return;
     }
 
-    const newText = `[^${label}]: ${content}`;
-
-    // Find the end of the definition line
+    const newText = buildFootnoteDefinitionText(label, content);
     view.dispatch({
       changes: {
-        from: line.from,
-        to: line.to,
+        from: definition.from,
+        to: definition.to,
         insert: newText,
       },
     });
@@ -74,39 +118,33 @@ export function gotoFootnoteTarget(view: EditorView, openedOnReference: boolean)
 export function removeFootnote(view: EditorView): void {
   const state = useFootnotePopupStore.getState();
   const { label, definitionPos, referencePos } = state;
-  const reference = label
-    ? findFootnoteReferenceAtPos(view, label, referencePos) ?? findFootnoteReference(view, label)
-    : null;
-  if (!reference) return;
+  if (!label) return;
+
+  const references = findFootnoteReferences(view, label);
+  const referenceAtPos = findFootnoteReferenceAtPos(view, label, referencePos);
+  if (referenceAtPos && !references.some((ref) => ref.from === referenceAtPos.from)) {
+    references.push(referenceAtPos);
+  }
+
+  if (references.length === 0) return;
 
   runOrQueueCodeMirrorAction(view, () => {
     const doc = view.state.doc;
     const changes: { from: number; to: number; insert: string }[] = [];
 
-    // Get actual definition extent (entire line if it exists)
-    let defLineFrom: number | null = null;
-    let defLineTo: number | null = null;
-    if (definitionPos !== null) {
-      const defLine = doc.lineAt(definitionPos);
-      defLineFrom = defLine.from;
-      // Include the newline if there is one
-      defLineTo = defLine.to < doc.length ? defLine.to + 1 : defLine.to;
-    }
-
-    // Delete in reverse order (later positions first) to preserve earlier positions
-    if (defLineFrom !== null && defLineTo !== null && defLineFrom > reference.to) {
-      // Definition is after reference - delete definition first
-      changes.push({ from: defLineFrom, to: defLineTo, insert: "" });
-      changes.push({ from: reference.from, to: reference.to, insert: "" });
-    } else if (defLineFrom !== null && defLineTo !== null) {
-      // Definition is before reference - delete reference first
-      changes.push({ from: reference.from, to: reference.to, insert: "" });
-      changes.push({ from: defLineFrom, to: defLineTo, insert: "" });
-    } else {
-      // No definition, just delete reference
+    for (const reference of references) {
       changes.push({ from: reference.from, to: reference.to, insert: "" });
     }
 
+    const definition =
+      (definitionPos !== null ? findFootnoteDefinitionAtPos(view, definitionPos) : null) ??
+      findFootnoteDefinition(view, label);
+    if (definition) {
+      const defTo = definition.to < doc.length ? definition.to + 1 : definition.to;
+      changes.push({ from: definition.from, to: defTo, insert: "" });
+    }
+
+    changes.sort((a, b) => a.from - b.from);
     view.dispatch({ changes });
   });
 }
@@ -132,6 +170,35 @@ function findFootnoteReferenceAtPos(
   return null;
 }
 
+export function findFootnoteDefinitionAtPos(
+  view: EditorView,
+  pos: number
+): { from: number; to: number; label: string; content: string } | null {
+  const doc = view.state.doc;
+  const line = doc.lineAt(pos);
+  const directMatch = line.text.match(FOOTNOTE_DEF_REGEX);
+  if (directMatch) {
+    return buildFootnoteDefinitionBlock(doc, line.number, directMatch[1], directMatch[2] || "");
+  }
+
+  if (!isFootnoteContinuationLine(line.text)) {
+    return null;
+  }
+
+  for (let i = line.number - 1; i >= 1; i -= 1) {
+    const current = doc.line(i);
+    const match = current.text.match(FOOTNOTE_DEF_REGEX);
+    if (match) {
+      return buildFootnoteDefinitionBlock(doc, i, match[1], match[2] || "");
+    }
+    if (!isFootnoteContinuationLine(current.text)) {
+      break;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Find the footnote definition for a given label in the document.
  * Returns the position and content, or null if not found.
@@ -147,15 +214,34 @@ export function findFootnoteDefinition(
     const line = doc.line(i);
     const match = line.text.match(defRegex);
     if (match) {
-      return {
-        from: line.from,
-        to: line.to,
-        content: match[1] || "",
-      };
+      return buildFootnoteDefinitionBlock(doc, i, label, match[1] || "");
     }
   }
 
   return null;
+}
+
+export function findFootnoteReferences(
+  view: EditorView,
+  label: string
+): Array<{ from: number; to: number }> {
+  const doc = view.state.doc;
+  const refRegex = new RegExp(`\\[\\^${escapeRegex(label)}\\](?!:)`, "g");
+  const references: Array<{ from: number; to: number }> = [];
+
+  for (let i = 1; i <= doc.lines; i += 1) {
+    const line = doc.line(i);
+    refRegex.lastIndex = 0;
+    let match;
+    while ((match = refRegex.exec(line.text)) !== null) {
+      references.push({
+        from: line.from + match.index,
+        to: line.from + match.index + match[0].length,
+      });
+    }
+  }
+
+  return references;
 }
 
 /**
@@ -166,21 +252,10 @@ export function findFootnoteReference(
   view: EditorView,
   label: string
 ): { from: number; to: number } | null {
-  const doc = view.state.doc;
-  const refRegex = new RegExp(`\\[\\^${escapeRegex(label)}\\](?!:)`);
+  const references = findFootnoteReferences(view, label);
+  if (references.length === 0) return null;
+  return references[0];
 
-  for (let i = 1; i <= doc.lines; i++) {
-    const line = doc.line(i);
-    const match = line.text.match(refRegex);
-    if (match && match.index !== undefined) {
-      return {
-        from: line.from + match.index,
-        to: line.from + match.index + match[0].length,
-      };
-    }
-  }
-
-  return null;
 }
 
 /**

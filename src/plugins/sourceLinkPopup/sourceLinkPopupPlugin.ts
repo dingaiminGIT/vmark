@@ -33,10 +33,11 @@ function findLinkAtPos(view: EditorView, pos: number): LinkRange | null {
 
   // Regex to match link syntax (not images):
   // - [text](url) or [text](url "title")
+  // - [text](<url with spaces>) or [text](<url> "title")
   // - Negative lookbehind for ! to exclude images
   // Note: JS doesn't have lookbehind in all environments, so we check the match index
-  // Captures: [1] = text, [2] = url
-  const linkRegex = /\[([^\]]*)\]\(([^)\s"]+)(?:\s+"[^"]*")?\)/g;
+  // Captures: [1] = text, [2] = angle bracket url, [3] = url
+  const linkRegex = /\[([^\]]*)\]\((?:<([^>]+)>|([^)\s"]+))(?:\s+"[^"]*")?\)/g;
 
   let match;
   while ((match = linkRegex.exec(lineText)) !== null) {
@@ -51,7 +52,7 @@ function findLinkAtPos(view: EditorView, pos: number): LinkRange | null {
     // Check if cursor is inside this link markdown
     if (pos >= matchStart && pos <= matchEnd) {
       const text = match[1];
-      const href = match[2];
+      const href = match[2] || match[3];
 
       return {
         from: matchStart,

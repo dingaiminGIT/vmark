@@ -10,7 +10,11 @@ import type { EditorView } from "@codemirror/view";
 import { createSourcePopupPlugin } from "@/plugins/sourcePopup";
 import { useFootnotePopupStore } from "@/stores/footnotePopupStore";
 import { SourceFootnotePopupView } from "./SourceFootnotePopupView";
-import { findFootnoteDefinition, findFootnoteReference } from "./sourceFootnoteActions";
+import {
+  findFootnoteDefinition,
+  findFootnoteDefinitionAtPos,
+  findFootnoteReference,
+} from "./sourceFootnoteActions";
 
 /**
  * Footnote detection result.
@@ -34,20 +38,19 @@ function findFootnoteAtPos(view: EditorView, pos: number): FootnoteMatch | null 
   const lineStart = line.from;
   const cursorOffset = pos - lineStart;
 
-  // First check for definition at start of line: [^label]: content
-  const defRegex = /^\[\^([^\]]+)\]:\s*(.*)/;
-  const defMatch = lineText.match(defRegex);
-  if (defMatch) {
-    // Cursor is somewhere on this definition line
+  const definition = findFootnoteDefinitionAtPos(view, pos);
+  if (definition) {
+    const defLine = doc.lineAt(definition.from);
     return {
-      from: lineStart,
-      to: line.to,
-      label: defMatch[1],
+      from: defLine.from,
+      to: defLine.to,
+      label: definition.label,
       isReference: false,
-      content: defMatch[2] || "",
+      content: definition.content,
     };
   }
 
+  // First check for definition at start of line: [^label]: content
   // Then check for references: [^label] (not followed by :)
   const refRegex = /\[\^([^\]]+)\](?!:)/g;
   let match;

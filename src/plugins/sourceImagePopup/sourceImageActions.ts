@@ -19,8 +19,31 @@ import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
 /**
  * Build image markdown syntax.
  */
-function buildImageMarkdown(alt: string, src: string): string {
-  return `![${alt}](${src})`;
+function buildImageMarkdown(
+  alt: string,
+  src: string,
+  title: string | null,
+  useAngleBrackets: boolean
+): string {
+  const shouldUseAngleBrackets = useAngleBrackets || /\s/.test(src);
+  const dest = shouldUseAngleBrackets ? `<${src}>` : src;
+  const titlePart = title ? ` "${title}"` : "";
+  return `![${alt}](${dest}${titlePart})`;
+}
+
+function parseImageMarkdown(
+  markdown: string
+): { alt: string; src: string; title: string | null; useAngleBrackets: boolean } | null {
+  const match = markdown.match(
+    /^!\[([^\]]*)\]\((?:<([^>]+)>|([^)\s"]+))(?:\s+"([^"]*)")?\)$/
+  );
+  if (!match) return null;
+  return {
+    alt: match[1],
+    src: match[2] || match[3],
+    title: match[4] ?? null,
+    useAngleBrackets: Boolean(match[2]),
+  };
 }
 
 /**
@@ -55,6 +78,18 @@ function getImageRange(view: EditorView): { from: number; to: number } | null {
   return findImageAtPos(view, imageNodePos);
 }
 
+function getImageMetaFromRange(
+  view: EditorView,
+  range: { from: number; to: number }
+): { title: string | null; useAngleBrackets: boolean } {
+  const markdown = view.state.doc.sliceString(range.from, range.to);
+  const parsed = parseImageMarkdown(markdown);
+  return {
+    title: parsed?.title ?? null,
+    useAngleBrackets: parsed?.useAngleBrackets ?? false,
+  };
+}
+
 /**
  * Save image changes to the document.
  * Replaces the current image markdown with updated values.
@@ -67,7 +102,8 @@ export function saveImageChanges(view: EditorView): void {
     return;
   }
 
-  const newMarkdown = buildImageMarkdown(imageAlt, imageSrc);
+  const { title, useAngleBrackets } = getImageMetaFromRange(view, range);
+  const newMarkdown = buildImageMarkdown(imageAlt, imageSrc, title, useAngleBrackets);
 
   runOrQueueCodeMirrorAction(view, () => {
     view.dispatch({

@@ -14,20 +14,54 @@ import { findHeadingByIdCM } from "@/utils/headingSlug";
 /**
  * Build link markdown syntax.
  */
-function buildLinkMarkdown(text: string, href: string): string {
-  return `[${text}](${href})`;
+function buildLinkMarkdown(
+  text: string,
+  href: string,
+  title: string | null,
+  useAngleBrackets: boolean
+): string {
+  const shouldUseAngleBrackets = useAngleBrackets || /\s/.test(href);
+  const dest = shouldUseAngleBrackets ? `<${href}>` : href;
+  const titlePart = title ? ` "${title}"` : "";
+  return `[${text}](${dest}${titlePart})`;
 }
 
-function parseLinkMarkdown(markdown: string): { text: string; href: string } | null {
-  const match = markdown.match(/^\[([^\]]*)\]\(([^)\s"]+)(?:\s+"[^"]*")?\)$/);
+function parseLinkMarkdown(
+  markdown: string
+): { text: string; href: string; title: string | null; useAngleBrackets: boolean } | null {
+  const match = markdown.match(
+    /^\[([^\]]*)\]\((?:<([^>]+)>|([^)\s"]+))(?:\s+"([^"]*)")?\)$/
+  );
   if (!match) return null;
-  return { text: match[1], href: match[2] };
+  return {
+    text: match[1],
+    href: match[2] || match[3],
+    title: match[4] ?? null,
+    useAngleBrackets: Boolean(match[2]),
+  };
 }
 
 function getLinkTextFromRange(view: EditorView, from: number, to: number): string {
   const markdown = view.state.doc.sliceString(from, to);
   const parsed = parseLinkMarkdown(markdown);
   return parsed?.text ?? markdown;
+}
+
+function getLinkMetaFromRange(
+  view: EditorView,
+  from: number,
+  to: number
+): { text: string; title: string | null; useAngleBrackets: boolean } {
+  const markdown = view.state.doc.sliceString(from, to);
+  const parsed = parseLinkMarkdown(markdown);
+  if (!parsed) {
+    return { text: markdown, title: null, useAngleBrackets: false };
+  }
+  return {
+    text: parsed.text,
+    title: parsed.title,
+    useAngleBrackets: parsed.useAngleBrackets,
+  };
 }
 
 /**
@@ -42,8 +76,8 @@ export function saveLinkChanges(view: EditorView): void {
     return;
   }
 
-  const linkText = getLinkTextFromRange(view, linkFrom, linkTo);
-  const newMarkdown = buildLinkMarkdown(linkText, href);
+  const { text, title, useAngleBrackets } = getLinkMetaFromRange(view, linkFrom, linkTo);
+  const newMarkdown = buildLinkMarkdown(text, href, title, useAngleBrackets);
 
   runOrQueueCodeMirrorAction(view, () => {
     view.dispatch({
