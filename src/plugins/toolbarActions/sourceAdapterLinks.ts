@@ -176,9 +176,8 @@ function insertLinkTemplate(
 export async function insertLink(view: EditorView): Promise<boolean> {
   const { from, to } = view.state.selection.main;
 
-  // Case 0: Cursor or selection inside existing link - show popup for editing
-  // Check if selection start is inside a link (prevents inserting link inside link)
-  if (showLinkPopupForExistingLink(view)) {
+  // Case 0: Cursor inside existing link - show popup for editing
+  if (from === to && showLinkPopupForExistingLink(view)) {
     return true;
   }
 
