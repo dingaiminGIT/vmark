@@ -159,7 +159,7 @@ const INSERT_GROUP: ToolbarGroup = {
   label: "Insert",
   icon: icons.insert,
   items: [
-    { id: "insert-image", icon: icons.image, label: "Image", shortcut: "⌥⌘I", action: "insertImage", enabledIn: ["textblock"] },
+    { id: "insert-image", icon: icons.image, label: "Image", shortcut: "⇧⌘I", action: "insertImage", enabledIn: ["textblock"] },
     { id: "insert-code-block", icon: icons.codeBlock, label: "Code Block", shortcut: "⌥⌘C", action: "insertCodeBlock", enabledIn: ["textblock"] },
     { id: "insert-math", icon: icons.math, label: "Math Block", shortcut: "⇧⌥⌘M", action: "insertMath", enabledIn: ["textblock"] },
     { id: "insert-details", icon: icons.expand, label: "Details", action: "insertDetails", enabledIn: ["textblock"] },

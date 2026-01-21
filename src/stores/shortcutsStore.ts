@@ -78,7 +78,7 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "taskList", label: "Task List", category: "blocks", defaultKey: "Alt-Mod-x", menuId: "task-list" },
   { id: "insertTable", label: "Insert Table", category: "blocks", defaultKey: "Mod-Shift-t", menuId: "insert-table" },
   { id: "horizontalLine", label: "Horizontal Line", category: "blocks", defaultKey: "Alt-Mod--", menuId: "horizontal-line" },
-  { id: "insertImage", label: "Insert Image", category: "blocks", defaultKey: "Alt-Mod-i", menuId: "image" },
+  { id: "insertImage", label: "Insert Image", category: "blocks", defaultKey: "Shift-Mod-i", menuId: "image" },
   { id: "indent", label: "Indent", category: "blocks", defaultKey: "Mod-]", menuId: "indent" },
   { id: "outdent", label: "Outdent", category: "blocks", defaultKey: "Mod-[", menuId: "outdent" },
 

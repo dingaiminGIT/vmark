@@ -506,6 +506,12 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
     return true;
   });
 
+  // Insert image - emit menu event to trigger the same flow as menu item
+  bindIfKey(bindings, shortcuts.getShortcut("insertImage"), () => {
+    void getCurrentWebviewWindow().emit("menu:image", getCurrentWebviewWindow().label);
+    return true;
+  });
+
   bindIfKey(bindings, shortcuts.getShortcut("sourcePeek"), (_state, _dispatch, view) => {
     if (!view) return false;
     const sourcePeek = useSourcePeekStore.getState();

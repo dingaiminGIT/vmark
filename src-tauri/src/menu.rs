@@ -388,7 +388,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         true,
         &[
             &links_submenu,
-            &MenuItem::with_id(app, "image", "Image...", true, Some("Alt+CmdOrCtrl+I"))?,
+            &MenuItem::with_id(app, "image", "Image...", true, Some("Shift+CmdOrCtrl+I"))?,
             &PredefinedMenuItem::separator(app)?,
             &table_submenu,
             &PredefinedMenuItem::separator(app)?,
@@ -891,7 +891,7 @@ fn create_menu_with_shortcuts(
         true,
         &[
             &links_submenu,
-            &MenuItem::with_id(app, "image", "Image...", true, get_accel("image", "Alt+CmdOrCtrl+I"))?,
+            &MenuItem::with_id(app, "image", "Image...", true, get_accel("image", "Shift+CmdOrCtrl+I"))?,
             &PredefinedMenuItem::separator(app)?,
             &table_submenu,
             &PredefinedMenuItem::separator(app)?,
