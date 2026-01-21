@@ -1,8 +1,34 @@
 import type { EditorView } from "@codemirror/view";
-import type { CursorInfo } from "@/types/cursorSync";
-import { detectNodeType, stripMarkdownSyntax, isInsideCodeBlock } from "./markdown";
+import type { CursorInfo, BlockAnchor } from "@/types/cursorSync";
+import {
+  detectNodeType,
+  stripMarkdownSyntax,
+  isInsideCodeBlock,
+  findCodeFenceStartLine,
+} from "./markdown";
 import { extractCursorContext } from "./matching";
 import { MIN_CONTEXT_PATTERN_LENGTH } from "./pmHelpers";
+import { getTableAnchorForLine } from "./table";
+
+/**
+ * Extract code block anchor from source position.
+ * Returns line number within the code block and column.
+ */
+function getCodeBlockAnchor(lines: string[], lineIndex: number, column: number): BlockAnchor | undefined {
+  const fenceStart = findCodeFenceStartLine(lines, lineIndex);
+  if (fenceStart === null) return undefined;
+
+  // Line within code block (0-based, first content line is 0)
+  // fenceStart is the ``` line, so content starts at fenceStart + 1
+  const rawLineInBlock = lineIndex - fenceStart - 1;
+  const lineInBlock = Math.max(0, rawLineInBlock);
+
+  return {
+    kind: "code",
+    lineInBlock,
+    columnInLine: rawLineInBlock < 0 ? 0 : column,
+  };
+}
 
 /**
  * Extract cursor info from CodeMirror editor.
@@ -24,9 +50,17 @@ export function getCursorInfoFromCodeMirror(view: EditorView): CursorInfo {
   // Detect node type
   let nodeType = detectNodeType(lineText);
 
-  // Check if inside code block
+  // Check if inside code block and get block anchor
+  let blockAnchor: BlockAnchor | undefined;
   if (isInsideCodeBlock(lines, lineIndex)) {
     nodeType = "code_block";
+    blockAnchor = getCodeBlockAnchor(lines, lineIndex, column);
+  } else {
+    const tableAnchor = getTableAnchorForLine(lines, lineIndex, column);
+    if (tableAnchor) {
+      nodeType = "table_cell";
+      blockAnchor = tableAnchor;
+    }
   }
 
   // Strip markdown syntax for accurate text positioning
@@ -46,16 +80,72 @@ export function getCursorInfoFromCodeMirror(view: EditorView): CursorInfo {
     percentInLine,
     contextBefore: context.contextBefore,
     contextAfter: context.contextAfter,
+    blockAnchor,
   };
+}
+
+/**
+ * Find the start line of a code block containing the given source line.
+ * Returns the 1-indexed line number of the opening fence.
+ */
+function findCodeBlockStartLine(view: EditorView, targetLine: number): number | null {
+  const content = view.state.doc.toString();
+  const lines = content.split("\n");
+
+  const fenceStart = findCodeFenceStartLine(lines, targetLine - 1);
+  if (fenceStart === null) return null;
+  return fenceStart + 1; // Convert to 1-indexed
+}
+
+/**
+ * Restore cursor in code block using block anchor coordinates.
+ */
+function restoreCursorInCodeBlockSource(
+  view: EditorView,
+  sourceLine: number,
+  anchor: { lineInBlock: number; columnInLine: number }
+): boolean {
+  // Find the code block start
+  const fenceStartLine = findCodeBlockStartLine(view, sourceLine);
+  if (fenceStartLine === null) return false;
+
+  // Calculate target line: fence line + 1 (content start) + lineInBlock
+  const targetLineNum = fenceStartLine + 1 + anchor.lineInBlock;
+
+  // Clamp to valid range
+  const lineCount = view.state.doc.lines;
+  if (targetLineNum < 1 || targetLineNum > lineCount) return false;
+
+  const docLine = view.state.doc.line(targetLineNum);
+
+  // Apply column offset (clamped to line length)
+  const column = Math.min(anchor.columnInLine, docLine.text.length);
+  const pos = docLine.from + column;
+
+  view.dispatch({
+    selection: { anchor: pos },
+    scrollIntoView: true,
+  });
+
+  return true;
 }
 
 /**
  * Restore cursor position in CodeMirror from cursor info.
  * Uses sourceLine for direct line lookup - much simpler and more accurate.
+ * Uses block anchors for precise positioning in code blocks.
  */
 export function restoreCursorInCodeMirror(view: EditorView, cursorInfo: CursorInfo): void {
-  const { sourceLine } = cursorInfo;
+  const { sourceLine, blockAnchor } = cursorInfo;
 
+  // Try block-specific restoration for code blocks
+  if (blockAnchor && blockAnchor.kind === "code") {
+    if (restoreCursorInCodeBlockSource(view, sourceLine, blockAnchor)) {
+      return;
+    }
+  }
+
+  // Fall back to generic restoration
   // Clamp to valid line range
   const lineCount = view.state.doc.lines;
   const targetLine = Math.max(1, Math.min(sourceLine, lineCount));

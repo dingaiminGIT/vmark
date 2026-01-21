@@ -125,31 +125,45 @@ export function stripInlineFormatting(text: string): string {
 }
 
 /**
- * Check if currently inside a code block.
- * Tracks fence type (``` vs ~~~) to avoid toggling on different markers.
+ * Find the opening fence line for a code block containing the given line index.
+ * Returns the 0-based line index of the opening fence, or null if not in a code block.
  */
-export function isInsideCodeBlock(lines: string[], lineIndex: number): boolean {
-  let currentFence: string | null = null; // null = outside, "```" or "~~~" = inside
+export function findCodeFenceStartLine(
+  lines: string[],
+  lineIndex: number
+): number | null {
+  let currentFence: string | null = null;
+  let fenceStartLine = -1;
 
   for (let i = 0; i <= lineIndex && i < lines.length; i++) {
     const trimmed = lines[i].trim();
 
     if (currentFence === null) {
-      // Not inside a code block - check for opening fence
       if (/^```/.test(trimmed)) {
         currentFence = "```";
+        fenceStartLine = i;
       } else if (/^~~~/.test(trimmed)) {
         currentFence = "~~~";
+        fenceStartLine = i;
       }
     } else {
-      // Inside a code block - only close on matching fence type
       if (currentFence === "```" && /^```/.test(trimmed)) {
         currentFence = null;
+        fenceStartLine = -1;
       } else if (currentFence === "~~~" && /^~~~/.test(trimmed)) {
         currentFence = null;
+        fenceStartLine = -1;
       }
     }
   }
 
-  return currentFence !== null;
+  return currentFence !== null ? fenceStartLine : null;
+}
+
+/**
+ * Check if currently inside a code block.
+ * Tracks fence type (``` vs ~~~) to avoid toggling on different markers.
+ */
+export function isInsideCodeBlock(lines: string[], lineIndex: number): boolean {
+  return findCodeFenceStartLine(lines, lineIndex) !== null;
 }

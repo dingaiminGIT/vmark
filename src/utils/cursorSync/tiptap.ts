@@ -10,6 +10,7 @@ import {
   findColumnInLine,
   END_OF_LINE_THRESHOLD,
 } from "./pmHelpers";
+import { getBlockAnchor, restoreCursorInCodeBlock, restoreCursorInTable } from "./tiptapAnchors";
 
 /**
  * Get node type from ancestor chain.
@@ -34,6 +35,7 @@ function getNodeTypeFromAncestors($pos: ResolvedPos): NodeType {
   return "paragraph";
 }
 
+
 /**
  * Extract cursor info from Tiptap editor.
  * Uses sourceLine attribute from ProseMirror nodes.
@@ -52,6 +54,9 @@ export function getCursorInfoFromTiptap(view: EditorView): CursorInfo {
   // Get node type
   const nodeType = getNodeTypeFromAncestors($pos);
 
+  // Get block-specific anchor for tables and code blocks
+  const blockAnchor = getBlockAnchor($pos);
+
   // Get column within the parent textblock
   const parent = $pos.parent;
   const column = from - $pos.start();
@@ -69,18 +74,33 @@ export function getCursorInfoFromTiptap(view: EditorView): CursorInfo {
     percentInLine,
     contextBefore: context.contextBefore,
     contextAfter: context.contextAfter,
+    blockAnchor,
   };
 }
 
 /**
  * Restore cursor position in Tiptap from cursor info.
  * Finds the node with matching sourceLine attribute.
+ * Uses block anchors for precise positioning in tables and code blocks.
  */
 export function restoreCursorInTiptap(view: EditorView, cursorInfo: CursorInfo): void {
   const { state } = view;
-  const { sourceLine } = cursorInfo;
+  const { sourceLine, blockAnchor } = cursorInfo;
 
-  // Find the first node with matching sourceLine
+  // Try block-specific restoration first for tables and code blocks
+  if (blockAnchor) {
+    if (blockAnchor.kind === "table") {
+      if (restoreCursorInTable(view, sourceLine, blockAnchor)) {
+        return;
+      }
+    } else if (blockAnchor.kind === "code") {
+      if (restoreCursorInCodeBlock(view, sourceLine, blockAnchor)) {
+        return;
+      }
+    }
+  }
+
+  // Fall back to generic sourceLine-based restoration
   let targetPos: number | null = null;
   let targetNode: PMNode | null = null;
   let found = false;
