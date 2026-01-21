@@ -125,6 +125,14 @@ export class LinkPopupView {
           e.preventDefault();
           activeEl.click();
         }
+      } else if (e.key === "Escape") {
+        // Handle ESC from any element inside the popup
+        const activeEl = document.activeElement as HTMLElement;
+        if (activeEl && this.container.contains(activeEl)) {
+          e.preventDefault();
+          useLinkPopupStore.getState().closePopup();
+          this.editorView.focus();
+        }
       }
     };
 
