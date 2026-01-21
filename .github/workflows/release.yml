@@ -135,7 +135,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Publish Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.create-release.outputs.version }}
-          draft: false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Use gh CLI to publish the draft release - more reliable than action
+          # which can create duplicate releases on API failures
+          gh release edit "${{ needs.create-release.outputs.version }}" \
+            --draft=false \
+            --repo "${{ github.repository }}"
+          echo "✅ Published release ${{ needs.create-release.outputs.version }}"
