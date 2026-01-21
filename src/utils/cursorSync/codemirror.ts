@@ -8,7 +8,7 @@ import {
 } from "./markdown";
 import { extractCursorContext } from "./matching";
 import { MIN_CONTEXT_PATTERN_LENGTH } from "./pmHelpers";
-import { getTableAnchorForLine } from "./table";
+import { getTableAnchorForLine, restoreTableColumnFromAnchor } from "./table";
 
 /**
  * Extract code block anchor from source position.
@@ -131,17 +131,48 @@ function restoreCursorInCodeBlockSource(
 }
 
 /**
+ * Restore cursor in a table row using block anchor coordinates.
+ */
+function restoreCursorInTableSource(
+  view: EditorView,
+  sourceLine: number,
+  anchor: { col: number; offsetInCell: number }
+): boolean {
+  const lineCount = view.state.doc.lines;
+  const targetLine = Math.max(1, Math.min(sourceLine, lineCount));
+  const docLine = view.state.doc.line(targetLine);
+
+  const column = restoreTableColumnFromAnchor(docLine.text, anchor);
+  if (column === null) return false;
+
+  const pos = docLine.from + column;
+
+  view.dispatch({
+    selection: { anchor: pos },
+    scrollIntoView: true,
+  });
+
+  return true;
+}
+
+/**
  * Restore cursor position in CodeMirror from cursor info.
  * Uses sourceLine for direct line lookup - much simpler and more accurate.
- * Uses block anchors for precise positioning in code blocks.
+ * Uses block anchors for precise positioning in code blocks and tables.
  */
 export function restoreCursorInCodeMirror(view: EditorView, cursorInfo: CursorInfo): void {
   const { sourceLine, blockAnchor } = cursorInfo;
 
-  // Try block-specific restoration for code blocks
-  if (blockAnchor && blockAnchor.kind === "code") {
-    if (restoreCursorInCodeBlockSource(view, sourceLine, blockAnchor)) {
-      return;
+  // Try block-specific restoration for code blocks and tables
+  if (blockAnchor) {
+    if (blockAnchor.kind === "code") {
+      if (restoreCursorInCodeBlockSource(view, sourceLine, blockAnchor)) {
+        return;
+      }
+    } else if (blockAnchor.kind === "table") {
+      if (restoreCursorInTableSource(view, sourceLine, blockAnchor)) {
+        return;
+      }
     }
   }
 

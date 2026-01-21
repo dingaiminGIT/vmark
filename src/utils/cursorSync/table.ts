@@ -132,3 +132,25 @@ export function getTableAnchorForLine(
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
+
+/**
+ * Restore cursor position in a markdown table line using block anchor.
+ * Returns the column position, or null if restoration failed.
+ */
+export function restoreTableColumnFromAnchor(
+  lineText: string,
+  anchor: { col: number; offsetInCell: number }
+): number | null {
+  const cellRanges = getTableCellRanges(lineText);
+  if (cellRanges.length === 0) return null;
+
+  // Clamp column to valid range
+  const col = clamp(anchor.col, 0, cellRanges.length - 1);
+  const cell = cellRanges[col];
+
+  // Calculate position: content start + offset (clamped)
+  const maxOffset = Math.max(0, cell.contentEnd - cell.contentStart);
+  const offset = clamp(anchor.offsetInCell, 0, maxOffset);
+
+  return cell.contentStart + offset;
+}
