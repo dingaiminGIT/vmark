@@ -18,7 +18,6 @@ import "@/plugins/mathPopup/math-popup.css";
 import "@/plugins/wikiLinkPopup/wiki-link-popup.css";
 import "@/plugins/footnotePopup/footnote-popup.css";
 import "@/styles/popup-shared.css";
-import "@/plugins/htmlBlockPopup/html-popup.css";
 import "@/plugins/alertBlock/alert-block.css";
 import "@/plugins/detailsBlock/details-block.css";
 import "@/plugins/focusMode/focus-mode.css";

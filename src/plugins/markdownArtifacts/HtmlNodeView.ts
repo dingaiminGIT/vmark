@@ -1,7 +1,9 @@
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { NodeView } from "@tiptap/pm/view";
 import { useSettingsStore, type HtmlRenderingMode } from "@/stores/settingsStore";
+import { useEditorStore } from "@/stores/editorStore";
 import { sanitizeHtmlPreview } from "@/utils/sanitize";
+import type { CursorInfo } from "@/types/cursorSync";
 
 interface HtmlNodeViewOptions {
   inline: boolean;
@@ -12,12 +14,14 @@ interface HtmlNodeViewOptions {
 class BaseHtmlNodeView implements NodeView {
   dom: HTMLElement;
 
+  private node: PMNode;
   private value: string;
   private renderMode: HtmlRenderingMode;
   private unsubscribe: (() => void) | null = null;
   private options: HtmlNodeViewOptions;
 
   constructor(node: PMNode, options: HtmlNodeViewOptions) {
+    this.node = node;
     this.options = options;
     this.value = String(node.attrs.value ?? "");
     this.renderMode = useSettingsStore.getState().markdown.htmlRenderingMode;
@@ -27,6 +31,9 @@ class BaseHtmlNodeView implements NodeView {
     this.dom.setAttribute("data-value", this.value);
     this.dom.setAttribute("contenteditable", "false");
     this.dom.className = options.inline ? "html-preview-inline" : "html-preview-block";
+
+    // Double-click to switch to Source mode
+    this.dom.addEventListener("dblclick", this.handleDoubleClick);
 
     this.render();
 
@@ -38,9 +45,36 @@ class BaseHtmlNodeView implements NodeView {
     });
   }
 
+  private handleDoubleClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const sourceLine = this.node.attrs.sourceLine as number | null;
+    if (sourceLine !== null) {
+      // Create cursor info to sync position
+      const cursorInfo: CursorInfo = {
+        sourceLine,
+        wordAtCursor: "",
+        offsetInWord: 0,
+        nodeType: "paragraph", // HTML blocks treated as paragraph-like
+        percentInLine: 0,
+        contextBefore: "",
+        contextAfter: "",
+      };
+      useEditorStore.getState().setCursorInfo(cursorInfo);
+    }
+
+    // Switch to source mode
+    const editorStore = useEditorStore.getState();
+    if (!editorStore.sourceMode) {
+      editorStore.toggleSourceMode();
+    }
+  };
+
   update(node: PMNode): boolean {
     if (node.type.name !== this.options.typeName) return false;
 
+    this.node = node;
     const nextValue = String(node.attrs.value ?? "");
     if (nextValue !== this.value) {
       this.value = nextValue;
@@ -51,6 +85,7 @@ class BaseHtmlNodeView implements NodeView {
   }
 
   destroy(): void {
+    this.dom.removeEventListener("dblclick", this.handleDoubleClick);
     if (this.unsubscribe) {
       this.unsubscribe();
       this.unsubscribe = null;

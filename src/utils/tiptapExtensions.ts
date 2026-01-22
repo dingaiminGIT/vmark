@@ -52,7 +52,6 @@ import {
   wikiLinkExtension,
 } from "@/plugins/markdownArtifacts";
 import { wikiLinkPopupExtension } from "@/plugins/wikiLinkPopup";
-import { htmlBlockPopupExtension } from "@/plugins/htmlBlockPopup";
 
 /**
  * Creates the array of Tiptap extensions for the WYSIWYG editor.
@@ -107,7 +106,6 @@ export function createTiptapExtensions(): Extensions {
     htmlInlineExtension,
     htmlBlockExtension,
     wikiLinkPopupExtension,
-    htmlBlockPopupExtension,
     footnoteReferenceExtension,
     footnoteDefinitionExtension,
     TableWithSourceLine.configure({ resizable: false }),
