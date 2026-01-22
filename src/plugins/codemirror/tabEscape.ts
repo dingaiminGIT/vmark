@@ -1,11 +1,14 @@
 /**
  * Tab Escape Plugin for CodeMirror
  *
- * Allows pressing Tab to jump over closing brackets, quotes, and markdown format chars.
+ * Allows pressing Tab to:
+ * 1. Navigate within markdown links: [text] -> (url) -> outside
+ * 2. Jump over closing brackets, quotes, and markdown format chars.
  */
 
 import { KeyBinding } from "@codemirror/view";
 import { guardCodeMirrorKeyBinding } from "@/utils/imeGuard";
+import { tabNavigateLink } from "./tabEscapeLink";
 
 // Closing characters that Tab can jump over
 const CLOSING_CHARS = new Set([
@@ -22,8 +25,9 @@ const CLOSING_CHARS = new Set([
 const CLOSING_SEQUENCES = ["~~", "=="];
 
 /**
- * Tab key handler: jump over closing bracket/quote if cursor is before one.
- * Handles both single chars and multi-char sequences (~~, ==).
+ * Tab key handler with multiple behaviors:
+ * 1. Link navigation: [text] -> (url) -> outside
+ * 2. Jump over closing bracket/quote if cursor is before one
  * Falls through to default Tab behavior (indent) otherwise.
  */
 export const tabEscapeKeymap: KeyBinding = guardCodeMirrorKeyBinding({
@@ -34,6 +38,11 @@ export const tabEscapeKeymap: KeyBinding = guardCodeMirrorKeyBinding({
 
     // Only handle when no selection
     if (from !== to) return false;
+
+    // Try link navigation first
+    if (tabNavigateLink(view)) {
+      return true;
+    }
 
     // Check for multi-char closing sequences first (~~, ==)
     const nextTwo = state.doc.sliceString(from, from + 2);

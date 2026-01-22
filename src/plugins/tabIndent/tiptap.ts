@@ -2,7 +2,14 @@
  * Tab Indent Extension for Tiptap
  *
  * Fallback Tab handler that keeps Tab inside the editor.
- * Handles table navigation, list indent/outdent, and finally inserts spaces.
+ * Handles:
+ * 1. Escape from marks (bold, italic, code, strike) and links
+ * 2. Table navigation
+ * 3. List indent/outdent
+ * 4. Space insertion (fallback)
+ *
+ * When cursor is in an inline mark or link:
+ * - Tab: jumps to position after the mark/link
  *
  * When cursor is in a table:
  * - Tab: moves to next cell, or adds a row at the last cell
@@ -19,11 +26,12 @@
  */
 
 import { Extension } from "@tiptap/core";
-import { Plugin, PluginKey, type EditorState } from "@tiptap/pm/state";
+import { Plugin, PluginKey, type EditorState, TextSelection } from "@tiptap/pm/state";
 import { goToNextCell, addRowAfter } from "@tiptap/pm/tables";
 import { liftListItem, sinkListItem } from "@tiptap/pm/schema-list";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { isInTable, getTableInfo } from "@/plugins/tableUI/tableActions.tiptap";
+import { canTabEscape } from "./tabEscape";
 
 const tabIndentPluginKey = new PluginKey("tabIndent");
 
@@ -67,6 +75,21 @@ export const tabIndentExtension = Extension.create({
               // Skip IME composition
               if (event.isComposing || event.keyCode === 229) return false;
 
+              const { state, dispatch } = view;
+
+              // Tab escape from marks/links (only for forward Tab, not Shift+Tab)
+              if (!event.shiftKey) {
+                const escapeResult = canTabEscape(state);
+                if (escapeResult) {
+                  event.preventDefault();
+                  const tr = state.tr.setSelection(
+                    TextSelection.create(state.doc, escapeResult.targetPos)
+                  );
+                  dispatch(tr);
+                  return true;
+                }
+              }
+
               // In table: delegate to table cell navigation
               if (isInTable(view)) {
                 event.preventDefault();
@@ -86,7 +109,6 @@ export const tabIndentExtension = Extension.create({
                 return true;
               }
 
-              const { state, dispatch } = view;
               const { selection } = state;
 
               // In list item: indent/outdent
