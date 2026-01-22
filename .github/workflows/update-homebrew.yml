@@ -1,0 +1,118 @@
+name: Update Homebrew Tap
+
+on:
+  release:
+    types: [published]
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 0.3.0)'
+        required: true
+
+jobs:
+  update-tap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            # Remove 'v' prefix from tag
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Wait for DMG to be available
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG_URL="https://github.com/xiaolai/vmark/releases/download/v${VERSION}/VMark_${VERSION}_universal.dmg"
+
+          echo "Waiting for DMG at: $DMG_URL"
+
+          for i in {1..30}; do
+            if curl -sI -o /dev/null -w "%{http_code}" "$DMG_URL" | grep -q "302\|200"; then
+              echo "DMG is available!"
+              exit 0
+            fi
+            echo "Attempt $i/30: DMG not ready yet, waiting 30s..."
+            sleep 30
+          done
+
+          echo "DMG not available after 15 minutes"
+          exit 1
+
+      - name: Download DMG and calculate SHA256
+        id: sha256
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG_URL="https://github.com/xiaolai/vmark/releases/download/v${VERSION}/VMark_${VERSION}_universal.dmg"
+
+          echo "Downloading: $DMG_URL"
+          curl -L -o vmark.dmg "$DMG_URL"
+
+          SHA256=$(shasum -a 256 vmark.dmg | cut -d ' ' -f 1)
+          echo "SHA256: $SHA256"
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+
+          rm vmark.dmg
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: xiaolai/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update cask formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256="${{ steps.sha256.outputs.sha256 }}"
+
+          cat > homebrew-tap/Casks/vmark.rb << 'EOF'
+          cask "vmark" do
+            version "VERSION_PLACEHOLDER"
+            sha256 "SHA256_PLACEHOLDER"
+
+            url "https://github.com/xiaolai/vmark/releases/download/v#{version}/VMark_#{version}_universal.dmg"
+            name "VMark"
+            desc "Modern Markdown editor with WYSIWYG and source mode"
+            homepage "https://github.com/xiaolai/vmark"
+
+            livecheck do
+              url :url
+              strategy :github_latest
+            end
+
+            depends_on macos: ">= :catalina"
+
+            app "VMark.app"
+
+            zap trash: [
+              "~/Library/Application Support/app.vmark",
+              "~/Library/Caches/app.vmark",
+              "~/Library/Preferences/app.vmark.plist",
+              "~/Library/Saved Application State/app.vmark.savedState",
+            ]
+          end
+          EOF
+
+          # Replace placeholders
+          sed -i "s/VERSION_PLACEHOLDER/$VERSION/" homebrew-tap/Casks/vmark.rb
+          sed -i "s/SHA256_PLACEHOLDER/$SHA256/" homebrew-tap/Casks/vmark.rb
+
+          echo "Updated cask formula:"
+          cat homebrew-tap/Casks/vmark.rb
+
+      - name: Commit and push
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add Casks/vmark.rb
+          git commit -m "Update vmark to ${{ steps.version.outputs.version }}"
+          git push
