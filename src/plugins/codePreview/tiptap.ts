@@ -431,8 +431,8 @@ export const codePreviewExtension = Extension.create({
                       })
                       .catch(() => {
                         renderPromises.delete(cacheKey);
-                        placeholder.className = "code-block-preview latex-preview code-block-preview-placeholder";
-                        placeholder.textContent = "Failed to render math";
+                        placeholder.className = "code-block-preview latex-preview mermaid-error";
+                        placeholder.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Failed to render math`;
                       });
 
                     return placeholder;
@@ -460,7 +460,7 @@ export const codePreviewExtension = Extension.create({
                         placeholder.innerHTML = sanitizeSvg(svg);
                       } else {
                         placeholder.className = "code-block-preview mermaid-error";
-                        placeholder.textContent = "Failed to render diagram";
+                        placeholder.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Failed to render diagram`;
                       }
                     });
                     return placeholder;

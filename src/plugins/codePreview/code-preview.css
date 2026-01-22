@@ -61,6 +61,13 @@
   white-space: pre-wrap;
   word-break: break-word;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.code-block-preview.mermaid-error svg {
+  flex-shrink: 0;
 }
 
 .code-block-preview-placeholder {
