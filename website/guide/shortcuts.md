@@ -130,6 +130,28 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 Toggle Hidden Files uses `Ctrl + H` on Windows and Linux.
 :::
 
+## Smart Tab Navigation
+
+Tab has context-aware behavior throughout the editor:
+
+### In Formatted Text (WYSIWYG)
+
+| Context | Tab Action |
+|---------|------------|
+| Inside **bold**/`code`/*italic*/~~strike~~ | Jump after the formatting |
+| Inside a link | Jump after the link |
+
+### In Markdown Links (Source Mode)
+
+| Context | Tab Action |
+|---------|------------|
+| Inside `[text]` | Jump to `(url)` |
+| Inside `(url)` | Jump after `)` |
+
+### Before Closing Characters (Source Mode)
+
+Tab jumps over: `)`, `]`, `}`, `*`, `_`, `` ` ``, `~~`, `==`, and quotes.
+
 ## Table Editing
 
 When cursor is inside a table:
