@@ -174,7 +174,7 @@ export function SourceEditor() {
 
   useSourceEditorSearch(viewRef);
 
-  return <div ref={containerRef} className="source-editor" />;
+  return <div ref={containerRef} className={`source-editor${showLineNumbers ? " show-line-numbers" : ""}`} />;
 }
 
 export default SourceEditor;

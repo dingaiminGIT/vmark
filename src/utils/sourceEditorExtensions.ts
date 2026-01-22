@@ -154,15 +154,6 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
         },
         preventDefault: true,
       }),
-      // Cmd+Shift+N: toggle line numbers
-      guardCodeMirrorKeyBinding({
-        key: "Mod-Shift-n",
-        run: () => {
-          useEditorStore.getState().toggleLineNumbers();
-          return true;
-        },
-        preventDefault: true,
-      }),
       ...closeBracketsKeymap,
       ...defaultKeymap,
       ...historyKeymap,

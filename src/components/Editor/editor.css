@@ -720,6 +720,19 @@
 
 .source-editor .cm-gutters {
   display: none;
+  background: transparent;
+  border-right: 1px solid var(--border-color);
+  color: var(--text-tertiary);
+}
+
+.source-editor.show-line-numbers .cm-gutters {
+  display: flex;
+}
+
+.source-editor .cm-lineNumbers .cm-gutterElement {
+  padding: 0 8px 0 12px;
+  min-width: 32px;
+  text-align: right;
 }
 
 /* Hide <br /> lines when showBrTags is off */
