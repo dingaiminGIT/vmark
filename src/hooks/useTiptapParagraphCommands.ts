@@ -12,6 +12,13 @@ import { registerMenuListener } from "@/utils/menuListenerHelper";
 
 const DEFAULT_MATH_BLOCK = "c = \\pm\\sqrt{a^2 + b^2}";
 
+const DEFAULT_DIAGRAM_BLOCK = `graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Do something]
+    B -->|No| D[Do another thing]
+    C --> E[End]
+    D --> E`;
+
 function getCurrentHeadingLevel(editor: TiptapEditor): number | null {
   const { $from } = editor.state.selection;
   const parent = $from.parent;
@@ -152,6 +159,18 @@ export function useTiptapParagraphCommands(editor: TiptapEditor | null) {
             type: "codeBlock",
             attrs: { language: "latex" },
             content: [{ type: "text", text: DEFAULT_MATH_BLOCK }],
+          })
+          .run();
+      }))) return;
+
+      if (!(await register("menu:diagram", (editor) => {
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: "codeBlock",
+            attrs: { language: "mermaid" },
+            content: [{ type: "text", text: DEFAULT_DIAGRAM_BLOCK }],
           })
           .run();
       }))) return;

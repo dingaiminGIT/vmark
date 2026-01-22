@@ -55,6 +55,8 @@ const INSERT_ACTIONS = [
   { event: "menu:horizontal-line", action: "insertDivider" },
   { event: "menu:insert-table", action: "insertTable" },
   { event: "menu:collapsible-block", action: "insertDetails" },
+  { event: "menu:math-block", action: "insertMath" },
+  { event: "menu:diagram", action: "insertDiagram" },
 ] as const;
 
 const TABLE_ACTIONS = [

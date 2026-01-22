@@ -71,6 +71,7 @@ export const icons = {
   // Block insert icons
   codeBlock: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m10 10-2 2 2 2"/><path d="m14 14 2-2-2-2"/></svg>`,
   details: `<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
+  diagram: `<svg viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="4" rx="1"/><rect x="15" y="3" width="6" height="4" rx="1"/><rect x="9" y="17" width="6" height="4" rx="1"/><path d="M6 7v4h12V7"/><path d="M12 11v6"/></svg>`,
   // Borderless variants for toolbar buttons
   insert: `<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>`,
   expand: `<svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>`,

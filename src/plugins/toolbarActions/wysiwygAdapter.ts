@@ -23,6 +23,13 @@ import { insertWikiLink, insertBookmarkLink } from "./wysiwygAdapterLinks";
 
 const DEFAULT_MATH_BLOCK = "c = \\pm\\sqrt{a^2 + b^2}";
 
+const DEFAULT_DIAGRAM_BLOCK = `graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Do something]
+    B -->|No| D[Do another thing]
+    C --> E[End]
+    D --> E`;
+
 /**
  * Check if an editor view is still connected and valid.
  */
@@ -342,6 +349,22 @@ function insertMathBlock(context: WysiwygToolbarContext): boolean {
   return true;
 }
 
+function insertDiagramBlock(context: WysiwygToolbarContext): boolean {
+  const editor = context.editor;
+  if (!editor) return false;
+
+  editor
+    .chain()
+    .focus()
+    .insertContent({
+      type: "codeBlock",
+      attrs: { language: "mermaid" },
+      content: [{ type: "text", text: DEFAULT_DIAGRAM_BLOCK }],
+    })
+    .run();
+  return true;
+}
+
 /**
  * Insert inline math with word expansion.
  *
@@ -567,6 +590,8 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       return true;
     case "insertMath":
       return insertMathBlock(context);
+    case "insertDiagram":
+      return insertDiagramBlock(context);
     case "insertInlineMath":
       return insertInlineMath(context);
     case "insertBulletList":

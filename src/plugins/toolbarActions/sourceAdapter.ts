@@ -7,7 +7,7 @@
 
 import type { EditorView } from "@codemirror/view";
 import { clearAllFormatting } from "@/plugins/sourceContextDetection/clearFormatting";
-import { buildAlertBlock, buildDetailsBlock, buildMathBlock, type AlertType } from "@/plugins/sourceContextDetection/sourceInsertions";
+import { buildAlertBlock, buildDetailsBlock, buildDiagramBlock, buildMathBlock, type AlertType } from "@/plugins/sourceContextDetection/sourceInsertions";
 import { getBlockquoteInfo, nestBlockquote, removeBlockquote, unnestBlockquote } from "@/plugins/sourceContextDetection/blockquoteDetection";
 import { convertToHeading, getHeadingInfo, setHeadingLevel } from "@/plugins/sourceContextDetection/headingDetection";
 import { getListItemInfo, indentListItem, outdentListItem, removeList, toBulletList, toOrderedList, toTaskList } from "@/plugins/sourceContextDetection/listDetection";
@@ -391,6 +391,8 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
       return handleInsertAlert(view, action);
     case "insertMath":
       return handleInsertMath(view);
+    case "insertDiagram":
+      return handleInsertDiagram(view);
     case "insertInlineMath":
       return insertInlineMath(view);
 
@@ -466,6 +468,14 @@ function handleInsertMath(view: EditorView): boolean {
   const { from, to } = view.state.selection.main;
   const selection = from === to ? "" : view.state.doc.sliceString(from, to);
   const { text, cursorOffset } = buildMathBlock(selection);
+  insertText(view, text, cursorOffset);
+  return true;
+}
+
+function handleInsertDiagram(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const selection = from === to ? "" : view.state.doc.sliceString(from, to);
+  const { text, cursorOffset } = buildDiagramBlock(selection);
   insertText(view, text, cursorOffset);
   return true;
 }

@@ -56,3 +56,22 @@ export function buildMathBlock(selection: string): InsertionResult {
   const cursorOffset = "$$\n".length;
   return { text, cursorOffset };
 }
+
+const DEFAULT_DIAGRAM = `graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Do something]
+    B -->|No| D[Do another thing]
+    C --> E[End]
+    D --> E`;
+
+/**
+ * Build a mermaid diagram code block.
+ * @param selection - Selected text to wrap (empty for default diagram)
+ * @returns Block text and cursor offset
+ */
+export function buildDiagramBlock(selection: string): InsertionResult {
+  const content = selection || DEFAULT_DIAGRAM;
+  const text = `\`\`\`mermaid\n${content}\n\`\`\``;
+  const cursorOffset = "```mermaid\n".length;
+  return { text, cursorOffset };
+}
