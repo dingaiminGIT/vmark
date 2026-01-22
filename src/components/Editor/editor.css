@@ -692,7 +692,7 @@
 
 .source-editor .cm-scroller {
   font-family: var(--font-sans) !important;
-  font-size: var(--editor-font-size, 18px) !important;
+  font-size: calc(var(--editor-font-size, 18px) * 0.9) !important;
   line-height: var(--editor-line-height, 1.6) !important;
   overflow-x: auto !important;
 }
