@@ -44,13 +44,20 @@ export interface ClientIdentity {
 }
 
 /**
+ * Function to resolve port dynamically (e.g., read from file).
+ */
+export type PortResolver = () => number | undefined;
+
+/**
  * Configuration for WebSocketBridge.
  */
 export interface WebSocketBridgeConfig {
   /** Host to connect to (default: localhost) */
   host?: string;
-  /** Port to connect to (default: 9224) */
+  /** Port to connect to (default: auto-discover from ~/.vmark/mcp-port) */
   port?: number;
+  /** Function to resolve port dynamically (called on each connect attempt) */
+  portResolver?: PortResolver;
   /** Request timeout in ms (default: 30000) */
   timeout?: number;
   /** Whether to auto-reconnect on disconnect (default: true) */
@@ -105,7 +112,8 @@ interface WsMessage {
  */
 export class WebSocketBridge implements Bridge {
   private readonly host: string;
-  private readonly port: number;
+  private port: number | undefined;
+  private readonly portResolver: PortResolver | undefined;
   private readonly timeout: number;
   private readonly autoReconnect: boolean;
   private readonly maxReconnectAttempts: number;
@@ -136,7 +144,8 @@ export class WebSocketBridge implements Bridge {
 
   constructor(config: WebSocketBridgeConfig = {}) {
     this.host = config.host ?? '127.0.0.1'; // Use IPv4 explicitly to avoid IPv6 issues
-    this.port = config.port ?? 9223;
+    this.port = config.port; // May be undefined - will use portResolver
+    this.portResolver = config.portResolver;
     this.timeout = config.timeout ?? 30000;
     this.autoReconnect = config.autoReconnect ?? true;
     this.maxReconnectAttempts = config.maxReconnectAttempts ?? 10;
@@ -154,10 +163,28 @@ export class WebSocketBridge implements Bridge {
   }
 
   /**
+   * Resolve the port to connect to.
+   * Uses static port if set, otherwise calls portResolver.
+   */
+  private resolvePort(): number | undefined {
+    if (this.port !== undefined) {
+      return this.port;
+    }
+    if (this.portResolver) {
+      const resolved = this.portResolver();
+      if (resolved !== undefined) {
+        this.logger.debug(`Port resolved from file: ${resolved}`);
+      }
+      return resolved;
+    }
+    return undefined;
+  }
+
+  /**
    * Get the WebSocket URL.
    */
-  private get url(): string {
-    return `ws://${this.host}:${this.port}`;
+  private getUrl(port: number): string {
+    return `ws://${this.host}:${port}`;
   }
 
   /**
@@ -225,15 +252,35 @@ export class WebSocketBridge implements Bridge {
     this.connecting = true;
     this.intentionalDisconnect = false;
 
+    // Resolve port dynamically (may read from file)
+    const port = this.resolvePort();
+    if (port === undefined) {
+      this.connecting = false;
+      // Schedule reconnect if port file not found (VMark may start later)
+      if (this.autoReconnect && !this.intentionalDisconnect) {
+        this.scheduleReconnect();
+      }
+      throw new Error(
+        'Cannot determine VMark port. Is VMark running? ' +
+          'The port file (~/.vmark/mcp-port) was not found.'
+      );
+    }
+
+    const url = this.getUrl(port);
+
     return new Promise((resolve, reject) => {
       try {
-        this.ws = new WebSocket(this.url);
+        this.ws = new WebSocket(url);
 
         const connectionTimeout = setTimeout(() => {
           if (!this.connected) {
             this.ws?.close();
             this.connecting = false;
-            reject(new Error(`Connection timeout to ${this.url}`));
+            // Schedule reconnect if connection times out
+            if (this.autoReconnect && !this.intentionalDisconnect) {
+              this.scheduleReconnect();
+            }
+            reject(new Error(`Connection timeout to ${url}`));
           }
         }, this.timeout);
 
@@ -279,6 +326,10 @@ export class WebSocketBridge implements Bridge {
           clearTimeout(connectionTimeout);
           if (!this.connected) {
             this.connecting = false;
+            // Schedule reconnect if initial connection fails
+            if (this.autoReconnect && !this.intentionalDisconnect) {
+              this.scheduleReconnect();
+            }
             reject(new Error(`WebSocket error: ${error.message}`));
           }
           // If already connected, error will trigger close event

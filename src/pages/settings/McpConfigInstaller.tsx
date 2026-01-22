@@ -15,7 +15,6 @@ interface ProviderStatus {
   path: string;
   exists: boolean;
   hasVmark: boolean;
-  configuredPort: number | null;
 }
 
 interface ConfigPreview {
@@ -104,19 +103,16 @@ function formatPath(path: string): string {
 
 interface ProviderRowProps {
   provider: ProviderStatus;
-  port: number;
   onPreview: () => void;
   onUninstall: () => void;
   loading: boolean;
 }
 
-function ProviderRow({ provider, port, onPreview, onUninstall, loading }: ProviderRowProps) {
-  const needsUpdate = provider.hasVmark && provider.configuredPort !== port;
-
+function ProviderRow({ provider, onPreview, onUninstall, loading }: ProviderRowProps) {
   return (
     <div className="flex items-center justify-between py-2.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
-        <StatusIcon installed={provider.hasVmark && !needsUpdate} />
+        <StatusIcon installed={provider.hasVmark} />
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-[var(--text-primary)] truncate">
             {provider.name}
@@ -133,11 +129,6 @@ function ProviderRow({ provider, port, onPreview, onUninstall, loading }: Provid
         </div>
       </div>
       <div className="flex items-center gap-2 ml-3">
-        {provider.hasVmark && needsUpdate && (
-          <span className="text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">
-            Port mismatch
-          </span>
-        )}
         {provider.hasVmark ? (
           <>
             <button
@@ -179,12 +170,11 @@ function ProviderRow({ provider, port, onPreview, onUninstall, loading }: Provid
 }
 
 interface McpConfigInstallerProps {
-  port: number;
   /** Called after successful install - used to enable autoStart and start bridge */
   onInstallSuccess?: () => void;
 }
 
-export function McpConfigInstaller({ port, onInstallSuccess }: McpConfigInstallerProps) {
+export function McpConfigInstaller({ onInstallSuccess }: McpConfigInstallerProps) {
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
   const [preview, setPreview] = useState<ConfigPreview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -212,7 +202,6 @@ export function McpConfigInstaller({ port, onInstallSuccess }: McpConfigInstalle
     try {
       const previewData = await invoke<ConfigPreview>("mcp_config_preview", {
         provider: providerId,
-        port,
       });
       setPreview(previewData);
     } catch (err) {
@@ -229,7 +218,6 @@ export function McpConfigInstaller({ port, onInstallSuccess }: McpConfigInstalle
     try {
       const result = await invoke<InstallResult>("mcp_config_install", {
         provider: preview.provider,
-        port,
       });
       if (result.success) {
         setSuccessMessage(result.message);
@@ -279,7 +267,6 @@ export function McpConfigInstaller({ port, onInstallSuccess }: McpConfigInstalle
           <ProviderRow
             key={provider.provider}
             provider={provider}
-            port={port}
             onPreview={() => handlePreview(provider.provider)}
             onUninstall={() => handleUninstall(provider.provider)}
             loading={loading}

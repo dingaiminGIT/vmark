@@ -41,6 +41,8 @@ pub struct McpServerStatus {
 
 /// Start only the MCP bridge WebSocket server (no sidecar).
 /// This is the recommended way to enable MCP - AI clients spawn their own sidecars.
+/// The port parameter is ignored - the OS assigns an available port automatically.
+/// The actual port is written to ~/.vmark/mcp-port for sidecar discovery.
 #[command]
 pub async fn mcp_bridge_start(app: AppHandle, port: u16) -> Result<McpServerStatus, String> {
     // Check if bridge is already running
@@ -53,25 +55,28 @@ pub async fn mcp_bridge_start(app: AppHandle, port: u16) -> Result<McpServerStat
         });
     }
 
-    // Start the bridge WebSocket server
-    mcp_bridge::start_bridge(app.clone(), port).await?;
+    // Start the bridge WebSocket server (returns actual port assigned by OS)
+    let actual_port = mcp_bridge::start_bridge(app.clone(), port).await?;
 
-    // Mark bridge as running
+    // Mark bridge as running with actual port
     BRIDGE_RUNNING.store(true, Ordering::SeqCst);
     {
         let mut port_guard = BRIDGE_PORT.lock().map_err(|e| e.to_string())?;
-        *port_guard = Some(port);
+        *port_guard = Some(actual_port);
     }
 
-    // Emit started event
-    let _ = app.emit("mcp-server:started", port);
+    // Emit started event with actual port
+    let _ = app.emit("mcp-server:started", actual_port);
 
     #[cfg(debug_assertions)]
-    eprintln!("[MCP] Bridge started on port {} (waiting for AI client sidecars)", port);
+    eprintln!(
+        "[MCP] Bridge started on port {} (waiting for AI client sidecars)",
+        actual_port
+    );
 
     Ok(McpServerStatus {
         running: true,
-        port: Some(port),
+        port: Some(actual_port),
         local_sidecar: false,
     })
 }
@@ -112,36 +117,40 @@ pub async fn mcp_bridge_stop(app: AppHandle) -> Result<McpServerStatus, String> 
 #[command]
 pub async fn mcp_server_start(app: AppHandle, port: u16) -> Result<McpServerStatus, String> {
     // Check if local sidecar is already running
-    {
+    let current_port = {
         let guard = MCP_SERVER.lock().map_err(|e| e.to_string())?;
         if guard.is_some() {
+            let port = BRIDGE_PORT.lock().map_err(|e| e.to_string())?.unwrap_or(port);
             return Ok(McpServerStatus {
                 running: true,
                 port: Some(port),
                 local_sidecar: true,
             });
         }
-    }
+        BRIDGE_PORT.lock().map_err(|e| e.to_string())?.clone()
+    };
 
     // Start the bridge first (if not already running)
-    if !BRIDGE_RUNNING.load(Ordering::SeqCst) {
-        mcp_bridge::start_bridge(app.clone(), port).await?;
+    let actual_port = if !BRIDGE_RUNNING.load(Ordering::SeqCst) {
+        let actual = mcp_bridge::start_bridge(app.clone(), port).await?;
         BRIDGE_RUNNING.store(true, Ordering::SeqCst);
         {
             let mut port_guard = BRIDGE_PORT.lock().map_err(|e| e.to_string())?;
-            *port_guard = Some(port);
+            *port_guard = Some(actual);
         }
-    }
+        actual
+    } else {
+        current_port.unwrap_or(port)
+    };
 
     // Small delay to ensure bridge is ready
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    // Spawn the sidecar process
+    // Spawn the sidecar process (no --port arg needed, it reads from file)
     let shell = app.shell();
     let sidecar = shell
         .sidecar("vmark-mcp-server")
-        .map_err(|e| format!("Failed to create sidecar command: {}", e))?
-        .args(["--port", &port.to_string()]);
+        .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
 
     let (mut rx, child) = sidecar.spawn().map_err(|e| {
         format!("Failed to spawn MCP server: {}", e)
@@ -187,12 +196,12 @@ pub async fn mcp_server_start(app: AppHandle, port: u16) -> Result<McpServerStat
         }
     });
 
-    // Emit started event
-    let _ = app.emit("mcp-server:started", port);
+    // Emit started event with actual port
+    let _ = app.emit("mcp-server:started", actual_port);
 
     Ok(McpServerStatus {
         running: true,
-        port: Some(port),
+        port: Some(actual_port),
         local_sidecar: true,
     })
 }

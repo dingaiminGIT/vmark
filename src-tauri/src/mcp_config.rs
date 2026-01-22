@@ -20,8 +20,6 @@ pub struct ProviderStatus {
     pub exists: bool,
     #[serde(rename = "hasVmark")]
     pub has_vmark: bool,
-    #[serde(rename = "configuredPort")]
-    pub configured_port: Option<u16>,
 }
 
 /// Preview of config changes before installation
@@ -173,69 +171,41 @@ fn get_mcp_binary_path() -> Result<String, String> {
 }
 
 /// Read existing config and check if it has vmark entry
-fn read_existing_config(path: &PathBuf, provider_id: &str) -> (Option<String>, bool, Option<u16>) {
+fn read_existing_config(path: &PathBuf, provider_id: &str) -> (Option<String>, bool) {
     let content = fs::read_to_string(path).ok();
-    let (has_vmark, configured_port) = if let Some(ref c) = content {
+    let has_vmark = if let Some(ref c) = content {
         match provider_id {
             "claude-desktop" | "claude" | "gemini" => {
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(c) {
-                    let has = json
-                        .get("mcpServers")
+                    json.get("mcpServers")
                         .and_then(|s| s.get("vmark"))
-                        .is_some();
-                    let port = json
-                        .get("mcpServers")
-                        .and_then(|s| s.get("vmark"))
-                        .and_then(|v| v.get("args"))
-                        .and_then(|a| a.as_array())
-                        .and_then(|args| {
-                            args.iter()
-                                .position(|a| a.as_str() == Some("--port"))
-                                .and_then(|i| args.get(i + 1))
-                                .and_then(|p| p.as_str())
-                                .and_then(|s| s.parse().ok())
-                        });
-                    (has, port)
+                        .is_some()
                 } else {
-                    (false, None)
+                    false
                 }
             }
             "codex" => {
                 if let Ok(toml) = c.parse::<toml::Table>() {
-                    let has = toml
-                        .get("mcp_servers")
+                    toml.get("mcp_servers")
                         .and_then(|s| s.get("vmark"))
-                        .is_some();
-                    let port = toml
-                        .get("mcp_servers")
-                        .and_then(|s| s.get("vmark"))
-                        .and_then(|v| v.get("args"))
-                        .and_then(|a| a.as_array())
-                        .and_then(|args| {
-                            args.iter()
-                                .position(|a| a.as_str() == Some("--port"))
-                                .and_then(|i| args.get(i + 1))
-                                .and_then(|p| p.as_str())
-                                .and_then(|s| s.parse().ok())
-                        });
-                    (has, port)
+                        .is_some()
                 } else {
-                    (false, None)
+                    false
                 }
             }
-            _ => (false, None),
+            _ => false,
         }
     } else {
-        (false, None)
+        false
     };
-    (content, has_vmark, configured_port)
+    (content, has_vmark)
 }
 
-/// Generate proposed config content for a provider
+/// Generate proposed config content for a provider.
+/// Note: No --port argument needed - sidecar auto-discovers port from ~/.vmark/mcp-port
 fn generate_config_content(
     provider_id: &str,
     binary_path: &str,
-    port: u16,
     existing_content: Option<&str>,
 ) -> Result<String, String> {
     match provider_id {
@@ -250,14 +220,14 @@ fn generate_config_content(
                 .entry("mcpServers")
                 .or_insert_with(|| serde_json::json!({}));
 
+            // No args needed - sidecar auto-discovers port from ~/.vmark/mcp-port
             mcp_servers
                 .as_object_mut()
                 .ok_or("mcpServers is not an object")?
                 .insert(
                     "vmark".to_string(),
                     serde_json::json!({
-                        "command": binary_path,
-                        "args": ["--port", port.to_string()]
+                        "command": binary_path
                     }),
                 );
 
@@ -273,15 +243,9 @@ fn generate_config_content(
                 .or_insert_with(|| toml::Value::Table(toml::Table::new()));
 
             if let toml::Value::Table(servers) = mcp_servers {
+                // No args needed - sidecar auto-discovers port from ~/.vmark/mcp-port
                 let mut vmark_config = toml::Table::new();
                 vmark_config.insert("command".to_string(), toml::Value::String(binary_path.to_string()));
-                vmark_config.insert(
-                    "args".to_string(),
-                    toml::Value::Array(vec![
-                        toml::Value::String("--port".to_string()),
-                        toml::Value::String(port.to_string()),
-                    ]),
-                );
                 servers.insert("vmark".to_string(), toml::Value::Table(vmark_config));
             }
 
@@ -335,10 +299,10 @@ pub fn mcp_config_get_status() -> Result<Vec<ProviderStatus>, String> {
     for provider in PROVIDERS {
         let path = get_config_path(provider)?;
         let exists = path.exists();
-        let (_, has_vmark, configured_port) = if exists {
-            read_existing_config(&path, provider.id)
+        let has_vmark = if exists {
+            read_existing_config(&path, provider.id).1
         } else {
-            (None, false, None)
+            false
         };
 
         statuses.push(ProviderStatus {
@@ -347,7 +311,6 @@ pub fn mcp_config_get_status() -> Result<Vec<ProviderStatus>, String> {
             path: path.to_string_lossy().to_string(),
             exists,
             has_vmark,
-            configured_port,
         });
     }
 
@@ -356,19 +319,19 @@ pub fn mcp_config_get_status() -> Result<Vec<ProviderStatus>, String> {
 
 /// Preview config changes before installation
 #[tauri::command]
-pub fn mcp_config_preview(provider: String, port: u16) -> Result<ConfigPreview, String> {
+pub fn mcp_config_preview(provider: String) -> Result<ConfigPreview, String> {
     let config = get_provider_config(&provider)?;
     let path = get_config_path(config)?;
     let binary_path = get_mcp_binary_path()?;
 
-    let (current_content, _, _) = if path.exists() {
-        read_existing_config(&path, config.id)
+    let current_content = if path.exists() {
+        read_existing_config(&path, config.id).0
     } else {
-        (None, false, None)
+        None
     };
 
     let proposed_content =
-        generate_config_content(config.id, &binary_path, port, current_content.as_deref())?;
+        generate_config_content(config.id, &binary_path, current_content.as_deref())?;
 
     let backup_path = generate_backup_path(&path);
 
@@ -385,7 +348,7 @@ pub fn mcp_config_preview(provider: String, port: u16) -> Result<ConfigPreview, 
 
 /// Install MCP configuration for a provider
 #[tauri::command]
-pub fn mcp_config_install(provider: String, port: u16) -> Result<InstallResult, String> {
+pub fn mcp_config_install(provider: String) -> Result<InstallResult, String> {
     let config = get_provider_config(&provider)?;
     let path = get_config_path(config)?;
     let binary_path = get_mcp_binary_path()?;
@@ -412,7 +375,7 @@ pub fn mcp_config_install(provider: String, port: u16) -> Result<InstallResult, 
 
     // Generate new content
     let new_content =
-        generate_config_content(config.id, &binary_path, port, current_content.as_deref())?;
+        generate_config_content(config.id, &binary_path, current_content.as_deref())?;
 
     // Write to temp file first (atomic write)
     let temp_path = path.with_extension("tmp");

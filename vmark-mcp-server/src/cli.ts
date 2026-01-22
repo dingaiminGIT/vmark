@@ -5,8 +5,14 @@
  * This is the entry point for the bundled sidecar binary.
  * It starts the MCP server and connects to VMark via WebSocket.
  *
+ * Port Discovery:
+ * - VMark writes its bridge port to ~/.vmark/mcp-port
+ * - This sidecar reads the port from that file automatically
+ * - No user configuration needed!
+ *
  * Usage:
- *   vmark-mcp-server --port 9224
+ *   vmark-mcp-server              # Auto-discovers port from ~/.vmark/mcp-port
+ *   vmark-mcp-server --port 9223  # Manual port override (legacy)
  */
 
 import { createVMarkMcpServer } from './index.js';
@@ -15,23 +21,65 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z, ZodTypeAny } from 'zod';
 import { execSync } from 'child_process';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+
+/**
+ * Get the path to the port file (~/.vmark/mcp-port).
+ */
+function getPortFilePath(): string {
+  return join(homedir(), '.vmark', 'mcp-port');
+}
+
+/**
+ * Read port from the port file written by VMark.
+ * Returns undefined if file doesn't exist or is invalid.
+ */
+function readPortFromFile(): number | undefined {
+  const portFilePath = getPortFilePath();
+
+  if (!existsSync(portFilePath)) {
+    return undefined;
+  }
+
+  try {
+    const content = readFileSync(portFilePath, 'utf8').trim();
+    const port = parseInt(content, 10);
+
+    if (!isNaN(port) && port > 0 && port < 65536) {
+      return port;
+    }
+  } catch {
+    // File read error - return undefined
+  }
+
+  return undefined;
+}
 
 /**
  * Parse command line arguments.
+ * Port resolution order:
+ * 1. --port CLI argument (manual override)
+ * 2. Port file (~/.vmark/mcp-port) - auto-discovery
+ * 3. Default to undefined (will retry reading port file on connect)
  */
-function parseArgs(): { port: number } {
+function parseArgs(): { port: number | undefined } {
   const args = process.argv.slice(2);
-  let port = 9223; // Default port (must match MCP bridge plugin)
+  let cliPort: number | undefined;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--port' && args[i + 1]) {
       const parsed = parseInt(args[i + 1], 10);
       if (!isNaN(parsed) && parsed > 0 && parsed < 65536) {
-        port = parsed;
+        cliPort = parsed;
       }
       i++;
     }
   }
+
+  // CLI port takes precedence, then port file, then undefined (will retry)
+  const port = cliPort ?? readPortFromFile();
 
   return { port };
 }
@@ -244,8 +292,10 @@ async function main(): Promise<void> {
   const clientIdentity = detectClientIdentity();
 
   // Create WebSocket bridge to connect to VMark
+  // Uses port resolver for dynamic port discovery on each connection attempt
   const bridge = new WebSocketBridge({
-    port,
+    port, // May be undefined - will use portResolver
+    portResolver: readPortFromFile, // Re-read port file on each connection attempt
     autoReconnect: true,
     maxReconnectAttempts: 30, // Reasonable limit to avoid infinite reconnection storms
     reconnectDelay: 2000, // Start with 2 second delay

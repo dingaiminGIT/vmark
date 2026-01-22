@@ -17,12 +17,14 @@ interface McpServerStatus {
 interface UseMcpServerResult {
   /** Whether the server is currently running */
   running: boolean;
+  /** The actual port the bridge is running on (null if not running) */
+  port: number | null;
   /** Whether an operation is in progress */
   loading: boolean;
   /** Error message if the last operation failed */
   error: string | null;
-  /** Start the MCP bridge on the given port */
-  start: (port: number) => Promise<void>;
+  /** Start the MCP bridge (port is auto-assigned) */
+  start: () => Promise<void>;
   /** Stop the MCP bridge */
   stop: () => Promise<void>;
   /** Refresh the bridge status */
@@ -35,12 +37,15 @@ interface UseMcpServerResult {
  * The bridge is a WebSocket server that AI client sidecars connect to.
  * VMark only starts the bridge; AI clients spawn their own sidecars.
  *
+ * The port is automatically assigned by the OS and written to ~/.vmark/mcp-port
+ * for sidecar discovery. Users don't need to configure it.
+ *
  * Usage:
  * ```tsx
- * const { running, loading, error, start, stop } = useMcpServer();
+ * const { running, port, loading, error, start, stop } = useMcpServer();
  *
- * // Start the bridge
- * await start(9223);
+ * // Start the bridge (port auto-assigned)
+ * await start();
  *
  * // Stop the bridge
  * await stop();
@@ -48,6 +53,7 @@ interface UseMcpServerResult {
  */
 export function useMcpServer(): UseMcpServerResult {
   const [running, setRunning] = useState(false);
+  const [port, setPort] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,19 +62,22 @@ export function useMcpServer(): UseMcpServerResult {
     try {
       const status = await invoke<McpServerStatus>("mcp_server_status");
       setRunning(status.running);
+      setPort(status.port);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
   }, []);
 
-  // Start the bridge (not the sidecar - AI clients spawn their own)
-  const start = useCallback(async (port: number) => {
+  // Start the bridge (port is auto-assigned by OS)
+  const start = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const status = await invoke<McpServerStatus>("mcp_bridge_start", { port });
+      // Port parameter is ignored - OS assigns an available port
+      const status = await invoke<McpServerStatus>("mcp_bridge_start", { port: 0 });
       setRunning(status.running);
+      setPort(status.port);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
@@ -85,6 +94,7 @@ export function useMcpServer(): UseMcpServerResult {
     try {
       const status = await invoke<McpServerStatus>("mcp_bridge_stop");
       setRunning(status.running);
+      setPort(status.port);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
@@ -115,6 +125,7 @@ export function useMcpServer(): UseMcpServerResult {
 
   return {
     running,
+    port,
     loading,
     error,
     start,

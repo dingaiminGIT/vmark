@@ -5,12 +5,19 @@
  * Access model:
  * - Read operations: All clients can execute simultaneously
  * - Write operations: Serialized via write lock, released after each write
+ *
+ * Port discovery:
+ * - Server binds to port 0 (OS assigns available port)
+ * - Actual port written to ~/.vmark/mcp-port
+ * - MCP sidecar reads port from this file (no user configuration needed)
  */
 
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
@@ -182,6 +189,40 @@ fn get_write_lock() -> Arc<tokio::sync::Mutex<()>> {
         .clone()
 }
 
+/// Get the path to the port file (~/.vmark/mcp-port)
+fn get_port_file_path() -> Option<PathBuf> {
+    dirs::home_dir().map(|home| home.join(".vmark").join("mcp-port"))
+}
+
+/// Write the port to the port file for MCP sidecar discovery
+fn write_port_file(port: u16) -> Result<(), String> {
+    let path = get_port_file_path().ok_or("Cannot determine home directory")?;
+
+    // Create ~/.vmark directory if it doesn't exist
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create ~/.vmark directory: {}", e))?;
+    }
+
+    // Write port to file
+    fs::write(&path, port.to_string())
+        .map_err(|e| format!("Failed to write port file: {}", e))?;
+
+    #[cfg(debug_assertions)]
+    eprintln!("[MCP Bridge] Port {} written to {:?}", port, path);
+
+    Ok(())
+}
+
+/// Remove the port file when bridge stops
+fn remove_port_file() {
+    if let Some(path) = get_port_file_path() {
+        let _ = fs::remove_file(&path);
+        #[cfg(debug_assertions)]
+        eprintln!("[MCP Bridge] Port file removed: {:?}", path);
+    }
+}
+
 /// Check if an operation is read-only.
 fn is_read_only_operation(request_type: &str) -> bool {
     matches!(
@@ -207,14 +248,29 @@ fn is_read_only_operation(request_type: &str) -> bool {
 }
 
 /// Start the MCP bridge WebSocket server.
-pub async fn start_bridge(app: AppHandle, port: u16) -> Result<(), String> {
-    let addr = format!("127.0.0.1:{}", port);
-    let listener = TcpListener::bind(&addr)
+/// Returns the actual port the server is listening on.
+pub async fn start_bridge(app: AppHandle, _port: u16) -> Result<u16, String> {
+    // Always bind to port 0 to let OS assign an available port
+    // This eliminates port conflicts entirely
+    let addr = "127.0.0.1:0";
+    let listener = TcpListener::bind(addr)
         .await
         .map_err(|e| format!("Failed to bind to {}: {}", addr, e))?;
 
+    // Get the actual port assigned by the OS
+    let actual_port = listener
+        .local_addr()
+        .map_err(|e| format!("Failed to get local address: {}", e))?
+        .port();
+
+    // Write port to file for MCP sidecar discovery
+    write_port_file(actual_port)?;
+
     #[cfg(debug_assertions)]
-    eprintln!("[MCP Bridge] WebSocket server listening on {}", addr);
+    eprintln!(
+        "[MCP Bridge] WebSocket server listening on 127.0.0.1:{}",
+        actual_port
+    );
 
     let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
     {
@@ -249,11 +305,14 @@ pub async fn start_bridge(app: AppHandle, port: u16) -> Result<(), String> {
         }
     });
 
-    Ok(())
+    Ok(actual_port)
 }
 
 /// Stop the MCP bridge WebSocket server.
 pub async fn stop_bridge() {
+    // Remove port file so MCP sidecar knows bridge is stopped
+    remove_port_file();
+
     // Send shutdown signal to server loop
     let holder = get_shutdown_holder();
     let mut guard = holder.write().await;
