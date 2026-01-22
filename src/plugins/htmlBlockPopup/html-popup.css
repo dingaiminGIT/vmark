@@ -41,6 +41,13 @@
   box-shadow: none;
 }
 
+.html-popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .html-popup-warning {
   font-size: 11px;
   color: var(--text-secondary);
@@ -48,7 +55,6 @@
 
 .html-popup-buttons {
   display: flex;
-  justify-content: flex-end;
   gap: 4px;
 }
 

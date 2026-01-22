@@ -67,6 +67,9 @@ export class HtmlBlockPopupView {
     textarea.rows = 5;
     textarea.addEventListener("input", this.handleInputChange);
 
+    const footer = document.createElement("div");
+    footer.className = "html-popup-footer";
+
     const warning = document.createElement("div");
     warning.className = "html-popup-warning";
     warning.textContent = "Raw HTML can be unsafe. Ensure it is trusted.";
@@ -83,9 +86,11 @@ export class HtmlBlockPopupView {
     buttons.appendChild(cancelBtn);
     buttons.appendChild(saveBtn);
 
+    footer.appendChild(warning);
+    footer.appendChild(buttons);
+
     container.appendChild(textarea);
-    container.appendChild(warning);
-    container.appendChild(buttons);
+    container.appendChild(footer);
 
     return container;
   }
@@ -159,6 +164,13 @@ export class HtmlBlockPopupView {
     }
 
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      this.handleSave();
+      return;
+    }
+
+    // Tab closes popup and returns focus to editor
+    if (e.key === "Tab") {
       e.preventDefault();
       this.handleSave();
     }
