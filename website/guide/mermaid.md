@@ -235,8 +235,28 @@ Mermaid diagrams automatically adapt to VMark's current theme (light or dark mod
 
 When exporting to HTML or PDF, Mermaid diagrams are rendered as SVG images for crisp display at any resolution.
 
-## Learn More
+## Learning Mermaid Syntax
 
-- [Mermaid Official Documentation](https://mermaid.js.org/)
-- [Mermaid Live Editor](https://mermaid.live/) - Test diagrams online
-- [Mermaid Cheat Sheet](https://mermaid.js.org/syntax/flowchart.html)
+VMark renders standard Mermaid syntax. To master diagram creation, refer to the official Mermaid documentation:
+
+### Official Documentation
+
+| Diagram Type | Documentation Link |
+|--------------|-------------------|
+| Flowchart | [Flowchart Syntax](https://mermaid.js.org/syntax/flowchart.html) |
+| Sequence Diagram | [Sequence Diagram Syntax](https://mermaid.js.org/syntax/sequenceDiagram.html) |
+| Class Diagram | [Class Diagram Syntax](https://mermaid.js.org/syntax/classDiagram.html) |
+| State Diagram | [State Diagram Syntax](https://mermaid.js.org/syntax/stateDiagram.html) |
+| Entity Relationship | [ER Diagram Syntax](https://mermaid.js.org/syntax/entityRelationshipDiagram.html) |
+| Gantt Chart | [Gantt Syntax](https://mermaid.js.org/syntax/gantt.html) |
+| Pie Chart | [Pie Chart Syntax](https://mermaid.js.org/syntax/pie.html) |
+| Git Graph | [Git Graph Syntax](https://mermaid.js.org/syntax/gitgraph.html) |
+
+### Practice Tools
+
+- **[Mermaid Live Editor](https://mermaid.live/)** - Interactive playground to test and preview diagrams before pasting into VMark
+- **[Mermaid Documentation](https://mermaid.js.org/)** - Complete reference with examples for all diagram types
+
+::: tip
+The Live Editor is great for experimenting with complex diagrams. Once your diagram looks right, copy the code into VMark.
+:::
