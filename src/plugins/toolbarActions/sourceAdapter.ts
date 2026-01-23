@@ -25,8 +25,11 @@ import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { encodeMarkdownUrl } from "@/utils/markdownUrl";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useImagePopupStore } from "@/stores/imagePopupStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useTabStore } from "@/stores/tabStore";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
+import { formatMarkdown, formatSelection } from "@/lib/cjkFormatter";
+import { resolveHardBreakStyle } from "@/utils/linebreaks";
 
 const TABLE_TEMPLATE = "| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n";
 
@@ -434,6 +437,12 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
     case "removeQuote":
       return handleBlockquoteAction(view, action);
 
+    // CJK formatting
+    case "formatCJK":
+      return handleFormatCJK(view);
+    case "formatCJKFile":
+      return handleFormatCJKFile(view);
+
     default:
       return false;
   }
@@ -604,4 +613,58 @@ function handleBlockquoteAction(view: EditorView, action: string): boolean {
     default:
       return false;
   }
+}
+
+// --- CJK formatting helpers ---
+
+function shouldPreserveTwoSpaceBreaks(): boolean {
+  try {
+    const windowLabel = getWindowLabel();
+    const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+    const doc = tabId ? useDocumentStore.getState().getDocument(tabId) : null;
+    const hardBreakStyleOnSave = useSettingsStore.getState().markdown.hardBreakStyleOnSave;
+    return resolveHardBreakStyle(doc?.hardBreakStyle ?? "unknown", hardBreakStyleOnSave) === "twoSpaces";
+  } catch {
+    return false;
+  }
+}
+
+function handleFormatCJK(view: EditorView): boolean {
+  const config = useSettingsStore.getState().cjkFormatting;
+  const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
+  const { from, to } = view.state.selection.main;
+
+  if (from !== to) {
+    // Format selection
+    const selectedText = view.state.doc.sliceString(from, to);
+    const formatted = formatSelection(selectedText, config, { preserveTwoSpaceHardBreaks });
+    if (formatted !== selectedText) {
+      view.dispatch({
+        changes: { from, to, insert: formatted },
+        selection: { anchor: from, head: from + formatted.length },
+      });
+    }
+    return true;
+  }
+
+  // No selection - format entire file
+  return handleFormatCJKFile(view);
+}
+
+function handleFormatCJKFile(view: EditorView): boolean {
+  const config = useSettingsStore.getState().cjkFormatting;
+  const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
+  const content = view.state.doc.toString();
+  const formatted = formatMarkdown(content, config, { preserveTwoSpaceHardBreaks });
+
+  if (formatted !== content) {
+    // Preserve cursor position as best as possible
+    const cursorPos = view.state.selection.main.head;
+    const newCursorPos = Math.min(cursorPos, formatted.length);
+    view.dispatch({
+      changes: { from: 0, to: content.length, insert: formatted },
+      selection: { anchor: newCursorPos },
+    });
+  }
+  return true;
 }

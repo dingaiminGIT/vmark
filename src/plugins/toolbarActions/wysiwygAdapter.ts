@@ -12,8 +12,11 @@ import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { useTabStore } from "@/stores/tabStore";
+import { formatMarkdown, formatSelection } from "@/lib/cjkFormatter";
+import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { readClipboardImagePath } from "@/utils/clipboardImagePath";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
 import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
@@ -623,7 +626,83 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       return insertWikiLink(context);
     case "link:bookmark":
       return insertBookmarkLink(context);
+    case "formatCJK":
+      return handleFormatCJK(context);
+    case "formatCJKFile":
+      return handleFormatCJKFile();
     default:
       return false;
   }
+}
+
+// --- CJK formatting helpers ---
+
+function shouldPreserveTwoSpaceBreaks(): boolean {
+  try {
+    const windowLabel = getWindowLabel();
+    const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+    const doc = tabId ? useDocumentStore.getState().getDocument(tabId) : null;
+    const hardBreakStyleOnSave = useSettingsStore.getState().markdown.hardBreakStyleOnSave;
+    return resolveHardBreakStyle(doc?.hardBreakStyle ?? "unknown", hardBreakStyleOnSave) === "twoSpaces";
+  } catch {
+    return false;
+  }
+}
+
+function getActiveMarkdown(): string {
+  try {
+    const windowLabel = getWindowLabel();
+    const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+    if (!tabId) return "";
+    return useDocumentStore.getState().getDocument(tabId)?.content ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function setActiveMarkdown(markdown: string): void {
+  try {
+    const windowLabel = getWindowLabel();
+    const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+    if (!tabId) return;
+    useDocumentStore.getState().setContent(tabId, markdown);
+  } catch {
+    // Silently fail
+  }
+}
+
+function handleFormatCJK(context: WysiwygToolbarContext): boolean {
+  const { view, editor } = context;
+  if (!view || !editor) return false;
+
+  const config = useSettingsStore.getState().cjkFormatting;
+  const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
+
+  // Check if there's a selection
+  if (!editor.state.selection.empty) {
+    const { state, dispatch } = view;
+    const { from, to } = state.selection;
+    const selectedText = state.doc.textBetween(from, to, "\n");
+    const formatted = formatSelection(selectedText, config, { preserveTwoSpaceHardBreaks });
+    if (formatted !== selectedText) {
+      dispatch(state.tr.replaceWith(from, to, state.schema.text(formatted)));
+      view.focus();
+    }
+    return true;
+  }
+
+  // No selection - format entire file
+  return handleFormatCJKFile();
+}
+
+function handleFormatCJKFile(): boolean {
+  const config = useSettingsStore.getState().cjkFormatting;
+  const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
+  const content = getActiveMarkdown();
+  const formatted = formatMarkdown(content, config, { preserveTwoSpaceHardBreaks });
+
+  if (formatted !== content) {
+    setActiveMarkdown(formatted);
+  }
+  return true;
 }
