@@ -215,6 +215,7 @@ jobs:
           echo "✅ Published release ${{ needs.create-release.outputs.version }}"
 
       - name: Trigger Homebrew tap update
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
