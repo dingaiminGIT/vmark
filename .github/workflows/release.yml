@@ -189,8 +189,11 @@ jobs:
         timeout-minutes: 45
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS code signing (notarization disabled - requires APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID)
+          # macOS code signing and notarization
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CI: true
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
