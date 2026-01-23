@@ -42,6 +42,12 @@
   --accent-bg: rgba(0, 102, 204, 0.1);
   --accent-text: #0066cc;
 
+  /* Border radius tokens */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 100px;
+
   /* Popup shared tokens (format toolbar, source popup, etc.) */
   --popup-padding: 6px;
   --popup-radius: 8px;

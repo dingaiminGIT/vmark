@@ -125,7 +125,7 @@
   line-height: var(--editor-line-height-px);
 }
 
-/* Headings */
+/* Headings - asymmetric margins for better visual hierarchy (GitHub style) */
 .tiptap-editor h1,
 .tiptap-editor h2,
 .tiptap-editor h3,
@@ -133,8 +133,8 @@
 .tiptap-editor h5,
 .tiptap-editor h6 {
   position: relative;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+  margin-top: 1.5em;    /* Larger for section separation */
+  margin-bottom: 0.75em; /* Smaller for content proximity */
   font-weight: bold;
   line-height: 1.25;
   cursor: text;
@@ -198,11 +198,18 @@
   text-decoration: underline;
 }
 
-/* Lists */
+/* Link focus state for accessibility */
+.tiptap-editor a:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Lists - GitHub standard indentation for better readability */
 .tiptap-editor ul,
 .tiptap-editor ol {
   margin: 0 0 0.8em 0;
-  padding-left: 1.5em;
+  padding-left: 2em;
   font-size: var(--editor-font-size-sm);
   line-height: var(--editor-line-height-px);
 }
@@ -248,32 +255,30 @@
   list-style-type: decimal;
 }
 
-/* Code - inline (relative to parent for consistent visual ratio) */
+/* Code - inline (GitHub style: no border, cleaner appearance) */
 .tiptap-editor code {
   font-family: var(--font-mono);
   font-size: 0.85em;
   background-color: var(--code-bg-color);
   color: var(--code-text-color);
-  border: 1px solid var(--code-border-color);
-  border-radius: 3px;
-  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  padding: 0.2em 0.4em;
   vertical-align: baseline;
 }
 
-/* Code blocks */
+/* Code blocks - GitHub style with improved radius and spacing */
 .tiptap-editor pre {
   font-family: var(--font-mono);
   font-size: var(--editor-font-size-mono);
   background-color: var(--code-bg-color);
   color: var(--code-text-color);
-  padding: 1em;
-  padding-top: 8px;
-  padding-bottom: 6px;
-  border-radius: 3px;
+  padding: 16px;
+  border-radius: var(--radius-md);
   overflow-x: auto;
-  margin: 15px 0;
+  margin: 16px 0;
   max-width: 100%;
   white-space: pre;
+  line-height: 1.45;
 }
 
 .tiptap-editor pre code {
@@ -283,11 +288,11 @@
   padding: 0;
 }
 
-/* Blockquotes */
+/* Blockquotes - subtle accent color border */
 .tiptap-editor blockquote {
-  border-left: 4px solid var(--table-border-color);
+  border-left: 0.25em solid var(--md-char-color);
   margin: 0.8em 0;
-  padding: 0 15px;
+  padding: 0 1em;
   color: var(--meta-content-color);
   font-size: var(--editor-font-size-sm);
   line-height: var(--editor-line-height-px);
