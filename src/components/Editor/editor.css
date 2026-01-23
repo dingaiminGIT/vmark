@@ -116,9 +116,13 @@
   caret-color: var(--text-color);
 }
 
-.tiptap-editor .ProseMirror p,
-.tiptap-editor .ProseMirror li {
+.tiptap-editor .ProseMirror p {
   line-height: var(--editor-line-height, 1.6);
+}
+
+/* List items use absolute line-height for consistent spacing with reduced font-size */
+.tiptap-editor .ProseMirror li {
+  line-height: var(--editor-line-height-px);
 }
 
 /* Headings */
@@ -200,6 +204,7 @@
   margin: 0.8em 0;
   padding-left: 1em;
   font-size: var(--editor-font-size-sm);
+  line-height: var(--editor-line-height-px);
 }
 
 .tiptap-editor ul:first-child,
@@ -218,7 +223,12 @@
 }
 
 .tiptap-editor li {
-  margin: 0.25em 0;
+  /* No margin - line-height provides consistent vertical rhythm */
+}
+
+/* Remove paragraph margin inside list items for consistent spacing */
+.tiptap-editor li > p {
+  margin-bottom: 0;
 }
 
 .tiptap-editor ul {
@@ -271,6 +281,7 @@
   padding: 0 15px;
   color: var(--meta-content-color);
   font-size: var(--editor-font-size-sm);
+  line-height: var(--editor-line-height-px);
 }
 
 .tiptap-editor blockquote blockquote {
@@ -301,6 +312,7 @@
   margin: 0.8em 0;
   table-layout: auto;
   font-size: var(--editor-font-size-sm);
+  line-height: var(--editor-line-height-px);
 }
 
 .tiptap-editor table tr {

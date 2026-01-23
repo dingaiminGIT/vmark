@@ -187,6 +187,9 @@ function applyTypography(
     fontStacks.mono[monoFont as keyof typeof fontStacks.mono] ||
     fontStacks.mono.system;
 
+  // Calculate absolute line-height for use with reduced font sizes
+  const lineHeightPx = fontSize * lineHeight;
+
   applyVars(root, {
     "--font-sans": `${latinStack}, ${cjkStack}`,
     "--font-mono": monoStack,
@@ -194,6 +197,7 @@ function applyTypography(
     "--editor-font-size-sm": `${fontSize * 0.9}px`,
     "--editor-font-size-mono": `${fontSize * 0.85}px`,
     "--editor-line-height": String(lineHeight),
+    "--editor-line-height-px": `${lineHeightPx}px`,
     "--editor-paragraph-spacing": `${paragraphSpacing}em`,
     "--editor-width": editorWidth > 0 ? `${editorWidth}em` : "none",
   });
