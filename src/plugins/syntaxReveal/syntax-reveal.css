@@ -42,7 +42,7 @@
 
 .syntax-marker-link-close {
   color: var(--md-char-color, #999);
-  font-size: 0.85em;
+  font-size: calc(var(--editor-font-size-mono) * 0.85);
 }
 
 /* Math markers */
@@ -60,7 +60,7 @@
 .syntax-marker-image-open,
 .syntax-marker-image-close {
   color: var(--primary-color, #4183c4);
-  font-size: 0.85em;
+  font-size: calc(var(--editor-font-size-mono) * 0.85);
 }
 
 .dark-theme .syntax-marker-link-open,
