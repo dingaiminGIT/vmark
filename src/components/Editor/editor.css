@@ -201,7 +201,7 @@
 /* Lists */
 .tiptap-editor ul,
 .tiptap-editor ol {
-  margin: 0.8em 0;
+  margin: 0 0 0.8em 0;
   padding-left: 1em;
   font-size: var(--editor-font-size-sm);
   line-height: var(--editor-line-height-px);
