@@ -517,11 +517,46 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
     if (!view) return false;
     const editor = (view.dom as HTMLElement & { editor?: TiptapEditor }).editor;
     if (!editor) return false;
-    // Use manual toggle check since TipTap's toggleBlockquote only works for lifting
+
     if (editor.isActive("blockquote")) {
+      // Remove blockquote - lift works for any content
       editor.chain().focus().lift("blockquote").run();
     } else {
-      editor.chain().focus().setBlockquote().run();
+      // Add blockquote - use ProseMirror wrap
+      const { state, dispatch } = view;
+      const { $from, $to } = state.selection;
+      const blockquoteType = state.schema.nodes.blockquote;
+      if (!blockquoteType) return false;
+
+      // Find if we're inside a list - if so, wrap the entire list
+      let wrapDepth = -1;
+      for (let d = $from.depth; d > 0; d--) {
+        const node = $from.node(d);
+        if (node.type.name === "bulletList" || node.type.name === "orderedList") {
+          wrapDepth = d;
+          break;
+        }
+      }
+
+      let range;
+      if (wrapDepth > 0) {
+        // Wrap at list level
+        const listStart = $from.before(wrapDepth);
+        const listEnd = $from.after(wrapDepth);
+        range = state.doc.resolve(listStart).blockRange(state.doc.resolve(listEnd));
+      } else {
+        // Normal block range for non-list content
+        range = $from.blockRange($to);
+      }
+
+      if (range) {
+        try {
+          dispatch(state.tr.wrap(range, [{ type: blockquoteType }]));
+          view.focus();
+        } catch {
+          // Wrap failed - might be schema constraint, ignore
+        }
+      }
     }
     return true;
   });
