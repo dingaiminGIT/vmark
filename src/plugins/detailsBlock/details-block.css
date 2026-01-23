@@ -91,4 +91,10 @@
   margin-bottom: 0;
 }
 
+/* Preserve list bullet/number space - must match specificity of the padding:12px rule */
+.details-block > ul:not(.details-summary),
+.details-block > ol:not(.details-summary) {
+  padding-left: calc(12px + 1em);
+}
+
 /* Dark mode uses the same CSS variables - no override needed */
