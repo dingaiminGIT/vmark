@@ -136,6 +136,38 @@ jobs:
           pnpm build
           node scripts/build-sidecar.js --target $SIDECAR_TARGET
 
+      # Pre-sign sidecar with JIT entitlements (required for pkg/Node.js binaries)
+      # This must happen BEFORE Tauri signs the app
+      - name: Sign sidecar with JIT entitlements (macOS)
+        if: matrix.platform == 'macos-latest'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          SIDECAR_TARGET: ${{ matrix.sidecar_target }}
+        run: |
+          # Determine sidecar filename based on target
+          if [ "$SIDECAR_TARGET" = "darwin-arm64" ]; then
+            SIDECAR_NAME="vmark-mcp-server-aarch64-apple-darwin"
+          else
+            SIDECAR_NAME="vmark-mcp-server-x86_64-apple-darwin"
+          fi
+          SIDECAR_PATH="src-tauri/binaries/$SIDECAR_NAME"
+
+          echo "Signing sidecar with JIT entitlements: $SIDECAR_PATH"
+
+          # Sign with entitlements that allow JIT compilation (required for V8/Node.js)
+          codesign --force --timestamp \
+            --entitlements src-tauri/sidecar-entitlements.plist \
+            --sign "$APPLE_SIGNING_IDENTITY" \
+            --options runtime \
+            --keychain build.keychain \
+            "$SIDECAR_PATH"
+
+          # Verify signature and entitlements
+          echo "Verifying signature..."
+          codesign -dv --verbose=2 "$SIDECAR_PATH"
+          echo "Checking entitlements..."
+          codesign -d --entitlements - "$SIDECAR_PATH"
+
       - name: Build MCP server sidecar (Windows)
         if: matrix.platform == 'windows-latest'
         working-directory: vmark-mcp-server
