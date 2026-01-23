@@ -509,25 +509,25 @@ export const ACTION_DEFINITIONS: Record<ActionId, ActionDefinition> = {
     id: "removeTrailingSpaces",
     label: "Remove Trailing Spaces",
     category: "cleanup",
-    supports: { wysiwyg: false, source: true },
+    supports: { wysiwyg: true, source: true },
   },
   collapseBlankLines: {
     id: "collapseBlankLines",
     label: "Collapse Blank Lines",
     category: "cleanup",
-    supports: { wysiwyg: false, source: true },
+    supports: { wysiwyg: true, source: true },
   },
   lineEndingsLF: {
     id: "lineEndingsLF",
     label: "Convert to LF",
     category: "cleanup",
-    supports: { wysiwyg: false, source: true },
+    supports: { wysiwyg: true, source: true },
   },
   lineEndingsCRLF: {
     id: "lineEndingsCRLF",
     label: "Convert to CRLF",
     category: "cleanup",
-    supports: { wysiwyg: false, source: true },
+    supports: { wysiwyg: true, source: true },
   },
 };
 

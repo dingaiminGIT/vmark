@@ -1,31 +1,37 @@
-import { emit } from "@tauri-apps/api/event";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { open, message } from "@tauri-apps/plugin-dialog";
+import type { Editor as TiptapEditor } from "@tiptap/core";
 import { NodeSelection, Selection } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
+import type { Node as PMNode, Mark as PMMark } from "@tiptap/pm/model";
 import { insertFootnoteAndOpenPopup } from "@/plugins/footnotePopup/tiptapInsertFootnote";
 import { expandedToggleMarkTiptap } from "@/plugins/editorPlugins.tiptap";
 import { resolveLinkPopupPayload } from "@/plugins/formatToolbar/linkPopupUtils";
 import { handleBlockquoteNest, handleBlockquoteUnnest, handleRemoveBlockquote, handleListIndent, handleListOutdent, handleRemoveList, handleToBulletList, handleToOrderedList } from "@/plugins/formatToolbar/nodeActions.tiptap";
 import { addColLeft, addColRight, addRowAbove, addRowBelow, alignColumn, deleteCurrentColumn, deleteCurrentRow, deleteCurrentTable, formatTable } from "@/plugins/tableUI/tableActions.tiptap";
 import { findWordAtCursor } from "@/plugins/syntaxReveal/marks";
-import { copyImageToAssets } from "@/hooks/useImageOperations";
+import { copyImageToAssets, insertBlockImageNode } from "@/hooks/useImageOperations";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { useTabStore } from "@/stores/tabStore";
-import { formatMarkdown, formatSelection } from "@/lib/cjkFormatter";
-import { resolveHardBreakStyle } from "@/utils/linebreaks";
+import { collapseNewlines, formatMarkdown, formatSelection, removeTrailingSpaces } from "@/lib/cjkFormatter";
+import { normalizeLineEndings, resolveHardBreakStyle } from "@/utils/linebreaks";
 import { readClipboardImagePath } from "@/utils/clipboardImagePath";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
+import { withReentryGuard } from "@/utils/reentryGuard";
+import { MultiSelection } from "@/plugins/multiCursor";
 import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import type { WysiwygToolbarContext } from "./types";
 import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./wysiwygMultiSelection";
 import { insertWikiLink, insertBookmarkLink } from "./wysiwygAdapterLinks";
 import { DEFAULT_MERMAID_DIAGRAM } from "@/plugins/mermaid/constants";
+import { toggleTaskList } from "@/plugins/taskToggle/tiptapTaskListUtils";
+import { expandSelectionInView, selectBlockInView, selectLineInView, selectWordInView } from "@/plugins/toolbarActions/tiptapSelectionActions";
 
 const DEFAULT_MATH_BLOCK = "c = \\pm\\sqrt{a^2 + b^2}";
+const INSERT_IMAGE_GUARD = "menu-insert-image";
 
 /**
  * Check if an editor view is still connected and valid.
@@ -36,11 +42,6 @@ function isViewConnected(view: EditorView): boolean {
   } catch {
     return false;
   }
-}
-
-async function emitMenuEvent(eventName: string) {
-  const windowLabel = getCurrentWebviewWindow().label;
-  await emit(eventName, windowLabel);
 }
 
 /**
@@ -313,6 +314,165 @@ function openLinkEditor(context: WysiwygToolbarContext): boolean {
   return true;
 }
 
+function clearFormattingInView(view: EditorView): boolean {
+  const { state, dispatch } = view;
+  const { selection } = state;
+  const ranges = selection instanceof MultiSelection
+    ? selection.ranges
+    : [{ $from: selection.$from, $to: selection.$to }];
+  let tr = state.tr;
+  let applied = false;
+
+  for (const range of ranges) {
+    const from = range.$from.pos;
+    const to = range.$to.pos;
+    if (from === to) continue;
+    applied = true;
+    state.doc.nodesBetween(from, to, (node: PMNode, pos: number) => {
+      if (node.isText && node.marks.length > 0) {
+        node.marks.forEach((mark: PMMark) => {
+          tr = tr.removeMark(
+            Math.max(from, pos),
+            Math.min(to, pos + node.nodeSize),
+            mark.type
+          );
+        });
+      }
+    });
+  }
+
+  if (applied && tr.docChanged) {
+    dispatch(tr);
+    view.focus();
+    return true;
+  }
+  return false;
+}
+
+function getCurrentHeadingLevel(editor: TiptapEditor): number | null {
+  const { $from } = editor.state.selection;
+  const parent = $from.parent;
+  if (parent.type.name === "heading") {
+    return parent.attrs.level as number;
+  }
+  return null;
+}
+
+function increaseHeadingLevel(editor: TiptapEditor): boolean {
+  const currentLevel = getCurrentHeadingLevel(editor);
+  if (currentLevel === null) {
+    editor.chain().focus().setHeading({ level: 6 }).run();
+    return true;
+  }
+  if (currentLevel > 1) {
+    editor.chain().focus().setHeading({ level: (currentLevel - 1) as 1 | 2 | 3 | 4 | 5 }).run();
+    return true;
+  }
+  return false;
+}
+
+function decreaseHeadingLevel(editor: TiptapEditor): boolean {
+  const currentLevel = getCurrentHeadingLevel(editor);
+  if (currentLevel === null) return false;
+  if (currentLevel < 6) {
+    editor.chain().focus().setHeading({ level: (currentLevel + 1) as 2 | 3 | 4 | 5 | 6 }).run();
+    return true;
+  }
+  editor.chain().focus().setParagraph().run();
+  return true;
+}
+
+function toggleBlockquote(editor: TiptapEditor): boolean {
+  if (editor.isActive("blockquote")) {
+    editor.chain().focus().lift("blockquote").run();
+    return true;
+  }
+
+  const { state, dispatch } = editor.view;
+  const { $from, $to } = state.selection;
+  const blockquoteType = state.schema.nodes.blockquote;
+  if (!blockquoteType) return false;
+
+  // Find if we're inside a list - if so, wrap the entire list
+  let wrapDepth = -1;
+  for (let d = $from.depth; d > 0; d--) {
+    const node = $from.node(d);
+    if (node.type.name === "bulletList" || node.type.name === "orderedList") {
+      wrapDepth = d;
+      break;
+    }
+  }
+
+  let range;
+  if (wrapDepth > 0) {
+    const listStart = $from.before(wrapDepth);
+    const listEnd = $from.after(wrapDepth);
+    range = state.doc.resolve(listStart).blockRange(state.doc.resolve(listEnd));
+  } else {
+    range = $from.blockRange($to);
+  }
+
+  if (range) {
+    try {
+      dispatch(state.tr.wrap(range, [{ type: blockquoteType }]));
+      editor.view.focus();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+function normalizeDialogPath(path: string | string[] | null): string | null {
+  if (!path) return null;
+  if (Array.isArray(path)) return path[0] ?? null;
+  return path;
+}
+
+async function insertImageFromPicker(view: EditorView): Promise<boolean> {
+  const selected = await open({
+    filters: [
+      {
+        name: "Images",
+        extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"],
+      },
+    ],
+  });
+
+  const sourcePath = normalizeDialogPath(selected);
+  if (!sourcePath) return false;
+
+  const filePath = getActiveFilePath();
+  if (!filePath) {
+    await message(
+      "Please save the document first to copy images to assets folder.",
+      { title: "Unsaved Document", kind: "warning" }
+    );
+    return false;
+  }
+
+  const relativePath = await copyImageToAssets(sourcePath, filePath);
+  if (!isViewConnected(view)) return false;
+  insertBlockImageNode(view, relativePath);
+  return true;
+}
+
+function handleInsertImage(context: WysiwygToolbarContext): boolean {
+  const view = context.view;
+  if (!view) return false;
+
+  const windowLabel = getWindowLabel();
+  void withReentryGuard(windowLabel, INSERT_IMAGE_GUARD, async () => {
+    const handled = await trySmartImageInsertion(view);
+    if (handled) return;
+    await insertImageFromPicker(view);
+  });
+
+  return true;
+}
+
 export function setWysiwygHeadingLevel(context: WysiwygToolbarContext, level: number): boolean {
   const editor = context.editor;
   if (!editor) return false;
@@ -501,10 +661,13 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
     case "code":
       return view ? expandedToggleMarkTiptap(view, "code") : false;
     case "clearFormatting":
-      void emitMenuEvent("menu:clear-format");
-      return true;
+      return view ? clearFormattingInView(view) : false;
     case "link":
       return openLinkEditor(context);
+    case "increaseHeading":
+      return context.editor ? increaseHeadingLevel(context.editor) : false;
+    case "decreaseHeading":
+      return context.editor ? decreaseHeadingLevel(context.editor) : false;
     case "bulletList":
       if (view && applyMultiSelectionListAction(view, action, context.editor)) return true;
       return view ? (handleToBulletList(view), true) : false;
@@ -513,7 +676,8 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       return view ? (handleToOrderedList(view), true) : false;
     case "taskList":
       if (view && applyMultiSelectionListAction(view, action, context.editor)) return true;
-      void emitMenuEvent("menu:task-list");
+      if (!context.editor) return false;
+      toggleTaskList(context.editor);
       return true;
     case "indent":
       if (view && applyMultiSelectionListAction(view, action, context.editor)) return true;
@@ -526,7 +690,8 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       return view ? (handleRemoveList(view), true) : false;
     case "insertTable":
     case "insertTableBlock":
-      void emitMenuEvent("menu:insert-table");
+      if (!context.editor) return false;
+      context.editor.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run();
       return true;
     case "addRowAbove":
       return view ? addRowAbove(view) : false;
@@ -566,24 +731,16 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       if (view && applyMultiSelectionBlockquoteAction(view, action)) return true;
       return view ? (handleRemoveBlockquote(view), true) : false;
     case "insertImage":
-      if (view) {
-        void trySmartImageInsertion(view).then((handled) => {
-          if (!handled) {
-            void emitMenuEvent("menu:image");
-          }
-        });
-        return true;
-      }
-      void emitMenuEvent("menu:image");
-      return true;
+      return handleInsertImage(context);
     case "insertCodeBlock":
-      void emitMenuEvent("menu:code-fences");
+      if (!context.editor) return false;
+      context.editor.chain().focus().setCodeBlock().run();
       return true;
     case "insertBlockquote":
-      void emitMenuEvent("menu:quote");
-      return true;
+      return context.editor ? toggleBlockquote(context.editor) : false;
     case "insertDivider":
-      void emitMenuEvent("menu:horizontal-line");
+      if (!context.editor) return false;
+      context.editor.chain().focus().setHorizontalRule().run();
       return true;
     case "insertMath":
       return insertMathBlock(context);
@@ -592,31 +749,40 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
     case "insertInlineMath":
       return insertInlineMath(context);
     case "insertBulletList":
-      void emitMenuEvent("menu:unordered-list");
+      if (!view) return false;
+      handleToBulletList(view);
       return true;
     case "insertOrderedList":
-      void emitMenuEvent("menu:ordered-list");
+      if (!view) return false;
+      handleToOrderedList(view);
       return true;
     case "insertTaskList":
-      void emitMenuEvent("menu:task-list");
+      if (!context.editor) return false;
+      toggleTaskList(context.editor);
       return true;
     case "insertDetails":
-      void emitMenuEvent("menu:collapsible-block");
+      if (!context.editor) return false;
+      context.editor.commands.insertDetailsBlock();
       return true;
     case "insertAlertNote":
-      void emitMenuEvent("menu:info-note");
+      if (!context.editor) return false;
+      context.editor.commands.insertAlertBlock("NOTE");
       return true;
     case "insertAlertTip":
-      void emitMenuEvent("menu:info-tip");
+      if (!context.editor) return false;
+      context.editor.commands.insertAlertBlock("TIP");
       return true;
     case "insertAlertImportant":
-      void emitMenuEvent("menu:info-important");
+      if (!context.editor) return false;
+      context.editor.commands.insertAlertBlock("IMPORTANT");
       return true;
     case "insertAlertWarning":
-      void emitMenuEvent("menu:info-warning");
+      if (!context.editor) return false;
+      context.editor.commands.insertAlertBlock("WARNING");
       return true;
     case "insertAlertCaution":
-      void emitMenuEvent("menu:info-caution");
+      if (!context.editor) return false;
+      context.editor.commands.insertAlertBlock("CAUTION");
       return true;
     case "insertFootnote":
       if (!context.editor) return false;
@@ -630,6 +796,22 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
       return handleFormatCJK(context);
     case "formatCJKFile":
       return handleFormatCJKFile();
+    case "removeTrailingSpaces":
+      return handleRemoveTrailingSpaces();
+    case "collapseBlankLines":
+      return handleCollapseBlankLines();
+    case "lineEndingsLF":
+      return handleLineEndings("lf");
+    case "lineEndingsCRLF":
+      return handleLineEndings("crlf");
+    case "selectWord":
+      return view ? selectWordInView(view) : false;
+    case "selectLine":
+      return view ? selectLineInView(view) : false;
+    case "selectBlock":
+      return view ? selectBlockInView(view) : false;
+    case "expandSelection":
+      return view ? expandSelectionInView(view) : false;
     default:
       return false;
   }
@@ -704,5 +886,38 @@ function handleFormatCJKFile(): boolean {
   if (formatted !== content) {
     setActiveMarkdown(formatted);
   }
+  return true;
+}
+
+function handleRemoveTrailingSpaces(): boolean {
+  const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
+  const content = getActiveMarkdown();
+  const formatted = removeTrailingSpaces(content, { preserveTwoSpaceHardBreaks });
+  if (formatted !== content) {
+    setActiveMarkdown(formatted);
+  }
+  return true;
+}
+
+function handleCollapseBlankLines(): boolean {
+  const content = getActiveMarkdown();
+  const formatted = collapseNewlines(content);
+  if (formatted !== content) {
+    setActiveMarkdown(formatted);
+  }
+  return true;
+}
+
+function handleLineEndings(target: "lf" | "crlf"): boolean {
+  const windowLabel = getWindowLabel();
+  const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+  if (!tabId) return false;
+  const doc = useDocumentStore.getState().getDocument(tabId);
+  if (!doc) return false;
+  const normalized = normalizeLineEndings(doc.content, target);
+  if (normalized !== doc.content) {
+    useDocumentStore.getState().setContent(tabId, normalized);
+  }
+  useDocumentStore.getState().setLineMetadata(tabId, { lineEnding: target });
   return true;
 }

@@ -15,6 +15,7 @@ import { getListItemInfo, indentListItem, outdentListItem, removeList, toBulletL
 import { getSourceTableInfo } from "@/plugins/sourceContextDetection/tableDetection";
 import { deleteColumn, deleteRow, deleteTable, formatTable, insertColumnLeft, insertColumnRight, insertRowAbove, insertRowBelow, setAllColumnsAlignment, setColumnAlignment } from "@/plugins/sourceContextDetection/tableActions";
 import { getAnchorRectFromRange } from "@/plugins/sourcePopup/sourcePopupUtils";
+import { expandSelectionInSource, selectBlockInSource, selectLineInSource, selectWordInSource } from "@/plugins/toolbarActions/sourceSelectionActions";
 import { canRunActionInMultiSelection } from "./multiSelectionPolicy";
 import type { SourceToolbarContext } from "./types";
 import { applyMultiSelectionBlockquoteAction, applyMultiSelectionHeading, applyMultiSelectionListAction } from "./sourceMultiSelection";
@@ -28,8 +29,8 @@ import { useImagePopupStore } from "@/stores/imagePopupStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTabStore } from "@/stores/tabStore";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
-import { formatMarkdown, formatSelection } from "@/lib/cjkFormatter";
-import { resolveHardBreakStyle } from "@/utils/linebreaks";
+import { collapseNewlines, formatMarkdown, formatSelection, removeTrailingSpaces } from "@/lib/cjkFormatter";
+import { normalizeLineEndings, resolveHardBreakStyle } from "@/utils/linebreaks";
 
 const TABLE_TEMPLATE = "| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n";
 
@@ -332,6 +333,32 @@ export function setSourceHeadingLevel(context: SourceToolbarContext, level: numb
   return true;
 }
 
+function increaseHeadingLevel(view: EditorView): boolean {
+  const info = getHeadingInfo(view);
+  if (info && info.level < 6) {
+    setHeadingLevel(view, info, info.level + 1);
+    return true;
+  }
+  if (!info) {
+    convertToHeading(view, 1);
+    return true;
+  }
+  return false;
+}
+
+function decreaseHeadingLevel(view: EditorView): boolean {
+  const info = getHeadingInfo(view);
+  if (info && info.level > 1) {
+    setHeadingLevel(view, info, info.level - 1);
+    return true;
+  }
+  if (info && info.level === 1) {
+    setHeadingLevel(view, info, 0);
+    return true;
+  }
+  return false;
+}
+
 export function performSourceToolbarAction(action: string, context: SourceToolbarContext): boolean {
   const view = context.view;
   if (!view) return false;
@@ -367,6 +394,10 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
     // Clear formatting
     case "clearFormatting":
       return handleClearFormatting(view);
+    case "increaseHeading":
+      return increaseHeadingLevel(view);
+    case "decreaseHeading":
+      return decreaseHeadingLevel(view);
 
     // Simple insertions
     case "insertImage":
@@ -437,11 +468,29 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
     case "removeQuote":
       return handleBlockquoteAction(view, action);
 
+    // Selection
+    case "selectWord":
+      return selectWordInSource(view);
+    case "selectLine":
+      return selectLineInSource(view);
+    case "selectBlock":
+      return selectBlockInSource(view);
+    case "expandSelection":
+      return expandSelectionInSource(view);
+
     // CJK formatting
     case "formatCJK":
       return handleFormatCJK(view);
     case "formatCJKFile":
       return handleFormatCJKFile(view);
+    case "removeTrailingSpaces":
+      return handleRemoveTrailingSpaces();
+    case "collapseBlankLines":
+      return handleCollapseBlankLines();
+    case "lineEndingsLF":
+      return handleLineEndings("lf");
+    case "lineEndingsCRLF":
+      return handleLineEndings("crlf");
 
     default:
       return false;
@@ -666,5 +715,46 @@ function handleFormatCJKFile(view: EditorView): boolean {
       selection: { anchor: newCursorPos },
     });
   }
+  return true;
+}
+
+// --- Text cleanup helpers ---
+
+function getActiveDocument() {
+  const windowLabel = getWindowLabel();
+  const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+  if (!tabId) return null;
+  return { tabId, doc: useDocumentStore.getState().getDocument(tabId) };
+}
+
+function handleRemoveTrailingSpaces(): boolean {
+  const active = getActiveDocument();
+  if (!active?.doc) return false;
+  const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
+  const formatted = removeTrailingSpaces(active.doc.content, { preserveTwoSpaceHardBreaks });
+  if (formatted !== active.doc.content) {
+    useDocumentStore.getState().setContent(active.tabId, formatted);
+  }
+  return true;
+}
+
+function handleCollapseBlankLines(): boolean {
+  const active = getActiveDocument();
+  if (!active?.doc) return false;
+  const formatted = collapseNewlines(active.doc.content);
+  if (formatted !== active.doc.content) {
+    useDocumentStore.getState().setContent(active.tabId, formatted);
+  }
+  return true;
+}
+
+function handleLineEndings(target: "lf" | "crlf"): boolean {
+  const active = getActiveDocument();
+  if (!active?.doc) return false;
+  const normalized = normalizeLineEndings(active.doc.content, target);
+  if (normalized !== active.doc.content) {
+    useDocumentStore.getState().setContent(active.tabId, normalized);
+  }
+  useDocumentStore.getState().setLineMetadata(active.tabId, { lineEnding: target });
   return true;
 }

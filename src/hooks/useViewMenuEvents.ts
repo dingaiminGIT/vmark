@@ -7,6 +7,7 @@ import { useTerminalStore } from "@/stores/terminalStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
+import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { normalizeLineEndings } from "@/utils/linebreaks";
 
@@ -111,6 +112,7 @@ export function useViewMenuEvents(): void {
 
       const unlistenLineEndingsLf = await currentWindow.listen<string>("menu:line-endings-lf", (event) => {
         if (event.payload !== windowLabel) return;
+        if (FEATURE_FLAGS.UNIFIED_MENU_DISPATCHER) return;
         convertLineEndings("lf");
       });
       if (cancelled) { unlistenLineEndingsLf(); return; }
@@ -118,6 +120,7 @@ export function useViewMenuEvents(): void {
 
       const unlistenLineEndingsCrlf = await currentWindow.listen<string>("menu:line-endings-crlf", (event) => {
         if (event.payload !== windowLabel) return;
+        if (FEATURE_FLAGS.UNIFIED_MENU_DISPATCHER) return;
         convertLineEndings("crlf");
       });
       if (cancelled) { unlistenLineEndingsCrlf(); return; }

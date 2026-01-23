@@ -1,14 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Editor as TiptapEditor } from "@tiptap/core";
 import { performWysiwygToolbarAction } from "./wysiwygAdapter";
-import { emit } from "@tauri-apps/api/event";
-
-vi.mock("@tauri-apps/api/event", () => ({
-  emit: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock("@tauri-apps/api/webviewWindow", () => ({
-  getCurrentWebviewWindow: () => ({ label: "main" }),
-}));
 
 const baseContext = {
   surface: "wysiwyg" as const,
@@ -22,18 +14,24 @@ describe("performWysiwygToolbarAction", () => {
     vi.clearAllMocks();
   });
 
-  it("emits alert menu events for each alert type action", () => {
+  it("calls alert insertion commands with the correct type", () => {
     const actions: Record<string, string> = {
-      insertAlertNote: "menu:info-note",
-      insertAlertTip: "menu:info-tip",
-      insertAlertImportant: "menu:info-important",
-      insertAlertWarning: "menu:info-warning",
-      insertAlertCaution: "menu:info-caution",
+      insertAlertNote: "NOTE",
+      insertAlertTip: "TIP",
+      insertAlertImportant: "IMPORTANT",
+      insertAlertWarning: "WARNING",
+      insertAlertCaution: "CAUTION",
     };
 
-    for (const [action, eventName] of Object.entries(actions)) {
-      performWysiwygToolbarAction(action, baseContext);
-      expect(emit).toHaveBeenLastCalledWith(eventName, "main");
+    for (const [action, alertType] of Object.entries(actions)) {
+      const insertAlertBlock = vi.fn();
+      const editor = { commands: { insertAlertBlock } } as unknown as TiptapEditor;
+      const applied = performWysiwygToolbarAction(action, {
+        ...baseContext,
+        editor,
+      });
+      expect(applied).toBe(true);
+      expect(insertAlertBlock).toHaveBeenCalledWith(alertType);
     }
   });
 });

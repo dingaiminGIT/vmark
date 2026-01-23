@@ -49,6 +49,10 @@ function mapActionIdToAdapterAction(actionId: ActionId): string {
       return "insertBlockquote";
     case "horizontalLine":
       return "insertDivider";
+    case "addRowBelow":
+      return "addRow";
+    case "addColRight":
+      return "addCol";
     case "wikiLink":
       return "link:wiki";
     case "bookmark":

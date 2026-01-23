@@ -8,15 +8,14 @@ import {
   setSourceHeadingLevel,
 } from "@/plugins/toolbarActions/sourceAdapter";
 import { getSourceMultiSelectionContext } from "@/plugins/toolbarActions/multiSelectionContext";
+import {
+  expandSelectionInSource,
+  selectBlockInSource,
+  selectLineInSource,
+  selectWordInSource,
+} from "@/plugins/toolbarActions/sourceSelectionActions";
 import { useSourceCursorContextStore } from "@/stores/sourceCursorContextStore";
 import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
-import {
-  getSourceBlockRange,
-  getSourceExpandedRange,
-  getSourceLineRange,
-  getSourceSelectionRange,
-  getSourceWordRange,
-} from "@/utils/sourceSelection";
 import { convertToHeading, getHeadingInfo, setHeadingLevel } from "@/plugins/sourceContextDetection/headingDetection";
 import { isTerminalFocused } from "@/utils/focus";
 import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
@@ -122,12 +121,6 @@ function deleteSelection(view: EditorView): void {
   if (transaction.changes.empty) return;
 
   view.dispatch(transaction);
-  view.focus();
-}
-
-function applySelectionRange(view: EditorView, range: { from: number; to: number } | null): void {
-  if (!range) return;
-  view.dispatch({ selection: EditorSelection.range(range.from, range.to) });
   view.focus();
 }
 
@@ -262,8 +255,7 @@ export function useSourceMenuCommands(viewRef: MutableRefObject<EditorView | nul
       const unlistenSelectWord = await currentWindow.listen<string>("menu:select-word", (event) => {
         if (event.payload !== windowLabel) return;
         withView((view) => {
-          const pos = view.state.selection.main.from;
-          applySelectionRange(view, getSourceWordRange(view.state, pos));
+          selectWordInSource(view);
         });
       });
       if (cancelled) {
@@ -275,8 +267,7 @@ export function useSourceMenuCommands(viewRef: MutableRefObject<EditorView | nul
       const unlistenSelectLine = await currentWindow.listen<string>("menu:select-line", (event) => {
         if (event.payload !== windowLabel) return;
         withView((view) => {
-          const pos = view.state.selection.main.from;
-          applySelectionRange(view, getSourceLineRange(view.state, pos));
+          selectLineInSource(view);
         });
       });
       if (cancelled) {
@@ -288,9 +279,7 @@ export function useSourceMenuCommands(viewRef: MutableRefObject<EditorView | nul
       const unlistenSelectBlock = await currentWindow.listen<string>("menu:select-block", (event) => {
         if (event.payload !== windowLabel) return;
         withView((view) => {
-          const selection = getSourceSelectionRange(view.state);
-          const range = getSourceBlockRange(view.state, selection.from, selection.to);
-          applySelectionRange(view, range);
+          selectBlockInSource(view);
         });
       });
       if (cancelled) {
@@ -302,9 +291,7 @@ export function useSourceMenuCommands(viewRef: MutableRefObject<EditorView | nul
       const unlistenExpandSelection = await currentWindow.listen<string>("menu:expand-selection", (event) => {
         if (event.payload !== windowLabel) return;
         withView((view) => {
-          const selection = getSourceSelectionRange(view.state);
-          const expanded = getSourceExpandedRange(view.state, selection.from, selection.to);
-          applySelectionRange(view, expanded);
+          expandSelectionInSource(view);
         });
       });
       if (cancelled) {
