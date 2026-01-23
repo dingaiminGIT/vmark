@@ -10,7 +10,7 @@
   display: inline;
   position: relative;
   vertical-align: baseline;
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-sm);
 }
 
 .math-inline:hover:not(.editing) {
@@ -86,7 +86,7 @@
   padding: 0.2em 0.4em;
   border-radius: 3px;
   font-family: monospace;
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-mono);
 }
 
 /* Block math preview in code blocks (legacy) */
@@ -147,7 +147,7 @@
   min-height: 60px;
   padding: 0.75rem;
   font-family: var(--font-mono, monospace);
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-mono);
   line-height: 1.5;
   border: none;
   background: transparent;

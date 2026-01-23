@@ -9,7 +9,7 @@
 .syntax-marker {
   color: var(--md-char-color, #999);
   font-family: var(--font-mono, monospace);
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-mono);
   opacity: 0;
   animation: syntax-fade-in 0.15s ease-out forwards;
   user-select: none;

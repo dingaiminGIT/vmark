@@ -27,7 +27,7 @@
   flex-shrink: 0;
   padding: 8px 8px 6px 8px;
   font-family: var(--font-mono);
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-mono);
   color: var(--text-tertiary);
   text-align: right;
   user-select: none;

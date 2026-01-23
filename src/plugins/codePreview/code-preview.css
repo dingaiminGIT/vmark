@@ -57,7 +57,7 @@
   color: var(--error-color, #cf222e);
   background-color: var(--error-bg, #ffebe9);
   font-family: ui-monospace, monospace;
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-mono);
   white-space: pre-wrap;
   word-break: break-word;
   text-align: left;
@@ -188,7 +188,7 @@
 .code-block-wrapper.code-block-editing pre code {
   display: block;
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-mono);
   white-space: pre-wrap;
   word-break: break-word;
   text-align: left;

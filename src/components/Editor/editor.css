@@ -199,7 +199,7 @@
 .tiptap-editor ol {
   margin: 0.8em 0;
   padding-left: 1em;
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-sm);
 }
 
 .tiptap-editor ul:first-child,
@@ -232,7 +232,7 @@
 /* Code - inline */
 .tiptap-editor code {
   font-family: var(--font-mono);
-  font-size: 0.85em;
+  font-size: var(--editor-font-size-mono);
   background-color: var(--code-bg-color);
   color: var(--code-text-color);
   border: 1px solid var(--code-border-color);
@@ -244,7 +244,7 @@
 /* Code blocks */
 .tiptap-editor pre {
   font-family: var(--font-mono);
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-mono);
   background-color: var(--code-bg-color);
   color: var(--code-text-color);
   padding: 1em;
@@ -270,7 +270,7 @@
   margin: 0.8em 0;
   padding: 0 15px;
   color: var(--meta-content-color);
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-sm);
 }
 
 .tiptap-editor blockquote blockquote {
@@ -300,7 +300,7 @@
   width: 100%;
   margin: 0.8em 0;
   table-layout: auto;
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-sm);
 }
 
 .tiptap-editor table tr {
@@ -530,7 +530,7 @@
 .tiptap-editor dl[data-type="footnote_definition"] dd::after {
   content: " ↩";
   color: var(--primary-color);
-  font-size: 0.9em;
+  font-size: var(--editor-font-size-sm);
   cursor: pointer;
   opacity: 0.7;
 }
@@ -692,7 +692,7 @@
 
 .source-editor .cm-scroller {
   font-family: var(--font-sans) !important;
-  font-size: calc(var(--editor-font-size, 18px) * 0.9) !important;
+  font-size: var(--editor-font-size-mono) !important;
   line-height: var(--editor-line-height, 1.6) !important;
   overflow-x: auto !important;
 }

@@ -191,6 +191,8 @@ function applyTypography(
     "--font-sans": `${latinStack}, ${cjkStack}`,
     "--font-mono": monoStack,
     "--editor-font-size": `${fontSize}px`,
+    "--editor-font-size-sm": `${fontSize * 0.9}px`,
+    "--editor-font-size-mono": `${fontSize * 0.85}px`,
     "--editor-line-height": String(lineHeight),
     "--editor-paragraph-spacing": `${paragraphSpacing}em`,
     "--editor-width": editorWidth > 0 ? `${editorWidth}em` : "none",

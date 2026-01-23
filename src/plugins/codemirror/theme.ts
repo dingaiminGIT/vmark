@@ -86,8 +86,8 @@ export const codeHighlightStyle = HighlightStyle.define([
  */
 export const sourceEditorTheme = EditorView.theme({
   "&": {
-    // Source mode is all mono/code, so use 0.9x to match WYSIWYG code blocks
-    fontSize: "calc(var(--editor-font-size) * 0.9)",
+    // Source mode is all mono/code, so use 0.85x to match WYSIWYG code blocks
+    fontSize: "var(--editor-font-size-mono)",
     height: "100%",
   },
   ".cm-content": {
