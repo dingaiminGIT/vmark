@@ -94,7 +94,13 @@
 /* Preserve list bullet/number space - must match specificity of the padding:12px rule */
 .details-block > ul:not(.details-summary),
 .details-block > ol:not(.details-summary) {
-  padding-left: calc(12px + 1em);
+  padding-left: 2em;
+}
+
+/* Blockquote needs left margin so its border isn't flush against the edge */
+.details-block > blockquote:not(.details-summary) {
+  margin-left: 0.75em;
+  padding-left: 1em;
 }
 
 /* Dark mode uses the same CSS variables - no override needed */
