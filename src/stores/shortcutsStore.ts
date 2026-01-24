@@ -98,6 +98,22 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "pastePlainText", label: "Paste as Plain Text", category: "editing", defaultKey: "Mod-Shift-v", description: "Paste without formatting in WYSIWYG" },
   { id: "toggleComment", label: "Toggle Comment", category: "editing", defaultKey: "Mod-Shift-/", description: "Insert HTML comment <!-- -->" },
 
+  // === Line Operations ===
+  { id: "moveLineUp", label: "Move Line Up", category: "editing", defaultKey: "Alt-Up", menuId: "move-line-up" },
+  { id: "moveLineDown", label: "Move Line Down", category: "editing", defaultKey: "Alt-Down", menuId: "move-line-down" },
+  { id: "duplicateLine", label: "Duplicate Line", category: "editing", defaultKey: "Shift-Alt-Down", menuId: "duplicate-line" },
+  { id: "deleteLine", label: "Delete Line", category: "editing", defaultKey: "Mod-Shift-k", menuId: "delete-line" },
+  { id: "joinLines", label: "Join Lines", category: "editing", defaultKey: "Mod-j", menuId: "join-lines" },
+  { id: "sortLinesAsc", label: "Sort Lines Ascending", category: "editing", defaultKey: "F5", menuId: "sort-lines-asc" },
+  { id: "sortLinesDesc", label: "Sort Lines Descending", category: "editing", defaultKey: "Shift-F5", menuId: "sort-lines-desc" },
+
+  // === Text Transformations ===
+  { id: "transformUppercase", label: "Transform to UPPERCASE", category: "editing", defaultKey: "Ctrl-Shift-u", menuId: "transform-uppercase" },
+  { id: "transformLowercase", label: "Transform to lowercase", category: "editing", defaultKey: "Ctrl-Shift-l", menuId: "transform-lowercase" },
+  { id: "transformTitleCase", label: "Transform to Title Case", category: "editing", defaultKey: "Ctrl-Shift-t", menuId: "transform-title-case" },
+  { id: "transformToggleCase", label: "Toggle Case", category: "editing", defaultKey: "", menuId: "transform-toggle-case", description: "Toggle between UPPERCASE and lowercase" },
+  { id: "removeBlankLines", label: "Remove Blank Lines", category: "editing", defaultKey: "", menuId: "remove-blank-lines", description: "Remove blank lines from selection" },
+
   // === View ===
   { id: "toggleSidebar", label: "Toggle Sidebar", category: "view", defaultKey: "Mod-Shift-b", menuId: "sidebar", scope: "global" },
   { id: "toggleOutline", label: "Toggle Outline", category: "view", defaultKey: "Mod-Alt-1", menuId: "outline" },

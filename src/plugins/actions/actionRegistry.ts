@@ -115,6 +115,22 @@ export const MENU_TO_ACTION: Record<MenuEventId, MenuActionMapping> = {
   "menu:collapse-blank-lines": { actionId: "collapseBlankLines" },
   "menu:line-endings-lf": { actionId: "lineEndingsLF" },
   "menu:line-endings-crlf": { actionId: "lineEndingsCRLF" },
+
+  // === Line Operations ===
+  "menu:move-line-up": { actionId: "moveLineUp" },
+  "menu:move-line-down": { actionId: "moveLineDown" },
+  "menu:duplicate-line": { actionId: "duplicateLine" },
+  "menu:delete-line": { actionId: "deleteLine" },
+  "menu:join-lines": { actionId: "joinLines" },
+  "menu:sort-lines-asc": { actionId: "sortLinesAsc" },
+  "menu:sort-lines-desc": { actionId: "sortLinesDesc" },
+  "menu:remove-blank-lines": { actionId: "removeBlankLines" },
+
+  // === Text Transformations ===
+  "menu:transform-uppercase": { actionId: "transformUppercase" },
+  "menu:transform-lowercase": { actionId: "transformLowercase" },
+  "menu:transform-title-case": { actionId: "transformTitleCase" },
+  "menu:transform-toggle-case": { actionId: "transformToggleCase" },
 };
 
 /**
@@ -527,6 +543,82 @@ export const ACTION_DEFINITIONS: Record<ActionId, ActionDefinition> = {
     id: "lineEndingsCRLF",
     label: "Convert to CRLF",
     category: "cleanup",
+    supports: { wysiwyg: true, source: true },
+  },
+
+  // === Line Operations ===
+  moveLineUp: {
+    id: "moveLineUp",
+    label: "Move Line Up",
+    category: "lines",
+    supports: { wysiwyg: true, source: true },
+  },
+  moveLineDown: {
+    id: "moveLineDown",
+    label: "Move Line Down",
+    category: "lines",
+    supports: { wysiwyg: true, source: true },
+  },
+  duplicateLine: {
+    id: "duplicateLine",
+    label: "Duplicate Line",
+    category: "lines",
+    supports: { wysiwyg: true, source: true },
+  },
+  deleteLine: {
+    id: "deleteLine",
+    label: "Delete Line",
+    category: "lines",
+    supports: { wysiwyg: true, source: true },
+  },
+  joinLines: {
+    id: "joinLines",
+    label: "Join Lines",
+    category: "lines",
+    supports: { wysiwyg: true, source: true },
+  },
+  sortLinesAsc: {
+    id: "sortLinesAsc",
+    label: "Sort Lines Ascending",
+    category: "lines",
+    supports: { wysiwyg: false, source: true },
+  },
+  sortLinesDesc: {
+    id: "sortLinesDesc",
+    label: "Sort Lines Descending",
+    category: "lines",
+    supports: { wysiwyg: false, source: true },
+  },
+  removeBlankLines: {
+    id: "removeBlankLines",
+    label: "Remove Blank Lines",
+    category: "lines",
+    supports: { wysiwyg: true, source: true },
+  },
+
+  // === Text Transformations ===
+  transformUppercase: {
+    id: "transformUppercase",
+    label: "Transform to UPPERCASE",
+    category: "transform",
+    supports: { wysiwyg: true, source: true },
+  },
+  transformLowercase: {
+    id: "transformLowercase",
+    label: "Transform to lowercase",
+    category: "transform",
+    supports: { wysiwyg: true, source: true },
+  },
+  transformTitleCase: {
+    id: "transformTitleCase",
+    label: "Transform to Title Case",
+    category: "transform",
+    supports: { wysiwyg: true, source: true },
+  },
+  transformToggleCase: {
+    id: "transformToggleCase",
+    label: "Toggle Case",
+    category: "transform",
     supports: { wysiwyg: true, source: true },
   },
 };

@@ -100,6 +100,22 @@ export const ACTION_IDS = [
   "collapseBlankLines",
   "lineEndingsLF",
   "lineEndingsCRLF",
+
+  // === Line Operations ===
+  "moveLineUp",
+  "moveLineDown",
+  "duplicateLine",
+  "deleteLine",
+  "joinLines",
+  "sortLinesAsc",
+  "sortLinesDesc",
+  "removeBlankLines",
+
+  // === Text Transformations ===
+  "transformUppercase",
+  "transformLowercase",
+  "transformTitleCase",
+  "transformToggleCase",
 ] as const;
 
 export type ActionId = (typeof ACTION_IDS)[number];
@@ -138,7 +154,9 @@ export type ActionCategory =
   | "inserts"
   | "selection"
   | "cjk"
-  | "cleanup";
+  | "cleanup"
+  | "lines"
+  | "transform";
 
 /**
  * Full action definition with metadata

@@ -1,7 +1,13 @@
 import { Extension, type Editor as TiptapEditor } from "@tiptap/core";
 import { keydownHandler } from "@tiptap/pm/keymap";
-import { Plugin, PluginKey, Selection, NodeSelection, type Command, type EditorState } from "@tiptap/pm/state";
+import { Plugin, PluginKey, Selection, NodeSelection, TextSelection, type Command, type EditorState } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
+import {
+  toUpperCase,
+  toLowerCase,
+  toTitleCase,
+  toggleCase,
+} from "@/utils/textTransformations";
 import { useUIStore } from "@/stores/uiStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useSourcePeekStore } from "@/stores/sourcePeekStore";
@@ -408,6 +414,190 @@ function handleSmartLinkShortcut(view: EditorView): boolean {
   return true;
 }
 
+// --- Text transformation helpers for WYSIWYG ---
+
+function wysiwygTransformSelection(view: EditorView, transform: (text: string) => string): boolean {
+  const { state, dispatch } = view;
+  const { from, to } = state.selection;
+  if (from === to) return false; // No selection
+
+  const selectedText = state.doc.textBetween(from, to, "");
+  const transformed = transform(selectedText);
+
+  if (transformed !== selectedText) {
+    dispatch(state.tr.insertText(transformed, from, to));
+    view.focus();
+  }
+  return true;
+}
+
+function doWysiwygTransformUppercase(view: EditorView): boolean {
+  return wysiwygTransformSelection(view, toUpperCase);
+}
+
+function doWysiwygTransformLowercase(view: EditorView): boolean {
+  return wysiwygTransformSelection(view, toLowerCase);
+}
+
+function doWysiwygTransformTitleCase(view: EditorView): boolean {
+  return wysiwygTransformSelection(view, toTitleCase);
+}
+
+function doWysiwygTransformToggleCase(view: EditorView): boolean {
+  return wysiwygTransformSelection(view, toggleCase);
+}
+
+// --- Line operation helpers for WYSIWYG ---
+
+function getBlockRange(state: EditorState): { from: number; to: number; node: ReturnType<typeof state.doc.nodeAt> } | null {
+  const { $from } = state.selection;
+  // Find the outermost block node containing the cursor
+  for (let depth = $from.depth; depth > 0; depth--) {
+    const node = $from.node(depth);
+    // Stop at block-level nodes like paragraph, heading, etc.
+    if (node.isBlock && !node.type.name.match(/^(bulletList|orderedList|blockquote|doc)$/)) {
+      const from = $from.before(depth);
+      const to = $from.after(depth);
+      return { from, to, node };
+    }
+  }
+  return null;
+}
+
+function doWysiwygMoveLineUp(view: EditorView): boolean {
+  const { state, dispatch } = view;
+  const blockRange = getBlockRange(state);
+  if (!blockRange) return false;
+
+  // Find the previous sibling block
+  const $from = state.doc.resolve(blockRange.from);
+  if ($from.index($from.depth - 1) === 0) return false; // Already at top
+
+  const prevBlockStart = $from.before($from.depth) - 1;
+  const $prevFrom = state.doc.resolve(prevBlockStart);
+  const prevBlock = $prevFrom.nodeBefore;
+  if (!prevBlock) return false;
+
+  const prevBlockFrom = prevBlockStart - prevBlock.nodeSize;
+
+  // Swap blocks: delete current, insert before previous
+  const currentNode = state.doc.nodeAt(blockRange.from);
+  if (!currentNode) return false;
+
+  const tr = state.tr;
+  tr.delete(blockRange.from, blockRange.to);
+  tr.insert(prevBlockFrom, currentNode);
+  // Update selection to moved block
+  tr.setSelection(TextSelection.near(tr.doc.resolve(prevBlockFrom + 1)));
+  dispatch(tr);
+  view.focus();
+  return true;
+}
+
+function doWysiwygMoveLineDown(view: EditorView): boolean {
+  const { state, dispatch } = view;
+  const blockRange = getBlockRange(state);
+  if (!blockRange) return false;
+
+  // Find the next sibling block
+  const $to = state.doc.resolve(blockRange.to);
+  const parentNode = $to.node($to.depth - 1);
+  if ($to.index($to.depth - 1) >= parentNode.childCount - 1) return false; // Already at bottom
+
+  const nextBlockEnd = blockRange.to + ($to.nodeAfter?.nodeSize ?? 0);
+  const nextBlock = $to.nodeAfter;
+  if (!nextBlock) return false;
+
+  // Swap blocks: delete next, insert before current
+  const currentNode = state.doc.nodeAt(blockRange.from);
+  if (!currentNode) return false;
+
+  const tr = state.tr;
+  tr.delete(blockRange.to, nextBlockEnd);
+  tr.insert(blockRange.from, nextBlock);
+  // Update selection to moved block
+  const newPos = blockRange.from + nextBlock.nodeSize;
+  tr.setSelection(TextSelection.near(tr.doc.resolve(newPos + 1)));
+  dispatch(tr);
+  view.focus();
+  return true;
+}
+
+function doWysiwygDuplicateLine(view: EditorView): boolean {
+  const { state, dispatch } = view;
+  const blockRange = getBlockRange(state);
+  if (!blockRange) return false;
+
+  const currentNode = state.doc.nodeAt(blockRange.from);
+  if (!currentNode) return false;
+
+  // Insert a copy after the current block
+  const tr = state.tr.insert(blockRange.to, currentNode.copy(currentNode.content));
+  // Move selection to duplicated block
+  tr.setSelection(TextSelection.near(tr.doc.resolve(blockRange.to + 1)));
+  dispatch(tr);
+  view.focus();
+  return true;
+}
+
+function doWysiwygDeleteLine(view: EditorView): boolean {
+  const { state, dispatch } = view;
+  const blockRange = getBlockRange(state);
+  if (!blockRange) return false;
+
+  const tr = state.tr.delete(blockRange.from, blockRange.to);
+  // Position cursor at the start of where the block was
+  const newPos = Math.min(blockRange.from, tr.doc.content.size - 1);
+  if (newPos > 0) {
+    tr.setSelection(TextSelection.near(tr.doc.resolve(newPos)));
+  }
+  dispatch(tr);
+  view.focus();
+  return true;
+}
+
+function doWysiwygJoinLines(view: EditorView): boolean {
+  const { state, dispatch } = view;
+  const { $from, $to, from, to } = state.selection;
+
+  // If there's a selection spanning multiple blocks, join them
+  if (from !== to) {
+    const startBlock = $from.blockRange($to);
+    if (startBlock && startBlock.depth > 0) {
+      // Try to join the blocks
+      const tr = state.tr;
+      // Replace all newlines/block boundaries with spaces
+      const text = state.doc.textBetween(from, to, " ");
+      tr.insertText(text, from, to);
+      dispatch(tr);
+      view.focus();
+      return true;
+    }
+  }
+
+  // No selection: join current block with next
+  const blockRange = getBlockRange(state);
+  if (!blockRange) return false;
+
+  const $to2 = state.doc.resolve(blockRange.to);
+  if (!$to2.nodeAfter) return false;
+
+  const nextNode = $to2.nodeAfter;
+  if (!nextNode.isTextblock) return false;
+
+  const nextText = nextNode.textContent.trimStart();
+
+  const tr = state.tr;
+  // Delete next block
+  tr.delete(blockRange.to, blockRange.to + nextNode.nodeSize);
+  // Append next block's text to current block
+  const insertPos = blockRange.to - 1;
+  tr.insertText(" " + nextText, insertPos, insertPos);
+  dispatch(tr);
+  view.focus();
+  return true;
+}
+
 export function buildEditorKeymapBindings(): Record<string, Command> {
   const shortcuts = useShortcutsStore.getState();
   const bindings: Record<string, Command> = {};
@@ -593,6 +783,47 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
       return true;
     }
     return escapeMarkBoundary(view);
+  });
+
+  // --- Line operations ---
+  bindIfKey(bindings, shortcuts.getShortcut("moveLineUp"), (_state, _dispatch, view) => {
+    if (!view) return false;
+    return doWysiwygMoveLineUp(view);
+  });
+  bindIfKey(bindings, shortcuts.getShortcut("moveLineDown"), (_state, _dispatch, view) => {
+    if (!view) return false;
+    return doWysiwygMoveLineDown(view);
+  });
+  bindIfKey(bindings, shortcuts.getShortcut("duplicateLine"), (_state, _dispatch, view) => {
+    if (!view) return false;
+    return doWysiwygDuplicateLine(view);
+  });
+  bindIfKey(bindings, shortcuts.getShortcut("deleteLine"), (_state, _dispatch, view) => {
+    if (!view) return false;
+    return doWysiwygDeleteLine(view);
+  });
+  bindIfKey(bindings, shortcuts.getShortcut("joinLines"), (_state, _dispatch, view) => {
+    if (!view) return false;
+    return doWysiwygJoinLines(view);
+  });
+  // Note: Sort lines are not implemented for WYSIWYG as they work on plain text lines
+
+  // --- Text transformations ---
+  bindIfKey(bindings, shortcuts.getShortcut("transformUppercase"), (_state, _dispatch, view) => {
+    if (!view) return false;
+    return doWysiwygTransformUppercase(view);
+  });
+  bindIfKey(bindings, shortcuts.getShortcut("transformLowercase"), (_state, _dispatch, view) => {
+    if (!view) return false;
+    return doWysiwygTransformLowercase(view);
+  });
+  bindIfKey(bindings, shortcuts.getShortcut("transformTitleCase"), (_state, _dispatch, view) => {
+    if (!view) return false;
+    return doWysiwygTransformTitleCase(view);
+  });
+  bindIfKey(bindings, shortcuts.getShortcut("transformToggleCase"), (_state, _dispatch, view) => {
+    if (!view) return false;
+    return doWysiwygTransformToggleCase(view);
   });
 
   return bindings;

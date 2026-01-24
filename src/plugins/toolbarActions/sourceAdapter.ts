@@ -31,6 +31,20 @@ import { useTabStore } from "@/stores/tabStore";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { collapseNewlines, formatMarkdown, formatSelection, removeTrailingSpaces } from "@/lib/cjkFormatter";
 import { normalizeLineEndings, resolveHardBreakStyle } from "@/utils/linebreaks";
+import {
+  toUpperCase,
+  toLowerCase,
+  toTitleCase,
+  toggleCase,
+  removeBlankLines,
+  moveLinesUp,
+  moveLinesDown,
+  duplicateLines,
+  deleteLines,
+  joinLines,
+  sortLinesAscending,
+  sortLinesDescending,
+} from "@/utils/textTransformations";
 
 const TABLE_TEMPLATE = "| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n";
 
@@ -492,6 +506,34 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
     case "lineEndingsCRLF":
       return handleLineEndings(view, "crlf");
 
+    // Line operations
+    case "moveLineUp":
+      return handleMoveLineUp(view);
+    case "moveLineDown":
+      return handleMoveLineDown(view);
+    case "duplicateLine":
+      return handleDuplicateLine(view);
+    case "deleteLine":
+      return handleDeleteLine(view);
+    case "joinLines":
+      return handleJoinLines(view);
+    case "sortLinesAsc":
+      return handleSortLinesAsc(view);
+    case "sortLinesDesc":
+      return handleSortLinesDesc(view);
+    case "removeBlankLines":
+      return handleRemoveBlankLines(view);
+
+    // Text transformations
+    case "transformUppercase":
+      return handleTransformCase(view, toUpperCase);
+    case "transformLowercase":
+      return handleTransformCase(view, toLowerCase);
+    case "transformTitleCase":
+      return handleTransformCase(view, toTitleCase);
+    case "transformToggleCase":
+      return handleTransformCase(view, toggleCase);
+
     default:
       return false;
   }
@@ -770,5 +812,148 @@ function handleLineEndings(view: EditorView, target: "lf" | "crlf"): boolean {
     useDocumentStore.getState().setLineMetadata(tabId, { lineEnding: target });
   }
 
+  return true;
+}
+
+// --- Line operations ---
+
+function handleMoveLineUp(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = moveLinesUp(text, from, to);
+
+  if (!result) return false;
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  view.focus();
+  return true;
+}
+
+function handleMoveLineDown(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = moveLinesDown(text, from, to);
+
+  if (!result) return false;
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  view.focus();
+  return true;
+}
+
+function handleDuplicateLine(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = duplicateLines(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  view.focus();
+  return true;
+}
+
+function handleDeleteLine(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = deleteLines(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newCursor },
+  });
+  view.focus();
+  return true;
+}
+
+function handleJoinLines(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = joinLines(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  view.focus();
+  return true;
+}
+
+function handleSortLinesAsc(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = sortLinesAscending(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  view.focus();
+  return true;
+}
+
+function handleSortLinesDesc(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = sortLinesDescending(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  view.focus();
+  return true;
+}
+
+function handleRemoveBlankLines(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+
+  if (from === to) {
+    return false; // No selection
+  }
+
+  const selectedText = view.state.doc.sliceString(from, to);
+  const transformed = removeBlankLines(selectedText);
+
+  if (transformed === selectedText) {
+    return true; // No change needed
+  }
+
+  view.dispatch({
+    changes: { from, to, insert: transformed },
+    selection: { anchor: from, head: from + transformed.length },
+  });
+  view.focus();
+  return true;
+}
+
+// --- Text transformations ---
+
+function handleTransformCase(view: EditorView, transform: (text: string) => string): boolean {
+  const { from, to } = view.state.selection.main;
+
+  if (from === to) {
+    return false; // No selection
+  }
+
+  const selectedText = view.state.doc.sliceString(from, to);
+  const transformed = transform(selectedText);
+
+  if (transformed === selectedText) {
+    return true; // No change needed
+  }
+
+  view.dispatch({
+    changes: { from, to, insert: transformed },
+    selection: { anchor: from, head: from + transformed.length },
+  });
+  view.focus();
   return true;
 }

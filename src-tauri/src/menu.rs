@@ -117,6 +117,38 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         ],
     )?;
 
+    // Lines submenu (line operations)
+    let lines_submenu = Submenu::with_items(
+        app,
+        "Lines",
+        true,
+        &[
+            &MenuItem::with_id(app, "move-line-up", "Move Line Up", true, Some("Alt+Up"))?,
+            &MenuItem::with_id(app, "move-line-down", "Move Line Down", true, Some("Alt+Down"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "duplicate-line", "Duplicate Line", true, Some("Shift+Alt+Down"))?,
+            &MenuItem::with_id(app, "delete-line", "Delete Line", true, Some("CmdOrCtrl+Shift+K"))?,
+            &MenuItem::with_id(app, "join-lines", "Join Lines", true, Some("CmdOrCtrl+J"))?,
+            &MenuItem::with_id(app, "remove-blank-lines", "Remove Blank Lines", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "sort-lines-asc", "Sort Lines Ascending", true, Some("F5"))?,
+            &MenuItem::with_id(app, "sort-lines-desc", "Sort Lines Descending", true, Some("Shift+F5"))?,
+        ],
+    )?;
+
+    // Transform submenu (text transformations)
+    let transform_submenu = Submenu::with_items(
+        app,
+        "Transform",
+        true,
+        &[
+            &MenuItem::with_id(app, "transform-uppercase", "UPPERCASE", true, Some("Ctrl+Shift+U"))?,
+            &MenuItem::with_id(app, "transform-lowercase", "lowercase", true, Some("Ctrl+Shift+L"))?,
+            &MenuItem::with_id(app, "transform-title-case", "Title Case", true, Some("Ctrl+Shift+T"))?,
+            &MenuItem::with_id(app, "transform-toggle-case", "Toggle Case", true, None::<&str>)?,
+        ],
+    )?;
+
     // Find submenu (grouped for cleaner Edit menu)
     let find_submenu = Submenu::with_items(
         app,
@@ -199,6 +231,8 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::select_all(app, Some("Select All"))?,
             &PredefinedMenuItem::separator(app)?,
             &selection_submenu,
+            &lines_submenu,
+            &transform_submenu,
             &find_submenu,
             &cleanup_submenu,
             &PredefinedMenuItem::separator(app)?,
@@ -713,6 +747,38 @@ fn create_menu_with_shortcuts(
         ],
     )?;
 
+    // Lines submenu (line operations)
+    let lines_submenu = Submenu::with_items(
+        app,
+        "Lines",
+        true,
+        &[
+            &MenuItem::with_id(app, "move-line-up", "Move Line Up", true, get_accel("move-line-up", "Alt+Up"))?,
+            &MenuItem::with_id(app, "move-line-down", "Move Line Down", true, get_accel("move-line-down", "Alt+Down"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "duplicate-line", "Duplicate Line", true, get_accel("duplicate-line", "Shift+Alt+Down"))?,
+            &MenuItem::with_id(app, "delete-line", "Delete Line", true, get_accel("delete-line", "CmdOrCtrl+Shift+K"))?,
+            &MenuItem::with_id(app, "join-lines", "Join Lines", true, get_accel("join-lines", "CmdOrCtrl+J"))?,
+            &MenuItem::with_id(app, "remove-blank-lines", "Remove Blank Lines", true, get_accel("remove-blank-lines", ""))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "sort-lines-asc", "Sort Lines Ascending", true, get_accel("sort-lines-asc", "F5"))?,
+            &MenuItem::with_id(app, "sort-lines-desc", "Sort Lines Descending", true, get_accel("sort-lines-desc", "Shift+F5"))?,
+        ],
+    )?;
+
+    // Transform submenu (text transformations)
+    let transform_submenu = Submenu::with_items(
+        app,
+        "Transform",
+        true,
+        &[
+            &MenuItem::with_id(app, "transform-uppercase", "UPPERCASE", true, get_accel("transform-uppercase", "Ctrl+Shift+U"))?,
+            &MenuItem::with_id(app, "transform-lowercase", "lowercase", true, get_accel("transform-lowercase", "Ctrl+Shift+L"))?,
+            &MenuItem::with_id(app, "transform-title-case", "Title Case", true, get_accel("transform-title-case", "Ctrl+Shift+T"))?,
+            &MenuItem::with_id(app, "transform-toggle-case", "Toggle Case", true, get_accel("transform-toggle-case", ""))?,
+        ],
+    )?;
+
     // Find submenu
     let find_submenu = Submenu::with_items(
         app,
@@ -776,6 +842,8 @@ fn create_menu_with_shortcuts(
             &PredefinedMenuItem::select_all(app, Some("Select All"))?,
             &PredefinedMenuItem::separator(app)?,
             &selection_submenu,
+            &lines_submenu,
+            &transform_submenu,
             &find_submenu,
             &line_endings_submenu,
             &cleanup_submenu,

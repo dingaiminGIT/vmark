@@ -1,6 +1,19 @@
 import type { KeyBinding } from "@codemirror/view";
 import type { EditorView } from "@codemirror/view";
 import { toggleBlockComment, selectLine } from "@codemirror/commands";
+import {
+  toUpperCase,
+  toLowerCase,
+  toTitleCase,
+  toggleCase,
+  moveLinesUp,
+  moveLinesDown,
+  duplicateLines,
+  deleteLines,
+  joinLines,
+  sortLinesAscending,
+  sortLinesDescending,
+} from "@/utils/textTransformations";
 import { useUIStore } from "@/stores/uiStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useSearchStore } from "@/stores/searchStore";
@@ -207,6 +220,134 @@ function copySelectionAsHtml(view: EditorView): boolean {
   return true;
 }
 
+// --- Text transformation helpers ---
+
+function transformSelection(view: EditorView, transform: (text: string) => string): boolean {
+  const { from, to } = view.state.selection.main;
+  if (from === to) return false; // No selection
+
+  const selectedText = view.state.doc.sliceString(from, to);
+  const transformed = transform(selectedText);
+
+  if (transformed !== selectedText) {
+    view.dispatch({
+      changes: { from, to, insert: transformed },
+      selection: { anchor: from, head: from + transformed.length },
+    });
+  }
+  return true;
+}
+
+function doTransformUppercase(view: EditorView): boolean {
+  return transformSelection(view, toUpperCase);
+}
+
+function doTransformLowercase(view: EditorView): boolean {
+  return transformSelection(view, toLowerCase);
+}
+
+function doTransformTitleCase(view: EditorView): boolean {
+  return transformSelection(view, toTitleCase);
+}
+
+function doTransformToggleCase(view: EditorView): boolean {
+  return transformSelection(view, toggleCase);
+}
+
+// --- Line operation helpers ---
+
+function doMoveLineUp(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = moveLinesUp(text, from, to);
+
+  if (!result) return false;
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  return true;
+}
+
+function doMoveLineDown(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = moveLinesDown(text, from, to);
+
+  if (!result) return false;
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  return true;
+}
+
+function doDuplicateLine(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = duplicateLines(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  return true;
+}
+
+function doDeleteLine(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = deleteLines(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newCursor },
+  });
+  return true;
+}
+
+function doJoinLines(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.doc.toString();
+  const result = joinLines(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  return true;
+}
+
+function doSortLinesAsc(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  if (from === to) return false; // Need selection for sort
+
+  const text = view.state.doc.toString();
+  const result = sortLinesAscending(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  return true;
+}
+
+function doSortLinesDesc(view: EditorView): boolean {
+  const { from, to } = view.state.selection.main;
+  if (from === to) return false; // Need selection for sort
+
+  const text = view.state.doc.toString();
+  const result = sortLinesDescending(text, from, to);
+
+  view.dispatch({
+    changes: { from: 0, to: text.length, insert: result.newText },
+    selection: { anchor: result.newFrom, head: result.newTo },
+  });
+  return true;
+}
+
 export function buildSourceShortcutKeymap(): KeyBinding[] {
   const shortcuts = useShortcutsStore.getState();
   const bindings: KeyBinding[] = [];
@@ -281,6 +422,21 @@ export function buildSourceShortcutKeymap(): KeyBinding[] {
   bindIfKey(bindings, shortcuts.getShortcut("formatCJKSelection"), formatCJKSelection);
   bindIfKey(bindings, shortcuts.getShortcut("formatCJKFile"), formatCJKFile);
   bindIfKey(bindings, shortcuts.getShortcut("copyAsHTML"), copySelectionAsHtml);
+
+  // --- Line operations ---
+  bindIfKey(bindings, shortcuts.getShortcut("moveLineUp"), doMoveLineUp);
+  bindIfKey(bindings, shortcuts.getShortcut("moveLineDown"), doMoveLineDown);
+  bindIfKey(bindings, shortcuts.getShortcut("duplicateLine"), doDuplicateLine);
+  bindIfKey(bindings, shortcuts.getShortcut("deleteLine"), doDeleteLine);
+  bindIfKey(bindings, shortcuts.getShortcut("joinLines"), doJoinLines);
+  bindIfKey(bindings, shortcuts.getShortcut("sortLinesAsc"), doSortLinesAsc);
+  bindIfKey(bindings, shortcuts.getShortcut("sortLinesDesc"), doSortLinesDesc);
+
+  // --- Text transformations ---
+  bindIfKey(bindings, shortcuts.getShortcut("transformUppercase"), doTransformUppercase);
+  bindIfKey(bindings, shortcuts.getShortcut("transformLowercase"), doTransformLowercase);
+  bindIfKey(bindings, shortcuts.getShortcut("transformTitleCase"), doTransformTitleCase);
+  bindIfKey(bindings, shortcuts.getShortcut("transformToggleCase"), doTransformToggleCase);
 
   return bindings;
 }
