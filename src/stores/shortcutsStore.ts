@@ -128,6 +128,7 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "toggleTerminal", label: "Toggle Terminal", category: "view", defaultKey: "Ctrl-`", menuId: "terminal", description: "Show or hide the integrated terminal", scope: "global" },
 
   // === File ===
+  { id: "newTab", label: "New Tab", category: "file", defaultKey: "Mod-t", description: "Create a new tab", scope: "global" },
   { id: "newFile", label: "New File", category: "file", defaultKey: "Mod-n", menuId: "new", scope: "global" },
   { id: "openFile", label: "Open File", category: "file", defaultKey: "Mod-o", menuId: "open", scope: "global" },
   { id: "openFolder", label: "Open Folder", category: "file", defaultKey: "Mod-Shift-o", menuId: "open-folder", scope: "global" },

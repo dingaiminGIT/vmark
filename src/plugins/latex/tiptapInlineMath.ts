@@ -6,6 +6,8 @@ import { loadKatex } from "./katexLoader";
 import { getMathPreviewView } from "@/plugins/mathPreview/MathPreviewView";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { inlineNodeEditingKey } from "@/plugins/inlineNodeEditing/tiptap";
+import { useShortcutsStore } from "@/stores/shortcutsStore";
+import { matchesShortcutEvent } from "@/utils/shortcutMatch";
 
 /**
  * NodeView for inline math with inline editing support.
@@ -211,11 +213,9 @@ class MathInlineNodeView implements NodeView {
   private handleKeydown = (e: KeyboardEvent) => {
     if (isImeKeyEvent(e)) return;
 
-    // Toggle shortcut: Alt+Cmd+M (Mac) or Alt+Ctrl+M (Win/Linux) - unwrap math
-    // Use e.code instead of e.key because Alt changes the character on Mac
-    const isMac = navigator.platform.toLowerCase().includes("mac");
-    const modKey = isMac ? e.metaKey : e.ctrlKey;
-    if (e.code === "KeyM" && e.altKey && modKey) {
+    // Toggle shortcut: unwrap math (uses inlineMath shortcut from store)
+    const inlineMathKey = useShortcutsStore.getState().getShortcut("inlineMath");
+    if (matchesShortcutEvent(e, inlineMathKey)) {
       e.preventDefault();
       this.unwrapToText();
       return;

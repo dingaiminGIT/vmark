@@ -2,9 +2,9 @@
  * Tab Shortcuts Hook
  *
  * Handles keyboard shortcuts for tab and UI operations:
- * - Cmd+T: New tab
- * - Cmd+W: Close current tab (with dirty check)
- * - F7: Toggle status bar visibility (mutually exclusive with FindBar/UniversalToolbar)
+ * - New tab (configurable, default: Mod+T)
+ * - Mod+W: Close current tab (with dirty check) - intentionally hardcoded for layered handling
+ * - Toggle status bar (configurable, default: F7)
  */
 
 import { useEffect } from "react";
@@ -29,9 +29,11 @@ export function useTabShortcuts() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isImeKeyEvent(e)) return;
       const isMeta = e.metaKey || e.ctrlKey;
+      const shortcuts = useShortcutsStore.getState();
 
-      // Cmd+T: New tab (editor-scoped)
-      if (isMeta && e.key === "t") {
+      // New tab (uses newTab shortcut from store)
+      const newTabKey = shortcuts.getShortcut("newTab");
+      if (matchesShortcutEvent(e, newTabKey)) {
         if (isTerminalFocused()) return; // Let terminal handle it
         e.preventDefault();
         const tabId = useTabStore.getState().createTab(windowLabel, null);
