@@ -220,7 +220,9 @@ jobs:
       - name: Trigger Homebrew tap update
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          # Use GITHUB_TOKEN for workflow dispatch in same repo
+          # (HOMEBREW_TAP_TOKEN only has permissions for homebrew-tap repo)
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Extract version number without 'v' prefix
           VERSION="${{ needs.create-release.outputs.version }}"
