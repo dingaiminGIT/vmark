@@ -2,30 +2,42 @@
  * AI Suggestion Styles
  *
  * Visual treatment for AI-generated content suggestions.
- * - Insert/Replace: Wave underline only (theme color)
- * - Delete: Red strikethrough
+ * UNDO/REDO SAFE: Document is NOT modified until user accepts.
+ *
+ * - Insert: Ghost text preview (not in document)
+ * - Replace: Original with strikethrough + ghost text for new
+ * - Delete: Original with strikethrough
  * - Buttons: Icon only, no background
  */
 
-/* Base suggestion styles */
+/* Ghost text - preview of content to be inserted */
+.ai-suggestion-ghost {
+  color: var(--primary-color);
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.ai-suggestion-ghost-focused {
+  opacity: 0.8;
+}
+
+/* Containers for widget decorations */
+.ai-suggestion-insert-container,
+.ai-suggestion-replace-container {
+  display: inline;
+}
+
+/* Base suggestion styles (for inline decorations) */
 .ai-suggestion {
   border-radius: 2px;
 }
 
-/* Insert suggestion - wave underline, theme color */
-.ai-suggestion-insert {
-  text-decoration: underline wavy;
-  text-decoration-color: var(--primary-color);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
-
-/* Replace suggestion - wave underline, theme color */
+/* Replace suggestion - strikethrough on original text */
 .ai-suggestion-replace {
-  text-decoration: underline wavy;
-  text-decoration-color: var(--primary-color);
+  text-decoration: line-through wavy;
+  text-decoration-color: var(--error-color);
   text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+  opacity: 0.6;
 }
 
 /* Delete suggestion - red wavy strikethrough */

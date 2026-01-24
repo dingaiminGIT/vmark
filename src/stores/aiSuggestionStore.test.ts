@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { useAiSuggestionStore } from "./aiSuggestionStore";
+import { AI_SUGGESTION_EVENTS } from "@/plugins/aiSuggestion/types";
 
 describe("aiSuggestionStore", () => {
   beforeEach(() => {
@@ -87,14 +88,14 @@ describe("aiSuggestionStore", () => {
 
     it("dispatches ai-suggestion:added event", () => {
       const handler = vi.fn();
-      window.addEventListener("ai-suggestion:added", handler);
+      window.addEventListener(AI_SUGGESTION_EVENTS.ADDED, handler);
 
       const { addSuggestion } = useAiSuggestionStore.getState();
       addSuggestion({ type: "insert", from: 0, to: 5 });
 
       expect(handler).toHaveBeenCalledTimes(1);
 
-      window.removeEventListener("ai-suggestion:added", handler);
+      window.removeEventListener(AI_SUGGESTION_EVENTS.ADDED, handler);
     });
   });
 
@@ -111,7 +112,7 @@ describe("aiSuggestionStore", () => {
 
     it("dispatches ai-suggestion:accept event", () => {
       const handler = vi.fn();
-      window.addEventListener("ai-suggestion:accept", handler);
+      window.addEventListener(AI_SUGGESTION_EVENTS.ACCEPT, handler);
 
       const { addSuggestion, acceptSuggestion } = useAiSuggestionStore.getState();
       const id = addSuggestion({ type: "insert", from: 0, to: 5 });
@@ -119,7 +120,7 @@ describe("aiSuggestionStore", () => {
 
       expect(handler).toHaveBeenCalledTimes(1);
 
-      window.removeEventListener("ai-suggestion:accept", handler);
+      window.removeEventListener(AI_SUGGESTION_EVENTS.ACCEPT, handler);
     });
 
     it("updates focus to next suggestion", () => {
@@ -147,7 +148,7 @@ describe("aiSuggestionStore", () => {
 
     it("dispatches ai-suggestion:reject event", () => {
       const handler = vi.fn();
-      window.addEventListener("ai-suggestion:reject", handler);
+      window.addEventListener(AI_SUGGESTION_EVENTS.REJECT, handler);
 
       const { addSuggestion, rejectSuggestion } = useAiSuggestionStore.getState();
       const id = addSuggestion({ type: "insert", from: 0, to: 5 });
@@ -155,7 +156,7 @@ describe("aiSuggestionStore", () => {
 
       expect(handler).toHaveBeenCalledTimes(1);
 
-      window.removeEventListener("ai-suggestion:reject", handler);
+      window.removeEventListener(AI_SUGGESTION_EVENTS.REJECT, handler);
     });
   });
 
@@ -252,7 +253,7 @@ describe("aiSuggestionStore", () => {
 
     it("dispatches ai-suggestion:focus-changed event", () => {
       const handler = vi.fn();
-      window.addEventListener("ai-suggestion:focus-changed", handler);
+      window.addEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handler);
 
       const { addSuggestion, focusSuggestion } = useAiSuggestionStore.getState();
       const id = addSuggestion({ type: "insert", from: 0, to: 5 });
@@ -261,7 +262,7 @@ describe("aiSuggestionStore", () => {
       // One from addSuggestion auto-focus, potentially one from explicit focus
       expect(handler).toHaveBeenCalled();
 
-      window.removeEventListener("ai-suggestion:focus-changed", handler);
+      window.removeEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handler);
     });
   });
 

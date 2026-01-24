@@ -2,9 +2,9 @@
  * MCP Bridge - AI Suggestion Handlers
  *
  * Wraps AI-generated content modifications in suggestions requiring user approval.
+ * IMPORTANT: No document modifications until user accepts - preserves undo/redo integrity.
  */
 
-import { parseMarkdown } from "@/utils/markdownPipeline";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { respond, getEditor } from "./utils";
 
@@ -23,7 +23,8 @@ export async function handleSetContentBlocked(id: string): Promise<void> {
 
 /**
  * Handle document.insertAtCursor with suggestion wrapping.
- * Inserts content but marks it as a suggestion requiring approval.
+ * Does NOT modify document - stores suggestion for preview decoration.
+ * Document is only modified when user accepts.
  */
 export async function handleInsertAtCursorWithSuggestion(
   id: string,
@@ -38,21 +39,15 @@ export async function handleInsertAtCursorWithSuggestion(
       throw new Error("text must be a string");
     }
 
-    // Get cursor position before insert
-    const fromPos = editor.state.selection.from;
+    // Get cursor position - this is where content will be inserted on accept
+    const insertPos = editor.state.selection.from;
 
-    // Parse and insert the content
-    const parsedDoc = parseMarkdown(editor.state.schema, text);
-    editor.commands.insertContent(parsedDoc.content.toJSON());
-
-    // Get cursor position after insert to determine the range
-    const toPos = editor.state.selection.from;
-
-    // Create suggestion for the inserted content
+    // Create suggestion WITHOUT modifying the document
+    // Content will be shown as ghost text decoration
     const suggestionId = useAiSuggestionStore.getState().addSuggestion({
       type: "insert",
-      from: fromPos,
-      to: toPos,
+      from: insertPos,
+      to: insertPos, // Same position - insert point
       newContent: text,
     });
 
@@ -61,8 +56,8 @@ export async function handleInsertAtCursorWithSuggestion(
       success: true,
       data: {
         suggestionId,
-        message: "Content inserted as suggestion. Awaiting user approval.",
-        range: { from: fromPos, to: toPos },
+        message: "Content staged as suggestion. Awaiting user approval.",
+        position: insertPos,
       },
     });
   } catch (error) {
@@ -76,7 +71,8 @@ export async function handleInsertAtCursorWithSuggestion(
 
 /**
  * Handle selection.replace with suggestion wrapping.
- * Replaces selection but marks it as a suggestion requiring approval.
+ * Does NOT modify document - stores both original and new content.
+ * Original shown with strikethrough, new shown as ghost text.
  */
 export async function handleSelectionReplaceWithSuggestion(
   id: string,
@@ -97,20 +93,15 @@ export async function handleSelectionReplaceWithSuggestion(
       return handleInsertAtCursorWithSuggestion(id, { text });
     }
 
-    // Get original content before replacing
+    // Get original content that would be replaced
     const originalContent = editor.state.doc.textBetween(from, to, "\n");
 
-    // Replace the content
-    editor.chain().focus().deleteRange({ from, to }).insertContentAt(from, text).run();
-
-    // Calculate new range (original from + length of new text)
-    const newTo = from + text.length;
-
-    // Create suggestion for the replacement
+    // Create suggestion WITHOUT modifying the document
+    // Original content shown with strikethrough, new content as ghost text
     const suggestionId = useAiSuggestionStore.getState().addSuggestion({
       type: "replace",
       from,
-      to: newTo,
+      to,
       newContent: text,
       originalContent,
     });
@@ -120,8 +111,8 @@ export async function handleSelectionReplaceWithSuggestion(
       success: true,
       data: {
         suggestionId,
-        message: "Content replaced as suggestion. Awaiting user approval.",
-        range: { from, to: newTo },
+        message: "Replacement staged as suggestion. Awaiting user approval.",
+        range: { from, to },
         originalContent,
       },
     });
@@ -151,7 +142,7 @@ export async function handleSelectionDeleteWithSuggestion(id: string): Promise<v
     // Get content that would be deleted
     const originalContent = editor.state.doc.textBetween(from, to, "\n");
 
-    // DO NOT delete - just mark as suggestion with strikethrough decoration
+    // Create suggestion - content shown with strikethrough decoration
     const suggestionId = useAiSuggestionStore.getState().addSuggestion({
       type: "delete",
       from,

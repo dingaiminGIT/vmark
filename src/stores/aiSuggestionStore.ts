@@ -7,6 +7,7 @@
 
 import { create } from "zustand";
 import type { AiSuggestion, SuggestionType } from "@/plugins/aiSuggestion/types";
+import { AI_SUGGESTION_EVENTS } from "@/plugins/aiSuggestion/types";
 
 interface AiSuggestionState {
   suggestions: Map<string, AiSuggestion>;
@@ -93,7 +94,7 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
 
       // Dispatch event for plugin to create decorations
       window.dispatchEvent(
-        new CustomEvent("ai-suggestion:added", { detail: { id, suggestion } })
+        new CustomEvent(AI_SUGGESTION_EVENTS.ADDED, { detail: { id, suggestion } })
       );
 
       return id;
@@ -105,7 +106,7 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
 
       // Dispatch event BEFORE removing from store so plugin can apply the change
       window.dispatchEvent(
-        new CustomEvent("ai-suggestion:accept", { detail: { id, suggestion } })
+        new CustomEvent(AI_SUGGESTION_EVENTS.ACCEPT, { detail: { id, suggestion } })
       );
 
       set((state) => {
@@ -136,7 +137,7 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
 
       // Dispatch event BEFORE removing from store so plugin can restore content
       window.dispatchEvent(
-        new CustomEvent("ai-suggestion:reject", { detail: { id, suggestion } })
+        new CustomEvent(AI_SUGGESTION_EVENTS.REJECT, { detail: { id, suggestion } })
       );
 
       set((state) => {
@@ -181,7 +182,7 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
       set({ focusedSuggestionId: id });
       if (id) {
         window.dispatchEvent(
-          new CustomEvent("ai-suggestion:focus-changed", { detail: { id } })
+          new CustomEvent(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, { detail: { id } })
         );
       }
     },
@@ -226,7 +227,7 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
 
     clearAll: () => {
       set({ suggestions: new Map(), focusedSuggestionId: null });
-      window.dispatchEvent(new CustomEvent("ai-suggestion:cleared"));
+      window.dispatchEvent(new CustomEvent(AI_SUGGESTION_EVENTS.CLEARED));
     },
   })
 );

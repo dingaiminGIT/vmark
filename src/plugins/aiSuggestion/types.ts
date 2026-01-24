@@ -6,6 +6,18 @@
 
 export type SuggestionType = "insert" | "replace" | "delete";
 
+/**
+ * Event names for AI suggestion system.
+ * Use these constants instead of magic strings.
+ */
+export const AI_SUGGESTION_EVENTS = {
+  ADDED: "ai-suggestion:added",
+  ACCEPT: "ai-suggestion:accept",
+  REJECT: "ai-suggestion:reject",
+  FOCUS_CHANGED: "ai-suggestion:focus-changed",
+  CLEARED: "ai-suggestion:cleared",
+} as const;
+
 export interface AiSuggestion {
   /** Unique identifier for this suggestion */
   id: string;

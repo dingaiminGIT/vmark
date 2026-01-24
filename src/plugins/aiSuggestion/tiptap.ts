@@ -2,7 +2,11 @@
  * AI Suggestion Tiptap Extension
  *
  * Provides decorations for AI suggestions and handles accept/reject transactions.
- * Follows the pattern from search/tiptap.ts for Zustand + decoration integration.
+ *
+ * UNDO/REDO SAFE: Document is NOT modified until user accepts.
+ * - Insert: Shows ghost text widget at position
+ * - Replace: Shows original with strikethrough + ghost text for new
+ * - Delete: Shows original with strikethrough
  */
 
 import { Extension } from "@tiptap/core";
@@ -11,10 +15,12 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { runOrQueueProseMirrorAction } from "@/utils/imeGuard";
 import type { AiSuggestion } from "./types";
+import { AI_SUGGESTION_EVENTS } from "./types";
+
+const aiSuggestionPluginKey = new PluginKey("aiSuggestion");
 
 /**
  * Create Lucide-style SVG icon element.
- * Icons are 24x24 viewBox, sized via CSS.
  */
 function createIcon(pathD: string | string[]): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -36,14 +42,63 @@ function createIcon(pathD: string | string[]): SVGSVGElement {
 const ICON_CHECK = "M20 6 9 17l-5-5";
 const ICON_X = ["M18 6 6 18", "m6 6 12 12"];
 
-const aiSuggestionPluginKey = new PluginKey("aiSuggestion");
+/**
+ * Create ghost text element for insert/replace preview.
+ */
+function createGhostText(text: string, isFocused: boolean): HTMLSpanElement {
+  const span = document.createElement("span");
+  span.className = `ai-suggestion-ghost${isFocused ? " ai-suggestion-ghost-focused" : ""}`;
+  span.textContent = text;
+  return span;
+}
 
 /**
- * Get decoration class based on suggestion type and focus state.
+ * Create accept/reject buttons container.
+ */
+function createButtons(suggestion: AiSuggestion): HTMLSpanElement {
+  const container = document.createElement("span");
+  container.className = "ai-suggestion-buttons";
+
+  // Accept button with Check icon
+  const acceptBtn = document.createElement("button");
+  acceptBtn.className = "ai-suggestion-btn ai-suggestion-btn-accept";
+  acceptBtn.title = "Accept (Enter)";
+  acceptBtn.appendChild(createIcon(ICON_CHECK));
+  acceptBtn.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    useAiSuggestionStore.getState().acceptSuggestion(suggestion.id);
+  };
+
+  // Reject button with X icon
+  const rejectBtn = document.createElement("button");
+  rejectBtn.className = "ai-suggestion-btn ai-suggestion-btn-reject";
+  rejectBtn.title = "Reject (Escape)";
+  rejectBtn.appendChild(createIcon(ICON_X));
+  rejectBtn.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    useAiSuggestionStore.getState().rejectSuggestion(suggestion.id);
+  };
+
+  container.appendChild(acceptBtn);
+  container.appendChild(rejectBtn);
+  return container;
+}
+
+/**
+ * Get decoration class for delete/replace original text.
  */
 function getDecorationClass(suggestion: AiSuggestion, isFocused: boolean): string {
   const baseClass = `ai-suggestion ai-suggestion-${suggestion.type}`;
   return isFocused ? `${baseClass} ai-suggestion-focused` : baseClass;
+}
+
+/**
+ * Check if suggestion positions are valid within document bounds.
+ */
+function isValidPosition(suggestion: AiSuggestion, docSize: number): boolean {
+  return suggestion.from >= 0 && suggestion.to <= docSize && suggestion.from <= suggestion.to;
 }
 
 export const aiSuggestionExtension = Extension.create({
@@ -129,57 +184,89 @@ export const aiSuggestionExtension = Extension.create({
             const { focusedSuggestionId, suggestions } = suggestionState;
 
             for (const suggestion of suggestions.values()) {
-              // Validate positions are within document bounds
-              if (suggestion.from < 0 || suggestion.to > state.doc.content.size) {
-                continue;
-              }
-
               const isFocused = suggestion.id === focusedSuggestionId;
-              const className = getDecorationClass(suggestion, isFocused);
+              const docSize = state.doc.content.size;
 
-              // Create inline decoration for the suggestion range
-              decorations.push(
-                Decoration.inline(suggestion.from, suggestion.to, {
-                  class: className,
-                  "data-suggestion-id": suggestion.id,
-                  "data-suggestion-type": suggestion.type,
-                })
-              );
+              // Skip suggestions with invalid positions
+              if (!isValidPosition(suggestion, docSize)) continue;
 
-              // Add widget decoration for accept/reject buttons on focused suggestion
-              if (isFocused) {
-                decorations.push(
-                  Decoration.widget(suggestion.to, () => {
-                    const container = document.createElement("span");
-                    container.className = "ai-suggestion-buttons";
+              switch (suggestion.type) {
+                case "insert": {
+                  // Insert: Show ghost text widget at position
+                  // No inline decoration - document unchanged
+                  decorations.push(
+                    Decoration.widget(suggestion.from, () => {
+                      const container = document.createElement("span");
+                      container.className = "ai-suggestion-insert-container";
+                      container.setAttribute("data-suggestion-id", suggestion.id);
 
-                    // Accept button with Check icon
-                    const acceptBtn = document.createElement("button");
-                    acceptBtn.className = "ai-suggestion-btn ai-suggestion-btn-accept";
-                    acceptBtn.title = "Accept (Enter)";
-                    acceptBtn.appendChild(createIcon(ICON_CHECK));
-                    acceptBtn.onclick = (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      useAiSuggestionStore.getState().acceptSuggestion(suggestion.id);
-                    };
+                      // Ghost text preview
+                      if (suggestion.newContent) {
+                        container.appendChild(createGhostText(suggestion.newContent, isFocused));
+                      }
 
-                    // Reject button with X icon
-                    const rejectBtn = document.createElement("button");
-                    rejectBtn.className = "ai-suggestion-btn ai-suggestion-btn-reject";
-                    rejectBtn.title = "Reject (Escape)";
-                    rejectBtn.appendChild(createIcon(ICON_X));
-                    rejectBtn.onclick = (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      useAiSuggestionStore.getState().rejectSuggestion(suggestion.id);
-                    };
+                      // Buttons for focused suggestion
+                      if (isFocused) {
+                        container.appendChild(createButtons(suggestion));
+                      }
 
-                    container.appendChild(acceptBtn);
-                    container.appendChild(rejectBtn);
-                    return container;
-                  })
-                );
+                      return container;
+                    }, { side: 0 })
+                  );
+                  break;
+                }
+
+                case "replace": {
+                  // Replace: Strikethrough original + ghost text for new
+                  // Strikethrough decoration on original text
+                  decorations.push(
+                    Decoration.inline(suggestion.from, suggestion.to, {
+                      class: getDecorationClass(suggestion, isFocused),
+                      "data-suggestion-id": suggestion.id,
+                      "data-suggestion-type": suggestion.type,
+                    })
+                  );
+
+                  // Ghost text widget after original
+                  decorations.push(
+                    Decoration.widget(suggestion.to, () => {
+                      const container = document.createElement("span");
+                      container.className = "ai-suggestion-replace-container";
+
+                      // Ghost text for new content
+                      if (suggestion.newContent) {
+                        container.appendChild(createGhostText(suggestion.newContent, isFocused));
+                      }
+
+                      // Buttons for focused suggestion
+                      if (isFocused) {
+                        container.appendChild(createButtons(suggestion));
+                      }
+
+                      return container;
+                    }, { side: 0 })
+                  );
+                  break;
+                }
+
+                case "delete": {
+                  // Delete: Strikethrough decoration only
+                  decorations.push(
+                    Decoration.inline(suggestion.from, suggestion.to, {
+                      class: getDecorationClass(suggestion, isFocused),
+                      "data-suggestion-id": suggestion.id,
+                      "data-suggestion-type": suggestion.type,
+                    })
+                  );
+
+                  // Buttons for focused suggestion
+                  if (isFocused) {
+                    decorations.push(
+                      Decoration.widget(suggestion.to, () => createButtons(suggestion), { side: 0 })
+                    );
+                  }
+                  break;
+                }
               }
             }
 
@@ -202,33 +289,8 @@ export const aiSuggestionExtension = Extension.create({
         },
 
         view(editorView) {
-          // Handle accept event - apply the change
+          // Handle accept event - NOW we modify the document
           const handleAccept = (event: Event) => {
-            const { suggestion } = (event as CustomEvent).detail as {
-              id: string;
-              suggestion: AiSuggestion;
-            };
-
-            runOrQueueProseMirrorAction(editorView, () => {
-              switch (suggestion.type) {
-                case "insert":
-                case "replace":
-                  // Content already in document, just need to refresh decorations
-                  editorView.dispatch(editorView.state.tr);
-                  break;
-
-                case "delete": {
-                  // Now actually delete the content
-                  const tr = editorView.state.tr.delete(suggestion.from, suggestion.to);
-                  editorView.dispatch(tr);
-                  break;
-                }
-              }
-            });
-          };
-
-          // Handle reject event - restore original state
-          const handleReject = (event: Event) => {
             const { suggestion } = (event as CustomEvent).detail as {
               id: string;
               suggestion: AiSuggestion;
@@ -239,28 +301,40 @@ export const aiSuggestionExtension = Extension.create({
 
               switch (suggestion.type) {
                 case "insert": {
-                  // Delete the inserted content
-                  const deleteTr = state.tr.delete(suggestion.from, suggestion.to);
-                  editorView.dispatch(deleteTr);
-                  break;
-                }
-
-                case "replace": {
-                  // Delete new content and restore original
-                  if (suggestion.originalContent) {
-                    const tr = state.tr
-                      .delete(suggestion.from, suggestion.to)
-                      .insertText(suggestion.originalContent, suggestion.from);
+                  // Insert the new content at the stored position
+                  if (suggestion.newContent) {
+                    const tr = state.tr.insertText(suggestion.newContent, suggestion.from);
                     editorView.dispatch(tr);
                   }
                   break;
                 }
 
-                case "delete":
-                  // Content was never deleted, just refresh decorations
-                  editorView.dispatch(state.tr);
+                case "replace": {
+                  // Delete original and insert new content
+                  if (suggestion.newContent) {
+                    const tr = state.tr
+                      .delete(suggestion.from, suggestion.to)
+                      .insertText(suggestion.newContent, suggestion.from);
+                    editorView.dispatch(tr);
+                  }
                   break;
+                }
+
+                case "delete": {
+                  // Delete the content
+                  const tr = state.tr.delete(suggestion.from, suggestion.to);
+                  editorView.dispatch(tr);
+                  break;
+                }
               }
+            });
+          };
+
+          // Handle reject event - just refresh decorations (no doc changes)
+          const handleReject = () => {
+            runOrQueueProseMirrorAction(editorView, () => {
+              // Trigger decoration refresh
+              editorView.dispatch(editorView.state.tr);
             });
           };
 
@@ -293,16 +367,16 @@ export const aiSuggestionExtension = Extension.create({
             }
           };
 
-          window.addEventListener("ai-suggestion:accept", handleAccept);
-          window.addEventListener("ai-suggestion:reject", handleReject);
-          window.addEventListener("ai-suggestion:focus-changed", handleFocusChanged);
+          window.addEventListener(AI_SUGGESTION_EVENTS.ACCEPT, handleAccept);
+          window.addEventListener(AI_SUGGESTION_EVENTS.REJECT, handleReject);
+          window.addEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handleFocusChanged);
 
           return {
             destroy() {
               unsubscribe();
-              window.removeEventListener("ai-suggestion:accept", handleAccept);
-              window.removeEventListener("ai-suggestion:reject", handleReject);
-              window.removeEventListener("ai-suggestion:focus-changed", handleFocusChanged);
+              window.removeEventListener(AI_SUGGESTION_EVENTS.ACCEPT, handleAccept);
+              window.removeEventListener(AI_SUGGESTION_EVENTS.REJECT, handleReject);
+              window.removeEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handleFocusChanged);
             },
           };
         },
