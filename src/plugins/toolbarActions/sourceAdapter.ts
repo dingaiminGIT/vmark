@@ -484,13 +484,13 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
     case "formatCJKFile":
       return handleFormatCJKFile(view);
     case "removeTrailingSpaces":
-      return handleRemoveTrailingSpaces();
+      return handleRemoveTrailingSpaces(view);
     case "collapseBlankLines":
-      return handleCollapseBlankLines();
+      return handleCollapseBlankLines(view);
     case "lineEndingsLF":
-      return handleLineEndings("lf");
+      return handleLineEndings(view, "lf");
     case "lineEndingsCRLF":
-      return handleLineEndings("crlf");
+      return handleLineEndings(view, "crlf");
 
     default:
       return false;
@@ -720,41 +720,55 @@ function handleFormatCJKFile(view: EditorView): boolean {
 
 // --- Text cleanup helpers ---
 
-function getActiveDocument() {
+/**
+ * Apply a full-document transformation via proper CodeMirror transaction.
+ * This preserves undo/redo history and reads directly from editor state.
+ */
+function applyFullDocumentTransform(
+  view: EditorView,
+  transform: (content: string) => string
+): boolean {
+  const content = view.state.doc.toString();
+  const transformed = transform(content);
+
+  if (transformed === content) {
+    return true;
+  }
+
+  // Preserve cursor position as best as possible
+  const cursorPos = view.state.selection.main.head;
+  const newCursorPos = Math.min(cursorPos, transformed.length);
+
+  view.dispatch({
+    changes: { from: 0, to: content.length, insert: transformed },
+    selection: { anchor: newCursorPos },
+  });
+
+  return true;
+}
+
+function handleRemoveTrailingSpaces(view: EditorView): boolean {
+  const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
+  return applyFullDocumentTransform(view, (content) =>
+    removeTrailingSpaces(content, { preserveTwoSpaceHardBreaks })
+  );
+}
+
+function handleCollapseBlankLines(view: EditorView): boolean {
+  return applyFullDocumentTransform(view, collapseNewlines);
+}
+
+function handleLineEndings(view: EditorView, target: "lf" | "crlf"): boolean {
   const windowLabel = getWindowLabel();
   const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
-  if (!tabId) return null;
-  return { tabId, doc: useDocumentStore.getState().getDocument(tabId) };
-}
 
-function handleRemoveTrailingSpaces(): boolean {
-  const active = getActiveDocument();
-  if (!active?.doc) return false;
-  const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
-  const formatted = removeTrailingSpaces(active.doc.content, { preserveTwoSpaceHardBreaks });
-  if (formatted !== active.doc.content) {
-    useDocumentStore.getState().setContent(active.tabId, formatted);
-  }
-  return true;
-}
+  // Apply the transformation via proper transaction
+  applyFullDocumentTransform(view, (content) => normalizeLineEndings(content, target));
 
-function handleCollapseBlankLines(): boolean {
-  const active = getActiveDocument();
-  if (!active?.doc) return false;
-  const formatted = collapseNewlines(active.doc.content);
-  if (formatted !== active.doc.content) {
-    useDocumentStore.getState().setContent(active.tabId, formatted);
+  // Update metadata in store (this doesn't affect editor state)
+  if (tabId) {
+    useDocumentStore.getState().setLineMetadata(tabId, { lineEnding: target });
   }
-  return true;
-}
 
-function handleLineEndings(target: "lf" | "crlf"): boolean {
-  const active = getActiveDocument();
-  if (!active?.doc) return false;
-  const normalized = normalizeLineEndings(active.doc.content, target);
-  if (normalized !== active.doc.content) {
-    useDocumentStore.getState().setContent(active.tabId, normalized);
-  }
-  useDocumentStore.getState().setLineMetadata(active.tabId, { lineEnding: target });
   return true;
 }
