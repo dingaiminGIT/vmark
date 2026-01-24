@@ -397,3 +397,27 @@
   vertical-align: -2px;
   margin-right: 2px;
 }
+
+/* ============================================
+   BADGE/PILL HOVER TEXT CONTRAST
+   Ensures proper text contrast when badges have
+   brand-colored backgrounds on hover
+   ============================================ */
+
+/* Light themes: white text on brand background */
+:root {
+  --badge-hover-text: #fff;
+}
+
+/* Dark/night themes: dark text on bright brand background */
+.dark,
+[data-vmark-theme="night"] {
+  --badge-hover-text: #1a1a1a;
+}
+
+/* Apply to any element that uses brand background on hover */
+a[class*="badge"]:hover,
+a[class*="pill"]:hover,
+a[class*="tag"]:hover {
+  color: var(--badge-hover-text) !important;
+}

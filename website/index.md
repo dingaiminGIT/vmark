@@ -133,7 +133,12 @@ features:
 
 .tech-badge:hover {
   background: var(--vp-c-brand-1);
-  color: var(--vp-c-white);
+  color: #fff !important;
+}
+
+/* Dark mode: brand is bright blue, needs dark text for contrast */
+.dark .tech-badge:hover {
+  color: #1a1a1a !important;
 }
 </style>
 
