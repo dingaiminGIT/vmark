@@ -39,6 +39,26 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 | Outdent | `Mod + [` |
 | Horizontal Line | `Alt + Mod + -` |
 
+## Line Operations
+
+| Action | Shortcut |
+|--------|----------|
+| Move Line Up | `Alt + Up` |
+| Move Line Down | `Alt + Down` |
+| Duplicate Line | `Shift + Alt + Down` |
+| Delete Line | `Mod + Shift + K` |
+| Join Lines | `Mod + J` |
+| Sort Lines Ascending | `F5` |
+| Sort Lines Descending | `Shift + F5` |
+
+## Text Transformations
+
+| Action | Shortcut |
+|--------|----------|
+| UPPERCASE | `Ctrl + Shift + U` |
+| lowercase | `Ctrl + Shift + L` |
+| Title Case | `Ctrl + Shift + T` |
+
 ## Insert
 
 | Action | Shortcut |

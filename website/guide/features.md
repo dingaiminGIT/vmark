@@ -34,6 +34,17 @@ Toggle between modes with `Cmd/Ctrl + /`.
 - Links with preview popups
 - Clear formatting command
 
+### Text Transformations
+
+Quickly change text case via Format → Transform:
+
+| Transform | Shortcut |
+|-----------|----------|
+| UPPERCASE | `Ctrl+Shift+U` |
+| lowercase | `Ctrl+Shift+L` |
+| Title Case | `Ctrl+Shift+T` |
+| Toggle Case | — |
+
 ### Block Elements
 
 - Headings 1-6 with easy shortcuts
@@ -42,6 +53,21 @@ Toggle between modes with `Cmd/Ctrl + /`.
 - Ordered, unordered, and task lists
 - Horizontal rules
 - Tables with full editing support
+
+### Line Operations
+
+Powerful line manipulation via Block → Lines:
+
+| Action | Shortcut |
+|--------|----------|
+| Move Line Up | `Alt+Up` |
+| Move Line Down | `Alt+Down` |
+| Duplicate Line | `Shift+Alt+Down` |
+| Delete Line | `Mod+Shift+K` |
+| Join Lines | `Mod+J` |
+| Remove Blank Lines | — |
+| Sort Lines Ascending | `F5` |
+| Sort Lines Descending | `Shift+F5` |
 
 ## Tables
 
@@ -151,12 +177,38 @@ Keep the active line centered on screen for a typewriter-like experience.
 
 Toggle soft line wrapping in the editor.
 
+## Tools Menu
+
+The Tools menu provides utilities for text cleanup and formatting:
+
+### Text Cleanup
+
+- **Remove Trailing Spaces**: Strip whitespace from line endings
+- **Collapse Blank Lines**: Reduce multiple blank lines to single
+
+### CJK Formatting
+
+Built-in Chinese/Japanese/Korean text formatting tools. [Learn more →](/guide/cjk-formatting)
+
+### Image Cleanup
+
+- **Clean Up Unused Images**: Find and remove orphaned images from your assets folder
+
+## Auto-Update
+
+VMark automatically checks for updates and can download and install them in-app:
+
+- Automatic update checking on launch
+- One-click update installation
+- Release notes preview before updating
+
 ## Workspace Support
 
 - Open folders as workspaces
 - File tree navigation in sidebar
 - Quick file switching
 - Recent files tracking
+- Window size and position remembered across sessions
 
 ## Customization
 

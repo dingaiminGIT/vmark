@@ -75,10 +75,6 @@ sudo rpm -i vmark-*.rpm
 
 All releases are built automatically via GitHub Actions. You can verify the authenticity by checking the release on our [GitHub Releases page](https://github.com/xiaolai/vmark/releases).
 
-## Previous Versions
-
-Need an older version? Visit our [GitHub Releases page](https://github.com/xiaolai/vmark/releases) to download previous versions.
-
 ## Building from Source
 
 For developers who want to build VMark from source:

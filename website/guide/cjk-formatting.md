@@ -118,11 +118,39 @@ The following content is **not** affected by formatting:
 
 ## Configuration
 
-CJK formatting options can be configured in Settings → Markdown:
+CJK formatting options can be configured in Settings → Language:
 
 - Enable/disable specific rules
 - Set punctuation repetition limit
 - Choose quote style (standard or corner brackets)
+
+---
+
+## Smart Quote Conversion
+
+VMark can automatically convert straight quotes to typographically correct smart quotes. This feature works during CJK formatting and supports multiple quote styles.
+
+### Quote Styles
+
+| Style | Double Quotes | Single Quotes |
+|-------|---------------|---------------|
+| Curly | "text" | 'text' |
+| Corner Brackets | 「text」 | 『text』 |
+| Guillemets | «text» | ‹text› |
+
+### Examples
+
+| Before | After (Curly) |
+|--------|---------------|
+| "hello" | "hello" |
+| 'world' | 'world' |
+| it's | it's |
+
+Apostrophes in contractions (like "it's" or "don't") are preserved correctly.
+
+### Configuration
+
+Enable Smart Quote Conversion in Settings → Language → CJK Formatting. You can also select your preferred quote style from the dropdown menu.
 
 ---
 
