@@ -18,6 +18,7 @@ import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { useTabStore } from "@/stores/tabStore";
 import { collapseNewlines, formatMarkdown, formatSelection, removeTrailingSpaces } from "@/lib/cjkFormatter";
 import { normalizeLineEndings, resolveHardBreakStyle } from "@/utils/linebreaks";
+import { parseMarkdown, serializeMarkdown } from "@/utils/markdownPipeline";
 import { readClipboardImagePath } from "@/utils/clipboardImagePath";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
 import { withReentryGuard } from "@/utils/reentryGuard";
@@ -797,15 +798,15 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
     case "formatCJK":
       return handleFormatCJK(context);
     case "formatCJKFile":
-      return handleFormatCJKFile();
+      return handleFormatCJKFile(context);
     case "removeTrailingSpaces":
-      return handleRemoveTrailingSpaces();
+      return handleRemoveTrailingSpaces(context);
     case "collapseBlankLines":
-      return handleCollapseBlankLines();
+      return handleCollapseBlankLines(context);
     case "lineEndingsLF":
-      return handleLineEndings("lf");
+      return handleLineEndings(context, "lf");
     case "lineEndingsCRLF":
-      return handleLineEndings("crlf");
+      return handleLineEndings(context, "crlf");
     case "selectWord":
       return view ? selectWordInView(view) : false;
     case "selectLine":
@@ -821,37 +822,56 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
 
 // --- CJK formatting helpers ---
 
+function getSerializeOptions(): { preserveLineBreaks: boolean; hardBreakStyle: "twoSpaces" | "backslash" } {
+  const windowLabel = getWindowLabel();
+  const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
+  const doc = tabId ? useDocumentStore.getState().getDocument(tabId) : null;
+  const preserveLineBreaks = useSettingsStore.getState().markdown.preserveLineBreaks;
+  const hardBreakStyleOnSave = useSettingsStore.getState().markdown.hardBreakStyleOnSave;
+  const hardBreakStyle = resolveHardBreakStyle(doc?.hardBreakStyle ?? "unknown", hardBreakStyleOnSave);
+  return { preserveLineBreaks, hardBreakStyle };
+}
+
 function shouldPreserveTwoSpaceBreaks(): boolean {
+  return getSerializeOptions().hardBreakStyle === "twoSpaces";
+}
+
+/**
+ * Apply a full-document transformation via proper editor transaction.
+ * This preserves undo/redo history and avoids state sync timing issues.
+ */
+function applyFullDocumentTransform(
+  context: WysiwygToolbarContext,
+  transform: (markdown: string) => string
+): boolean {
+  const { editor } = context;
+  if (!editor) return false;
+
+  const serializeOpts = getSerializeOptions();
+
+  // Serialize current editor content directly (avoids stale store data)
+  const currentMarkdown = serializeMarkdown(editor.schema, editor.state.doc, serializeOpts);
+
+  // Apply transformation
+  const transformed = transform(currentMarkdown);
+
+  // Only update if changed
+  if (transformed === currentMarkdown) {
+    return true;
+  }
+
+  // Parse back to ProseMirror doc and apply via editor command
+  // This creates a proper undo point
   try {
-    const windowLabel = getWindowLabel();
-    const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
-    const doc = tabId ? useDocumentStore.getState().getDocument(tabId) : null;
-    const hardBreakStyleOnSave = useSettingsStore.getState().markdown.hardBreakStyleOnSave;
-    return resolveHardBreakStyle(doc?.hardBreakStyle ?? "unknown", hardBreakStyleOnSave) === "twoSpaces";
-  } catch {
+    const newDoc = parseMarkdown(editor.schema, transformed, {
+      preserveLineBreaks: serializeOpts.preserveLineBreaks,
+    });
+    editor.commands.setContent(newDoc);
+    editor.commands.focus();
+    return true;
+  } catch (error) {
+    console.error("[wysiwygAdapter] Failed to apply document transform:", error);
     return false;
-  }
-}
-
-function getActiveMarkdown(): string {
-  try {
-    const windowLabel = getWindowLabel();
-    const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
-    if (!tabId) return "";
-    return useDocumentStore.getState().getDocument(tabId)?.content ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function setActiveMarkdown(markdown: string): void {
-  try {
-    const windowLabel = getWindowLabel();
-    const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
-    if (!tabId) return;
-    useDocumentStore.getState().setContent(tabId, markdown);
-  } catch {
-    // Silently fail
   }
 }
 
@@ -876,50 +896,41 @@ function handleFormatCJK(context: WysiwygToolbarContext): boolean {
   }
 
   // No selection - format entire file
-  return handleFormatCJKFile();
+  return handleFormatCJKFile(context);
 }
 
-function handleFormatCJKFile(): boolean {
+function handleFormatCJKFile(context: WysiwygToolbarContext): boolean {
   const config = useSettingsStore.getState().cjkFormatting;
   const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
-  const content = getActiveMarkdown();
-  const formatted = formatMarkdown(content, config, { preserveTwoSpaceHardBreaks });
 
-  if (formatted !== content) {
-    setActiveMarkdown(formatted);
-  }
-  return true;
+  return applyFullDocumentTransform(context, (markdown) =>
+    formatMarkdown(markdown, config, { preserveTwoSpaceHardBreaks })
+  );
 }
 
-function handleRemoveTrailingSpaces(): boolean {
+function handleRemoveTrailingSpaces(context: WysiwygToolbarContext): boolean {
   const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
-  const content = getActiveMarkdown();
-  const formatted = removeTrailingSpaces(content, { preserveTwoSpaceHardBreaks });
-  if (formatted !== content) {
-    setActiveMarkdown(formatted);
-  }
-  return true;
+
+  return applyFullDocumentTransform(context, (markdown) =>
+    removeTrailingSpaces(markdown, { preserveTwoSpaceHardBreaks })
+  );
 }
 
-function handleCollapseBlankLines(): boolean {
-  const content = getActiveMarkdown();
-  const formatted = collapseNewlines(content);
-  if (formatted !== content) {
-    setActiveMarkdown(formatted);
-  }
-  return true;
+function handleCollapseBlankLines(context: WysiwygToolbarContext): boolean {
+  return applyFullDocumentTransform(context, collapseNewlines);
 }
 
-function handleLineEndings(target: "lf" | "crlf"): boolean {
+function handleLineEndings(context: WysiwygToolbarContext, target: "lf" | "crlf"): boolean {
   const windowLabel = getWindowLabel();
   const tabId = useTabStore.getState().activeTabId[windowLabel] ?? null;
-  if (!tabId) return false;
-  const doc = useDocumentStore.getState().getDocument(tabId);
-  if (!doc) return false;
-  const normalized = normalizeLineEndings(doc.content, target);
-  if (normalized !== doc.content) {
-    useDocumentStore.getState().setContent(tabId, normalized);
+
+  // Apply the transformation via proper editor transaction
+  applyFullDocumentTransform(context, (content) => normalizeLineEndings(content, target));
+
+  // Update metadata in store (this doesn't affect editor state)
+  if (tabId) {
+    useDocumentStore.getState().setLineMetadata(tabId, { lineEnding: target });
   }
-  useDocumentStore.getState().setLineMetadata(tabId, { lineEnding: target });
+
   return true;
 }
