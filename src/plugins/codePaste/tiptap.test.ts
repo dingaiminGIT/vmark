@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import { Slice } from "@tiptap/pm/model";
 import { codePasteExtension } from "./tiptap";
 
 // Mock the settings store
@@ -66,7 +67,7 @@ describe("codePaste extension", () => {
       const event = createClipboardEvent("const x = 1;\nconst y = 2;");
 
       // The handler should return false (not handled)
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
 
@@ -77,7 +78,7 @@ describe("codePaste extension", () => {
         "<p>const x = 1;</p>"
       );
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
   });
@@ -87,7 +88,7 @@ describe("codePaste extension", () => {
       editor = createEditor();
       const event = createClipboardEvent("const x = 1;");
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
 
@@ -95,7 +96,7 @@ describe("codePaste extension", () => {
       editor = createEditor();
       const event = createClipboardEvent("Hello world.\nThis is plain text.");
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
 
@@ -107,7 +108,7 @@ describe("codePaste extension", () => {
 }`;
       const event = createClipboardEvent(code);
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       // Should be handled if detected as code
       expect(typeof handled).toBe("boolean");
     });
@@ -119,7 +120,7 @@ describe("codePaste extension", () => {
     return True`;
       const event = createClipboardEvent(code);
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(typeof handled).toBe("boolean");
     });
   });
@@ -134,7 +135,7 @@ describe("codePaste extension", () => {
 const y = 2;`;
       const event = createClipboardEvent(code);
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       // Should not handle - let default behavior take over
       expect(handled).toBeFalsy();
     });
@@ -147,7 +148,7 @@ const y = 2;`;
       const largeCode = "x".repeat(51000);
       const event = createClipboardEvent(largeCode);
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
   });
@@ -157,7 +158,7 @@ const y = 2;`;
       editor = createEditor();
       const event = createClipboardEvent("");
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
   });

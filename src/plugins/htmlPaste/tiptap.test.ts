@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import { Slice } from "@tiptap/pm/model";
 import { htmlPasteExtension } from "./tiptap";
 
 // Mock the settings store
@@ -69,7 +70,7 @@ describe("htmlPaste extension", () => {
       editor = createEditor();
       const event = createClipboardEvent("text", "<p><strong>bold</strong></p>");
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
 
@@ -81,7 +82,7 @@ describe("htmlPaste extension", () => {
       editor = createEditor();
       const event = createClipboardEvent("plain text", "<p><strong>bold</strong></p>");
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBe(true);
       expect(event.defaultPrevented).toBe(true);
     });
@@ -92,7 +93,7 @@ describe("htmlPaste extension", () => {
       editor = createEditor();
       const event = createClipboardEvent("plain text only", "");
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
 
@@ -101,7 +102,7 @@ describe("htmlPaste extension", () => {
       // Simple span is not substantial
       const event = createClipboardEvent("text", "<span>text</span>");
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
 
@@ -112,7 +113,7 @@ describe("htmlPaste extension", () => {
         "<p><strong>Hello</strong> <em>world</em></p>"
       );
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       // May or may not be handled depending on conversion result
       expect(typeof handled).toBe("boolean");
     });
@@ -124,7 +125,7 @@ describe("htmlPaste extension", () => {
         "<h1>Title</h1>"
       );
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(typeof handled).toBe("boolean");
     });
 
@@ -135,7 +136,7 @@ describe("htmlPaste extension", () => {
         "<ul><li>Item 1</li><li>Item 2</li></ul>"
       );
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(typeof handled).toBe("boolean");
     });
   });
@@ -150,7 +151,7 @@ describe("htmlPaste extension", () => {
         "<p><strong>bold text</strong></p>"
       );
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       expect(handled).toBeFalsy();
     });
   });
@@ -162,7 +163,7 @@ describe("htmlPaste extension", () => {
       const largeHtml = "<p>" + "x".repeat(101000) + "</p>";
       const event = createClipboardEvent("plain fallback", largeHtml);
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       // Should still handle it by falling back to plain text
       expect(handled).toBe(true);
     });
@@ -177,7 +178,7 @@ describe("htmlPaste extension", () => {
         "<p>just text</p>"
       );
 
-      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event));
+      const handled = editor.view.someProp("handlePaste", (f) => f(editor.view, event, Slice.empty));
       // When markdown output equals plain text, let other handlers deal with it
       expect(handled).toBeFalsy();
     });

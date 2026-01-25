@@ -79,7 +79,6 @@ export function shouldPasteAsCodeBlock(text: string): { should: boolean; languag
   return { should: false, language: "" };
 }
 
-// Re-export types and patterns for testing
-export type { CodeDetectionResult };
+// Re-export patterns and functions for testing
 export { LANGUAGE_PATTERNS, GENERIC_CODE_PATTERNS, NON_CODE_PATTERNS } from "./patterns";
 export { calculateCodeScore, detectLanguage } from "./scoring";
