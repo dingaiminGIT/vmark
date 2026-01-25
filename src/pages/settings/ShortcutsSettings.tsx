@@ -181,10 +181,10 @@ export function ShortcutsSettings() {
         </div>
 
         {/* Import/Export */}
-        <Button size="md" onClick={handleExport}>
+        <Button onClick={handleExport}>
           Export
         </Button>
-        <Button size="md" onClick={() => fileInputRef.current?.click()}>
+        <Button onClick={() => fileInputRef.current?.click()}>
           Import
         </Button>
         <input
@@ -197,7 +197,6 @@ export function ShortcutsSettings() {
 
         {/* Reset All */}
         <Button
-          size="md"
           variant="danger"
           onClick={() => {
             if (confirm("Reset all shortcuts to defaults?")) {

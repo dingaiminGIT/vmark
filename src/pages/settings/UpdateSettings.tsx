@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { SettingRow, Toggle, SettingsGroup, Select } from "./components";
+import { SettingRow, Toggle, SettingsGroup, Select, Button } from "./components";
 import { useSettingsStore, type UpdateCheckFrequency } from "@/stores/settingsStore";
 import { useUpdateStore } from "@/stores/updateStore";
 import { useUpdateOperations } from "@/hooks/useUpdateOperations";
@@ -198,62 +198,39 @@ function UpdateAvailableCard() {
           <div className="flex flex-col gap-2 shrink-0">
             {status === "available" && (
               <>
-                <button
+                <Button
+                  variant="primary"
                   onClick={handleDownload}
                   disabled={isDownloading}
-                  className="px-3 py-1.5 rounded text-sm font-medium
-                             bg-[var(--primary-color)] text-white
-                             hover:opacity-90 disabled:opacity-50
-                             disabled:cursor-not-allowed transition-opacity
-                             flex items-center gap-1.5"
+                  icon={isDownloading
+                    ? <Loader2 className="w-3 h-3 animate-spin" />
+                    : <Download className="w-3 h-3" />
+                  }
                 >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-3.5 h-3.5" />
-                      Download
-                    </>
-                  )}
-                </button>
-                <button
+                  {isDownloading ? "Downloading..." : "Download"}
+                </Button>
+                <Button
+                  variant="tertiary"
                   onClick={handleSkip}
-                  className="px-3 py-1.5 rounded text-sm font-medium
-                             bg-[var(--bg-tertiary)] text-[var(--text-secondary)]
-                             hover:bg-[var(--hover-bg)] transition-colors
-                             flex items-center gap-1.5"
+                  icon={<SkipForward className="w-3 h-3" />}
                 >
-                  <SkipForward className="w-3.5 h-3.5" />
                   Skip
-                </button>
+                </Button>
               </>
             )}
 
             {status === "ready" && (
-              <button
+              <Button
+                variant="success"
                 onClick={handleRestart}
                 disabled={isRestarting}
-                className="px-3 py-1.5 rounded text-sm font-medium
-                           bg-[var(--success-color)] text-[var(--contrast-text)]
-                           hover:opacity-90 disabled:opacity-50
-                           disabled:cursor-not-allowed transition-opacity
-                           flex items-center gap-1.5"
+                icon={isRestarting
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <RefreshCw className="w-3 h-3" />
+                }
               >
-                {isRestarting ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Restarting...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Restart to Update
-                  </>
-                )}
-              </button>
+                {isRestarting ? "Restarting..." : "Restart to Update"}
+              </Button>
             )}
           </div>
         </div>
@@ -348,16 +325,13 @@ export function UpdateSettings() {
         <SettingRow label="Check now" description={`Last checked: ${lastCheckText}`}>
           <div className="flex items-center gap-3">
             <StatusIndicator />
-            <button
+            <Button
+              variant="tertiary"
               onClick={handleCheckNow}
               disabled={checkDisabled}
-              className="px-3 py-1.5 rounded text-sm font-medium
-                         bg-[var(--bg-tertiary)] text-[var(--text-primary)]
-                         hover:bg-[var(--hover-bg)] disabled:opacity-50
-                         disabled:cursor-not-allowed transition-colors"
             >
               {isChecking || status === "checking" ? "Checking..." : "Check for Updates"}
-            </button>
+            </Button>
           </div>
         </SettingRow>
       </SettingsGroup>

@@ -100,11 +100,10 @@ export function KeyCapture({ shortcut, conflict, onCapture, onCancel }: KeyCaptu
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          <Button size="md" onClick={onCancel}>
+          <Button onClick={onCancel}>
             Cancel
           </Button>
           <Button
-            size="md"
             variant="primary"
             onClick={handleConfirm}
             disabled={!capturedKey}

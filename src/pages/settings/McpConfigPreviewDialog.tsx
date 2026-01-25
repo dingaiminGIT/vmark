@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "./components";
+import { Button, CloseButton, CopyButton } from "./components";
 
 interface ConfigPreview {
   provider: string;
@@ -85,15 +85,7 @@ export function McpConfigPreviewDialog({
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">
             Install MCP Config for {providerName}
           </h3>
-          <button
-            onClick={onCancel}
-            className="p-1 rounded hover:bg-[var(--hover-bg)] text-[var(--text-tertiary)]"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+          <CloseButton onClick={onCancel} />
         </div>
 
         {/* Body */}
@@ -156,10 +148,10 @@ export function McpConfigPreviewDialog({
 
         {/* Footer */}
         <div className="flex justify-end gap-2 px-4 py-3 border-t border-[var(--border-color)]">
-          <Button size="md" onClick={onCancel} disabled={loading}>
+          <Button onClick={onCancel} disabled={loading}>
             Cancel
           </Button>
-          <Button size="md" variant="primary" onClick={onConfirm} disabled={loading}>
+          <Button variant="primary" onClick={onConfirm} disabled={loading}>
             {loading ? "Installing..." : "Install"}
           </Button>
         </div>
@@ -186,10 +178,6 @@ function InfoRow({
   copyable?: boolean;
   fullValue?: string; // Full value to copy (if different from displayed value)
 }) {
-  const handleCopy = () => {
-    navigator.clipboard.writeText(fullValue || value);
-  };
-
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-[var(--text-tertiary)] w-20 flex-shrink-0">
@@ -203,19 +191,7 @@ function InfoRow({
       >
         {value}
       </span>
-      {copyable && (
-        <button
-          onClick={handleCopy}
-          className="p-0.5 rounded hover:bg-[var(--hover-bg)] text-[var(--text-tertiary)]
-                     hover:text-[var(--text-secondary)] transition-colors"
-          title="Copy to clipboard"
-        >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
-        </button>
-      )}
+      {copyable && <CopyButton text={fullValue || value} />}
       {badge && (
         <span
           className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
