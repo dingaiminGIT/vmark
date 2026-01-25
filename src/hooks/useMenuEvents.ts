@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { type UnlistenFn } from "@tauri-apps/api/event";
 import { WebviewWindow, getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -29,42 +30,54 @@ export function useMenuEvents(): void {
       const currentWindow = getCurrentWebviewWindow();
       const windowLabel = currentWindow.label;
 
-      // Preferences
+      // Preferences - open Settings centered on this window
       const unlistenPreferences = await currentWindow.listen<string>("menu:preferences", async (event) => {
         if (event.payload !== windowLabel) return;
+
+        const settingsWidth = 760;
+        const settingsHeight = 540;
+
+        // Calculate centered position with proper scale factor conversion
+        // outerPosition/outerSize return physical pixels, but we need logical pixels
+        const calculateCenteredPosition = async (): Promise<{ x: number; y: number } | null> => {
+          try {
+            const scaleFactor = await currentWindow.scaleFactor();
+            const [position, size] = await Promise.all([
+              currentWindow.outerPosition(),
+              currentWindow.outerSize(),
+            ]);
+            // Convert physical pixels to logical pixels
+            const x = Math.round(position.x / scaleFactor + (size.width / scaleFactor - settingsWidth) / 2);
+            const y = Math.round(position.y / scaleFactor + (size.height / scaleFactor - settingsHeight) / 2);
+            return { x, y };
+          } catch {
+            return null;
+          }
+        };
+
+        // If Settings exists, reposition and focus it
         const existing = await WebviewWindow.getByLabel("settings");
         if (existing) {
+          const pos = await calculateCenteredPosition();
+          if (pos) {
+            await existing.setPosition(new LogicalPosition(pos.x, pos.y));
+          }
           await existing.setFocus();
           return;
         }
 
-        // Calculate position to center settings window relative to current window
-        const settingsWidth = 700;
-        const settingsHeight = 500;
-        let x: number | undefined;
-        let y: number | undefined;
-
-        try {
-          const [position, size] = await Promise.all([
-            currentWindow.outerPosition(),
-            currentWindow.outerSize(),
-          ]);
-          x = Math.round(position.x + (size.width - settingsWidth) / 2);
-          y = Math.round(position.y + (size.height - settingsHeight) / 2);
-        } catch {
-          // Fall back to screen center if position can't be determined
-        }
-
+        // Create new Settings window
+        const pos = await calculateCenteredPosition();
         new WebviewWindow("settings", {
           url: "/settings",
           title: "Settings",
           width: settingsWidth,
           height: settingsHeight,
-          minWidth: 500,
+          minWidth: 600,
           minHeight: 400,
-          x,
-          y,
-          center: x === undefined, // Only center on screen if position unknown
+          x: pos?.x,
+          y: pos?.y,
+          center: !pos, // Center on screen only if position unknown
           resizable: true,
           hiddenTitle: true,
           titleBarStyle: "overlay",

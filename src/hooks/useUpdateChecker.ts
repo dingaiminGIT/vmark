@@ -11,6 +11,7 @@
 import { useEffect, useRef } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -164,25 +165,55 @@ export function useUpdateChecker() {
   }, [EVENTS.REQUEST_STATE]);
 
   // Listen for menu "Check for Updates..." event - opens Settings at Updates section
+  // Event payload contains the focused window label from Rust
   useEffect(() => {
-    const unlistenPromise = listen<string>("menu:check-updates", async () => {
-      // Open Settings window at Updates section
+    const unlistenPromise = listen<string>("menu:check-updates", async (event) => {
+      const settingsWidth = 760;
+      const settingsHeight = 540;
+
+      // Calculate centered position based on the window that triggered the menu
+      const calculateCenteredPosition = async (): Promise<{ x: number; y: number } | null> => {
+        try {
+          const sourceWindow = await WebviewWindow.getByLabel(event.payload);
+          if (!sourceWindow) return null;
+          const scaleFactor = await sourceWindow.scaleFactor();
+          const [position, size] = await Promise.all([
+            sourceWindow.outerPosition(),
+            sourceWindow.outerSize(),
+          ]);
+          const x = Math.round(position.x / scaleFactor + (size.width / scaleFactor - settingsWidth) / 2);
+          const y = Math.round(position.y / scaleFactor + (size.height / scaleFactor - settingsHeight) / 2);
+          return { x, y };
+        } catch {
+          return null;
+        }
+      };
+
+      // If Settings exists, reposition, navigate, and focus
       const existing = await WebviewWindow.getByLabel("settings");
       if (existing) {
+        const pos = await calculateCenteredPosition();
+        if (pos) {
+          await existing.setPosition(new LogicalPosition(pos.x, pos.y));
+        }
         await existing.setFocus();
-        // Emit event to navigate to updates section
         await emit("settings:navigate", "updates");
         return;
       }
+
+      // Create new Settings window
+      const pos = await calculateCenteredPosition();
       new WebviewWindow("settings", {
         url: "/settings?section=updates",
         title: "Settings",
-        width: 760,
-        height: 540,
+        width: settingsWidth,
+        height: settingsHeight,
         minWidth: 600,
         minHeight: 400,
+        x: pos?.x,
+        y: pos?.y,
+        center: !pos,
         resizable: true,
-        center: true,
         titleBarStyle: "overlay" as const,
         hiddenTitle: true,
       });
