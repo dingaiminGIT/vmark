@@ -165,6 +165,14 @@ export type HtmlRenderingMode = "hidden" | "sanitized" | "sanitizedWithStyles";
 
 export type MarkdownPasteMode = "auto" | "off";
 
+/**
+ * Paste mode determines how clipboard content is processed:
+ * - "smart": Convert HTML to Markdown, detect markdown syntax (default)
+ * - "plain": Always paste as plain text
+ * - "rich": Keep Tiptap's default HTML handling
+ */
+export type PasteMode = "smart" | "plain" | "rich";
+
 export interface McpServerSettings {
   port: number;        // Default: 9223 (must match MCP bridge plugin port)
   autoStart: boolean;  // Start on app launch
@@ -200,6 +208,7 @@ export interface MarkdownSettings {
   showBrTags: boolean; // Display <br> tags visibly
   enableRegexSearch: boolean; // Enable regex in Find & Replace
   pasteMarkdownInWysiwyg: MarkdownPasteMode; // Convert pasted markdown into rich text
+  pasteMode: PasteMode; // How to handle clipboard content (smart/plain/rich)
   mediaBorderStyle: MediaBorderStyle; // Border style for images and diagrams
   htmlRenderingMode: HtmlRenderingMode; // Rich text display for raw HTML
   hardBreakStyleOnSave: HardBreakStyleOnSave; // Preserve or normalize hard break output
@@ -357,6 +366,7 @@ const initialState: SettingsState = {
     showBrTags: false,
     enableRegexSearch: true,
     pasteMarkdownInWysiwyg: "auto",
+    pasteMode: "smart", // Default: convert HTML to Markdown
     mediaBorderStyle: "none",
     htmlRenderingMode: "hidden",
     hardBreakStyleOnSave: "preserve",

@@ -14,6 +14,8 @@ import {
 } from "@/plugins/shared/sourceLineNodes";
 import { smartPasteExtension } from "@/plugins/smartPaste/tiptap";
 import { markdownPasteExtension } from "@/plugins/markdownPaste/tiptap";
+import { htmlPasteExtension } from "@/plugins/htmlPaste/tiptap";
+import { codePasteExtension } from "@/plugins/codePaste/tiptap";
 import { linkPopupExtension } from "@/plugins/linkPopup/tiptap";
 import { linkTooltipExtension } from "@/plugins/linkTooltip";
 import { linkCreatePopupExtension } from "@/plugins/linkCreatePopup";
@@ -131,6 +133,8 @@ export function createTiptapExtensions(): Extensions {
     footnotePopupExtension,
     smartPasteExtension,
     markdownPasteExtension,
+    htmlPasteExtension,
+    codePasteExtension,
     linkPopupExtension,
     linkTooltipExtension,
     linkCreatePopupExtension,
