@@ -11,6 +11,7 @@
 // Intl.Segmenter type declaration (ES2022)
 // Global augmentation for Intl.Segmenter which is not in older TS lib
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Intl {
     interface SegmentData {
       segment: string;

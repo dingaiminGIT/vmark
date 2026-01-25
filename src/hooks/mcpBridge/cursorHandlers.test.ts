@@ -4,7 +4,7 @@
  * Tests for cursor.getContext and cursor.setPosition handlers.
  */
 
-import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { handleCursorGetContext, handleCursorSetPosition } from "./cursorHandlers";
 
 // Mock the utils module
