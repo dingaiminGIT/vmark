@@ -22,6 +22,7 @@ import { expandedToggleMark } from "@/plugins/editorPlugins/expandedToggleMark";
 import { findAnyMarkRangeAtCursor, findMarkRange, findWordAtCursor } from "@/plugins/syntaxReveal/marks";
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { useLinkCreatePopupStore } from "@/stores/linkCreatePopupStore";
 import { useWikiLinkPopupStore } from "@/stores/wikiLinkPopupStore";
 import { extractHeadingsWithIds } from "@/utils/headingSlug";
 import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
@@ -277,19 +278,50 @@ function openLinkPopup(
 }
 
 /**
+ * Open link create popup with given parameters.
+ */
+function openLinkCreatePopup(
+  view: EditorView,
+  text: string,
+  rangeFrom: number,
+  rangeTo: number,
+  showTextInput: boolean
+): void {
+  try {
+    const start = view.coordsAtPos(rangeFrom);
+    const end = view.coordsAtPos(rangeTo);
+    useLinkCreatePopupStore.getState().openPopup({
+      text,
+      rangeFrom,
+      rangeTo,
+      anchorRect: {
+        top: Math.min(start.top, end.top),
+        left: Math.min(start.left, end.left),
+        bottom: Math.max(start.bottom, end.bottom),
+        right: Math.max(start.right, end.right),
+      },
+      showTextInput,
+    });
+  } catch (error) {
+    console.error("[LinkCreatePopup] Failed to open:", error);
+  }
+}
+
+/**
  * Smart link insertion with clipboard URL detection for WYSIWYG mode.
  * Checks clipboard for URL and applies link directly if found.
- * Falls back to expandedToggleMark for normal link editing.
+ * Opens create popup when no clipboard URL to let user enter URL.
  *
  * When cursor is inside an existing link:
  * - Bookmark link (href starts with #): opens heading picker
  * - Regular link: opens the link popup for editing
  *
- * When link popup or heading picker is already open, blocks the shortcut.
+ * When link popup, create popup, wiki link popup, or heading picker is already open, blocks the shortcut.
  */
 function handleSmartLinkShortcut(view: EditorView): boolean {
-  // Block if link popup, wiki link popup, or heading picker is already open
+  // Block if any popup or picker is already open
   if (useLinkPopupStore.getState().isOpen ||
+      useLinkCreatePopupStore.getState().isOpen ||
       useWikiLinkPopupStore.getState().isOpen ||
       useHeadingPickerStore.getState().isOpen) {
     return true;
@@ -344,27 +376,41 @@ function handleSmartLinkShortcut(view: EditorView): boolean {
   // Try smart link insertion (async)
   void (async () => {
     const clipboardUrl = await readClipboardUrl();
-    if (!clipboardUrl) {
-      // No clipboard URL - fall back to normal behavior
-      expandedToggleMark(view, "link");
-      return;
-    }
 
-    // Has selection: apply link directly
+    // Has selection
     if (from !== to) {
-      applyLinkWithUrl(view, from, to, clipboardUrl);
+      if (clipboardUrl) {
+        // Apply link directly with clipboard URL
+        applyLinkWithUrl(view, from, to, clipboardUrl);
+      } else {
+        // Open create popup with URL input only (text is selected)
+        const selectedText = view.state.doc.textBetween(from, to, "");
+        openLinkCreatePopup(view, selectedText, from, to, false);
+      }
       return;
     }
 
     // No selection: try word expansion
     const wordRange = findWordAtCursor($from);
     if (wordRange) {
-      applyLinkWithUrl(view, wordRange.from, wordRange.to, clipboardUrl);
+      if (clipboardUrl) {
+        applyLinkWithUrl(view, wordRange.from, wordRange.to, clipboardUrl);
+      } else {
+        // Open create popup with URL input only (word will be wrapped)
+        const wordText = view.state.doc.textBetween(wordRange.from, wordRange.to, "");
+        openLinkCreatePopup(view, wordText, wordRange.from, wordRange.to, false);
+      }
       return;
     }
 
-    // No selection, no word: insert URL as linked text
-    insertLinkAtCursor(view, clipboardUrl);
+    // No selection, no word
+    if (clipboardUrl) {
+      // Insert URL as linked text
+      insertLinkAtCursor(view, clipboardUrl);
+    } else {
+      // Open create popup with both text and URL inputs
+      openLinkCreatePopup(view, "", from, to, true);
+    }
   })();
 
   return true;

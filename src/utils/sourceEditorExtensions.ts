@@ -50,6 +50,7 @@ import { guardCodeMirrorKeyBinding } from "@/utils/imeGuard";
 import { createSourceImagePopupPlugin } from "@/plugins/sourceImagePopup";
 import { createSourceLinkPopupPlugin } from "@/plugins/sourceLinkPopup";
 import { createSourceLinkTooltipPlugin } from "@/plugins/sourceLinkTooltip";
+import { createSourceLinkCreatePopupPlugin } from "@/plugins/sourceLinkCreatePopup";
 import { createSourceWikiLinkPopupPlugin } from "@/plugins/sourceWikiLinkPopup";
 import { createSourceFootnotePopupPlugin } from "@/plugins/sourceFootnotePopup";
 
@@ -184,6 +185,8 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
     createSourceLinkTooltipPlugin(),
     // Link popup editor (Cmd+K)
     createSourceLinkPopupPlugin(),
+    // Link create popup (Cmd+K when no link, no clipboard URL)
+    createSourceLinkCreatePopupPlugin(),
     // Wiki link popup editor
     createSourceWikiLinkPopupPlugin(),
     // Footnote popup editor

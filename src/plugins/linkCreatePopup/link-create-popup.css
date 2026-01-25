@@ -1,0 +1,120 @@
+/**
+ * Link Create Popup Styles
+ *
+ * Popup for creating new links (text + URL inputs).
+ */
+
+.link-create-popup {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--popup-padding);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-color);
+  box-shadow: var(--popup-shadow);
+  animation: popup-fade-in 0.1s ease-out;
+}
+
+.dark-theme .link-create-popup {
+  box-shadow: var(--popup-shadow-dark);
+}
+
+.link-create-popup-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.link-create-popup-input {
+  flex: 1;
+  min-width: 200px;
+  height: 24px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-color);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  outline: none;
+}
+
+.link-create-popup-input:focus {
+  background: var(--subtle-bg);
+}
+
+.link-create-popup-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.link-create-popup-url {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.link-create-popup-btn {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.link-create-popup-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.link-create-popup-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.link-create-popup-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* Save button hover - primary color */
+.link-create-popup-btn-save:hover:not(:disabled) {
+  color: var(--primary-color);
+}
+
+/* Cancel button hover - error color */
+.link-create-popup-btn-cancel:hover:not(:disabled) {
+  color: var(--error-color);
+}
+
+/* Focus indicator: U-shaped underline */
+.link-create-popup-btn:focus-visible {
+  outline: none;
+}
+
+.link-create-popup-btn:focus-visible::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
+}
