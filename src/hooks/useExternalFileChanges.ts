@@ -20,6 +20,7 @@ import { normalizePath } from "@/utils/paths";
 import { saveToPath } from "@/utils/saveToPath";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { isPendingSave } from "@/utils/pendingSaves";
+import { getFileName } from "@/utils/paths";
 
 interface FsChangeEvent {
   watchId: string;
@@ -73,7 +74,7 @@ export function useExternalFileChanges(): void {
   // Cancel/dismiss preserves user's changes (safe default)
   const handleDirtyChange = useCallback(
     async (tabId: string, filePath: string) => {
-      const fileName = filePath.split("/").pop() || "file";
+      const fileName = getFileName(filePath) || "file";
       const doc = useDocumentStore.getState().getDocument(tabId);
 
       // Single dialog with 3 options:

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { SettingsGroup } from "./components";
 import { McpConfigPreviewDialog } from "./McpConfigPreviewDialog";
+import { getFileName, normalizePath } from "@/utils/paths";
 
 type DiagnosticStatus = "Valid" | "PathMismatch" | "BinaryMissing" | "NotConfigured";
 
@@ -123,13 +124,16 @@ function CopyButton({ text, size = "sm" }: { text: string; size?: "sm" | "xs" })
 
 /** Shorten path to just filename for display */
 function shortenPath(path: string): string {
-  const parts = path.split("/");
-  return parts[parts.length - 1] || path;
+  return getFileName(path) || path;
 }
 
 /** Format path for tooltip (replace home with ~) */
 function formatPath(path: string): string {
-  return path.replace(/^\/Users\/[^/]+/, "~");
+  const normalized = normalizePath(path);
+  // Handle both Unix (/Users/...) and Windows (C:/Users/...) home paths
+  return normalized
+    .replace(/^\/Users\/[^/]+/, "~")
+    .replace(/^[A-Za-z]:\/Users\/[^/]+/, "~");
 }
 
 interface ProviderRowProps {

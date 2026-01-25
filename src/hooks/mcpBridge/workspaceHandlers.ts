@@ -7,6 +7,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { serializeMarkdown } from "@/utils/markdownPipeline";
+import { getFileName } from "@/utils/paths";
 import { respond, getEditor } from "./utils";
 
 /**
@@ -25,7 +26,7 @@ export async function handleWindowsList(id: string): Promise<void> {
       data: [
         {
           label: "main",
-          title: doc?.filePath?.split("/").pop() ?? "Untitled",
+          title: doc?.filePath ? getFileName(doc.filePath) || "Untitled" : "Untitled",
           filePath: doc?.filePath ?? null,
           isFocused: true,
           isAiExposed: true,
@@ -233,7 +234,7 @@ export async function handleWorkspaceSaveDocumentAs(
 
     // Update tab and document with new path
     tabStore.updateTabPath(activeTabId, path);
-    tabStore.updateTabTitle(activeTabId, path.split("/").pop() ?? "Untitled");
+    tabStore.updateTabTitle(activeTabId, getFileName(path) || "Untitled");
     docStore.setFilePath(activeTabId, path);
     docStore.markSaved(activeTabId);
 

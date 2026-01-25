@@ -16,6 +16,25 @@ const imageHandlerPluginKey = new PluginKey("imageHandler");
 const CLIPBOARD_IMAGE_GUARD = "clipboard-image";
 
 /**
+ * Convert a file:// URL to a filesystem path.
+ * Handles both Unix and Windows file URL formats:
+ * - Unix: file:///Users/name/file.png -> /Users/name/file.png
+ * - Windows: file:///C:/Users/name/file.png -> C:/Users/name/file.png
+ */
+function fileUrlToPath(url: string): string {
+  // Remove file:// prefix
+  let path = url.replace(/^file:\/\//, "");
+  // URL decode
+  path = decodeURIComponent(path);
+  // On Windows, file URLs have format file:///C:/path, resulting in /C:/path
+  // Remove the leading slash if followed by a drive letter
+  if (/^\/[A-Za-z]:/.test(path)) {
+    path = path.slice(1);
+  }
+  return path;
+}
+
+/**
  * Show warning that document must be saved first.
  */
 async function showUnsavedDocWarning(): Promise<void> {
@@ -696,7 +715,7 @@ function handleDrop(view: EditorView, event: DragEvent, _slice: unknown, moved: 
         const filePaths = uriList
           .split("\n")
           .filter((line) => line.startsWith("file://"))
-          .map((uri) => decodeURIComponent(uri.replace("file://", "")));
+          .map(fileUrlToPath);
 
         if (filePaths.length > 0) {
           const detection = detectMultipleImagePaths(filePaths);
