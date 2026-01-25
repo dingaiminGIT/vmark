@@ -15,6 +15,10 @@
  * - Block toggles: block type name ("blockquote", "codeBlock")
  */
 export const ACTION_IDS = [
+  // === Edit ===
+  "undo",
+  "redo",
+
   // === Inline Formatting ===
   "bold",
   "italic",
@@ -144,6 +148,7 @@ export interface ActionCapability {
  * Action category for grouping in UI
  */
 export type ActionCategory =
+  | "edit"
   | "formatting"
   | "links"
   | "headings"

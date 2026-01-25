@@ -7,6 +7,13 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 - **Mod** = Cmd on macOS, Ctrl on Windows/Linux
 - **Alt** = Option on macOS
 
+## Edit
+
+| Action | Shortcut |
+|--------|----------|
+| Undo | `Mod + Z` |
+| Redo | `Mod + Shift + Z` |
+
 ## Text Formatting
 
 | Action | Shortcut |

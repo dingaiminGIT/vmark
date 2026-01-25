@@ -648,6 +648,12 @@ export function performWysiwygToolbarAction(action: string, context: WysiwygTool
   if (!canRunActionInMultiSelection(action, context.multiSelection)) return false;
 
   switch (action) {
+    // Edit
+    case "undo":
+      return context.editor ? context.editor.commands.undo() : false;
+    case "redo":
+      return context.editor ? context.editor.commands.redo() : false;
+
     case "bold":
       return view ? expandedToggleMarkTiptap(view, "bold") : false;
     case "italic":

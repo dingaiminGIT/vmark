@@ -27,6 +27,10 @@ const menuIds = menuIdsData as { menuIds: string[]; allMenuIds: string[] };
  * This is the canonical mapping used by the unified menu dispatcher.
  */
 export const MENU_TO_ACTION: Record<MenuEventId, MenuActionMapping> = {
+  // === Edit ===
+  "menu:undo": { actionId: "undo" },
+  "menu:redo": { actionId: "redo" },
+
   // === Inline Formatting ===
   "menu:bold": { actionId: "bold" },
   "menu:italic": { actionId: "italic" },
@@ -139,6 +143,20 @@ export const MENU_TO_ACTION: Record<MenuEventId, MenuActionMapping> = {
  * Each action specifies whether it's supported in WYSIWYG and/or Source mode.
  */
 export const ACTION_DEFINITIONS: Record<ActionId, ActionDefinition> = {
+  // === Edit ===
+  undo: {
+    id: "undo",
+    label: "Undo",
+    category: "edit",
+    supports: { wysiwyg: true, source: true },
+  },
+  redo: {
+    id: "redo",
+    label: "Redo",
+    category: "edit",
+    supports: { wysiwyg: true, source: true },
+  },
+
   // === Inline Formatting ===
   bold: {
     id: "bold",

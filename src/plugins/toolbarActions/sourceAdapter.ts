@@ -6,6 +6,7 @@
  */
 
 import type { EditorView } from "@codemirror/view";
+import { undo, redo } from "@codemirror/commands";
 import { clearAllFormatting } from "@/plugins/sourceContextDetection/clearFormatting";
 import { buildAlertBlock, buildDetailsBlock, buildDiagramBlock, buildMathBlock, type AlertType } from "@/plugins/sourceContextDetection/sourceInsertions";
 import { getBlockquoteInfo, nestBlockquote, removeBlockquote, unnestBlockquote } from "@/plugins/sourceContextDetection/blockquoteDetection";
@@ -416,6 +417,12 @@ export function performSourceToolbarAction(action: string, context: SourceToolba
   if (!canRunActionInMultiSelection(action, context.multiSelection)) return false;
 
   switch (action) {
+    // Edit
+    case "undo":
+      return undo(view);
+    case "redo":
+      return redo(view);
+
     // Inline formatting
     case "bold":
       return applyInlineFormat(view, "bold");

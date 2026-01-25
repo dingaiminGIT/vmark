@@ -23,6 +23,7 @@ const EXCLUDED_IDS = new Set([
   "no-recent", // Placeholder
   "clear-recent", // File menu action
   "preferences", // Opens settings
+  "check-updates", // Help menu action
   // File operations (handled separately)
   "new",
   "new-window",

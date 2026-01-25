@@ -271,13 +271,14 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     )?;
 
     // Edit menu (simplified - Lines moved to Block, Transform to Format, Cleanup to Tools)
+    // Note: Using custom MenuItem for undo/redo to properly integrate with editor history
     let edit_menu = Submenu::with_items(
         app,
         "Edit",
         true,
         &[
-            &PredefinedMenuItem::undo(app, Some("Undo"))?,
-            &PredefinedMenuItem::redo(app, Some("Redo"))?,
+            &MenuItem::with_id(app, "undo", "Undo", true, Some("CmdOrCtrl+Z"))?,
+            &MenuItem::with_id(app, "redo", "Redo", true, Some("CmdOrCtrl+Shift+Z"))?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::cut(app, Some("Cut"))?,
             &PredefinedMenuItem::copy(app, Some("Copy"))?,
@@ -940,13 +941,14 @@ fn create_menu_with_shortcuts(
     )?;
 
     // Edit menu (simplified - Lines moved to Block, Transform to Format, Cleanup to Tools)
+    // Note: Using custom MenuItem for undo/redo to properly integrate with editor history
     let edit_menu = Submenu::with_items(
         app,
         "Edit",
         true,
         &[
-            &PredefinedMenuItem::undo(app, Some("Undo"))?,
-            &PredefinedMenuItem::redo(app, Some("Redo"))?,
+            &MenuItem::with_id(app, "undo", "Undo", true, get_accel("undo", "CmdOrCtrl+Z"))?,
+            &MenuItem::with_id(app, "redo", "Redo", true, get_accel("redo", "CmdOrCtrl+Shift+Z"))?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::cut(app, Some("Cut"))?,
             &PredefinedMenuItem::copy(app, Some("Copy"))?,
