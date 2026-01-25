@@ -22,8 +22,9 @@ import { guardCodeMirrorKeyBinding } from "@/utils/imeGuard";
  * Smart Home command - toggles between first non-whitespace and line start.
  * First press: go to first non-whitespace character
  * Second press (if already at first non-whitespace): go to column 0
+ * Exported for testing.
  */
-function smartHome(view: import("@codemirror/view").EditorView): boolean {
+export function smartHome(view: import("@codemirror/view").EditorView): boolean {
   const { state } = view;
   const { head } = state.selection.main;
   const line = state.doc.lineAt(head);
@@ -53,8 +54,9 @@ function smartHome(view: import("@codemirror/view").EditorView): boolean {
 
 /**
  * Smart Home with selection extension.
+ * Exported for testing.
  */
-function smartHomeSelect(view: import("@codemirror/view").EditorView): boolean {
+export function smartHomeSelect(view: import("@codemirror/view").EditorView): boolean {
   const { state } = view;
   const { anchor, head } = state.selection.main;
   const line = state.doc.lineAt(head);

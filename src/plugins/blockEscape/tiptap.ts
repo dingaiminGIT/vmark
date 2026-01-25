@@ -20,8 +20,9 @@ import { guardProseMirrorCommand } from "@/utils/imeGuard";
 
 /**
  * Combined handler for ArrowUp - tries list first, then blockquote.
+ * Exported for testing.
  */
-function handleEscapeUp(view: EditorView): boolean {
+export function handleEscapeUp(view: EditorView): boolean {
   // Try list escape first
   if (escapeListUp(view)) return true;
   // Try blockquote escape
@@ -32,8 +33,9 @@ function handleEscapeUp(view: EditorView): boolean {
 
 /**
  * Combined handler for ArrowDown - tries list first, then blockquote.
+ * Exported for testing.
  */
-function handleEscapeDown(view: EditorView): boolean {
+export function handleEscapeDown(view: EditorView): boolean {
   // Try list escape first
   if (escapeListDown(view)) return true;
   // Try blockquote escape
@@ -44,8 +46,9 @@ function handleEscapeDown(view: EditorView): boolean {
 
 /**
  * Wrap handler as ProseMirror command.
+ * Exported for testing.
  */
-function asCommand(fn: (view: EditorView) => boolean): Command {
+export function asCommand(fn: (view: EditorView) => boolean): Command {
   return (_state, _dispatch, view) => {
     if (!view) return false;
     return fn(view as unknown as EditorView);

@@ -17,22 +17,24 @@ import { guardCodeMirrorKeyBinding } from "@/utils/imeGuard";
 
 /**
  * Patterns for detecting structural characters at cursor position.
+ * Exported for testing.
  */
 
 // Table row: starts with optional whitespace, then pipe
-const TABLE_ROW_PATTERN = /^\s*\|/;
+export const TABLE_ROW_PATTERN = /^\s*\|/;
 
 // List item: starts with optional whitespace, then marker
-const LIST_ITEM_PATTERN = /^(\s*)(-|\*|\+|\d+\.)\s/;
+export const LIST_ITEM_PATTERN = /^(\s*)(-|\*|\+|\d+\.)\s/;
 
 // Blockquote: starts with optional whitespace, then >
-const BLOCKQUOTE_PATTERN = /^(\s*)(>+)\s?/;
+export const BLOCKQUOTE_PATTERN = /^(\s*)(>+)\s?/;
 
 /**
  * Check if cursor is right after a table pipe at cell start.
  * Returns the pipe position if true, or -1 if not.
+ * Exported for testing.
  */
-function getCellStartPipePos(view: EditorView): number {
+export function getCellStartPipePos(view: EditorView): number {
   const { state } = view;
   const { head } = state.selection.main;
   const line = state.doc.lineAt(head);
@@ -57,8 +59,9 @@ function getCellStartPipePos(view: EditorView): number {
 /**
  * Check if cursor is right after a list marker.
  * Returns the marker range if true, or null if not.
+ * Exported for testing.
  */
-function getListMarkerRange(view: EditorView): { from: number; to: number } | null {
+export function getListMarkerRange(view: EditorView): { from: number; to: number } | null {
   const { state } = view;
   const { head } = state.selection.main;
   const line = state.doc.lineAt(head);
@@ -83,8 +86,9 @@ function getListMarkerRange(view: EditorView): { from: number; to: number } | nu
 /**
  * Check if cursor is right after a blockquote marker.
  * Returns the marker position info if true, or null if not.
+ * Exported for testing.
  */
-function getBlockquoteMarkerInfo(view: EditorView): { markerEnd: number; depth: number } | null {
+export function getBlockquoteMarkerInfo(view: EditorView): { markerEnd: number; depth: number } | null {
   const { state } = view;
   const { head } = state.selection.main;
   const line = state.doc.lineAt(head);
@@ -108,8 +112,9 @@ function getBlockquoteMarkerInfo(view: EditorView): { markerEnd: number; depth: 
 
 /**
  * Smart backspace handler that protects structural characters.
+ * Exported for testing.
  */
-function smartBackspace(view: EditorView): boolean {
+export function smartBackspace(view: EditorView): boolean {
   const { state } = view;
   const { head, empty } = state.selection.main;
 
@@ -174,8 +179,9 @@ function smartBackspace(view: EditorView): boolean {
 
 /**
  * Smart delete handler (similar logic for forward delete).
+ * Exported for testing.
  */
-function smartDelete(view: EditorView): boolean {
+export function smartDelete(view: EditorView): boolean {
   const { state } = view;
   const { head, empty } = state.selection.main;
 

@@ -7,14 +7,52 @@
  * - Blockquote markers (>)
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+import {
+  TABLE_ROW_PATTERN,
+  LIST_ITEM_PATTERN,
+  BLOCKQUOTE_PATTERN,
+  getCellStartPipePos,
+  getListMarkerRange,
+  getBlockquoteMarkerInfo,
+  smartBackspace,
+  smartDelete,
+} from "./structuralCharProtection";
+
+// Track views for cleanup
+const views: EditorView[] = [];
+
+afterEach(() => {
+  views.forEach((v) => v.destroy());
+  views.length = 0;
+});
+
+/**
+ * Create a CodeMirror EditorView with the given content and cursor position.
+ * Cursor position is indicated by ^ in the content string.
+ */
+function createView(contentWithCursor: string): EditorView {
+  const cursorPos = contentWithCursor.indexOf("^");
+  const content = contentWithCursor.replace("^", "");
+
+  const state = EditorState.create({
+    doc: content,
+    selection: { anchor: cursorPos },
+  });
+
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const view = new EditorView({ state, parent: container });
+  views.push(view);
+  return view;
+}
 
 describe("Structural Character Protection", () => {
   // Test the regex patterns used for detection
 
   describe("TABLE_ROW_PATTERN", () => {
-    const TABLE_ROW_PATTERN = /^\s*\|/;
-
     it("matches lines starting with pipe", () => {
       expect(TABLE_ROW_PATTERN.test("| cell")).toBe(true);
       expect(TABLE_ROW_PATTERN.test("|cell")).toBe(true);
@@ -32,8 +70,6 @@ describe("Structural Character Protection", () => {
   });
 
   describe("LIST_ITEM_PATTERN", () => {
-    const LIST_ITEM_PATTERN = /^(\s*)(-|\*|\+|\d+\.)\s/;
-
     it("matches unordered list markers", () => {
       expect(LIST_ITEM_PATTERN.test("- item")).toBe(true);
       expect(LIST_ITEM_PATTERN.test("* item")).toBe(true);
@@ -66,8 +102,6 @@ describe("Structural Character Protection", () => {
   });
 
   describe("BLOCKQUOTE_PATTERN", () => {
-    const BLOCKQUOTE_PATTERN = /^(\s*)(>+)\s?/;
-
     it("matches single blockquote marker", () => {
       expect(BLOCKQUOTE_PATTERN.test("> quote")).toBe(true);
       expect(BLOCKQUOTE_PATTERN.test(">quote")).toBe(true);
@@ -100,24 +134,201 @@ describe("Structural Character Protection", () => {
     });
   });
 
-  describe("Cell start pipe detection", () => {
-    // Pattern to check if cursor is right after a pipe with optional whitespace
-    const CELL_START_PATTERN = /\|\s*$/;
-
-    it("matches cursor right after pipe", () => {
-      expect(CELL_START_PATTERN.test("|")).toBe(true);
-      expect(CELL_START_PATTERN.test("| ")).toBe(true);
-      expect(CELL_START_PATTERN.test("|  ")).toBe(true);
+  describe("getCellStartPipePos", () => {
+    it("returns pipe position when cursor is right after pipe", () => {
+      const view = createView("| ^cell | cell |");
+      const pipePos = getCellStartPipePos(view);
+      expect(pipePos).toBe(0); // Position of first pipe
     });
 
-    it("matches text before pipe", () => {
-      expect(CELL_START_PATTERN.test("cell |")).toBe(true);
-      expect(CELL_START_PATTERN.test("cell | ")).toBe(true);
+    it("returns pipe position when cursor is after pipe with whitespace", () => {
+      const view = createView("|  ^cell");
+      const pipePos = getCellStartPipePos(view);
+      expect(pipePos).toBe(0);
     });
 
-    it("does not match without trailing pipe", () => {
-      expect(CELL_START_PATTERN.test("text")).toBe(false);
-      expect(CELL_START_PATTERN.test("| text")).toBe(false);
+    it("returns -1 when not in a table row", () => {
+      const view = createView("plain ^text");
+      const pipePos = getCellStartPipePos(view);
+      expect(pipePos).toBe(-1);
+    });
+
+    it("returns -1 when cursor is not after a pipe", () => {
+      const view = createView("| cell ^content | cell |");
+      const pipePos = getCellStartPipePos(view);
+      expect(pipePos).toBe(-1);
+    });
+
+    it("returns pipe position for middle cell", () => {
+      const view = createView("| cell | ^second | third |");
+      const pipePos = getCellStartPipePos(view);
+      expect(pipePos).toBe(7); // Position of second pipe
+    });
+  });
+
+  describe("getListMarkerRange", () => {
+    it("returns range when cursor is right after marker", () => {
+      const view = createView("- ^item");
+      const range = getListMarkerRange(view);
+      expect(range).not.toBeNull();
+      expect(range?.from).toBe(0);
+      expect(range?.to).toBe(2); // "- " length
+    });
+
+    it("returns range for ordered list", () => {
+      const view = createView("1. ^item");
+      const range = getListMarkerRange(view);
+      expect(range).not.toBeNull();
+      expect(range?.from).toBe(0);
+      expect(range?.to).toBe(3); // "1. " length
+    });
+
+    it("returns range for indented list", () => {
+      const view = createView("  - ^item");
+      const range = getListMarkerRange(view);
+      expect(range).not.toBeNull();
+      expect(range?.from).toBe(2); // After indentation
+      expect(range?.to).toBe(4); // "- " length from indentation
+    });
+
+    it("returns null when cursor is past the marker", () => {
+      const view = createView("- item ^content");
+      const range = getListMarkerRange(view);
+      expect(range).toBeNull();
+    });
+
+    it("returns null for non-list line", () => {
+      const view = createView("plain ^text");
+      const range = getListMarkerRange(view);
+      expect(range).toBeNull();
+    });
+  });
+
+  describe("getBlockquoteMarkerInfo", () => {
+    it("returns info when cursor is after marker", () => {
+      const view = createView("> ^quote");
+      const info = getBlockquoteMarkerInfo(view);
+      expect(info).not.toBeNull();
+      expect(info?.depth).toBe(1);
+    });
+
+    it("returns depth for nested blockquotes", () => {
+      const view = createView(">> ^nested");
+      const info = getBlockquoteMarkerInfo(view);
+      expect(info).not.toBeNull();
+      expect(info?.depth).toBe(2);
+    });
+
+    it("returns depth for deeply nested", () => {
+      const view = createView(">>> ^deep");
+      const info = getBlockquoteMarkerInfo(view);
+      expect(info).not.toBeNull();
+      expect(info?.depth).toBe(3);
+    });
+
+    it("returns null when cursor is past the marker", () => {
+      const view = createView("> quote ^content");
+      const info = getBlockquoteMarkerInfo(view);
+      expect(info).toBeNull();
+    });
+
+    it("returns null for non-blockquote line", () => {
+      const view = createView("plain ^text");
+      const info = getBlockquoteMarkerInfo(view);
+      expect(info).toBeNull();
+    });
+  });
+
+  describe("smartBackspace", () => {
+    it("moves cursor before pipe instead of deleting", () => {
+      const view = createView("| ^cell |");
+      const handled = smartBackspace(view);
+      expect(handled).toBe(true);
+      expect(view.state.selection.main.head).toBe(0); // Before the pipe
+    });
+
+    it("removes list marker entirely", () => {
+      const view = createView("- ^item");
+      const handled = smartBackspace(view);
+      expect(handled).toBe(true);
+      expect(view.state.doc.toString()).toBe("item");
+    });
+
+    it("removes single blockquote marker", () => {
+      const view = createView("> ^quote");
+      const handled = smartBackspace(view);
+      expect(handled).toBe(true);
+      expect(view.state.doc.toString()).toBe("quote");
+    });
+
+    it("reduces nested blockquote by one level", () => {
+      const view = createView(">> ^nested");
+      const handled = smartBackspace(view);
+      expect(handled).toBe(true);
+      expect(view.state.doc.toString()).toBe("> nested");
+    });
+
+    it("returns false for normal text", () => {
+      const view = createView("plain ^text");
+      const handled = smartBackspace(view);
+      expect(handled).toBe(false);
+    });
+
+    it("returns false when there is a selection", () => {
+      const content = "| cell |";
+      const state = EditorState.create({
+        doc: content,
+        selection: { anchor: 2, head: 4 }, // Selection
+      });
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      const view = new EditorView({ state, parent: container });
+      views.push(view);
+
+      const handled = smartBackspace(view);
+      expect(handled).toBe(false);
+    });
+
+    it("returns false at document start", () => {
+      const view = createView("^text");
+      const handled = smartBackspace(view);
+      expect(handled).toBe(false);
+    });
+  });
+
+  describe("smartDelete", () => {
+    it("skips over pipe instead of deleting", () => {
+      const view = createView("| cell ^| next");
+      const handled = smartDelete(view);
+      expect(handled).toBe(true);
+      expect(view.state.selection.main.head).toBe(8); // After the pipe
+    });
+
+    it("returns false for normal text", () => {
+      const view = createView("plain ^text");
+      const handled = smartDelete(view);
+      expect(handled).toBe(false);
+    });
+
+    it("returns false when there is a selection", () => {
+      const content = "| cell | next";
+      const state = EditorState.create({
+        doc: content,
+        selection: { anchor: 2, head: 4 },
+      });
+      const container = document.createElement("div");
+      document.body.appendChild(container);
+      const view = new EditorView({ state, parent: container });
+      views.push(view);
+
+      const handled = smartDelete(view);
+      expect(handled).toBe(false);
+    });
+
+    it("returns false at document end", () => {
+      const view = createView("text^");
+      const handled = smartDelete(view);
+      expect(handled).toBe(false);
     });
   });
 });
