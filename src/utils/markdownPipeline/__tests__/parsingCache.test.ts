@@ -173,6 +173,40 @@ describe("parsingCache", () => {
     it("returns maxSize of 20", () => {
       expect(getCacheStats().maxSize).toBe(20);
     });
+
+    it("tracks cache hits and misses", () => {
+      const markdown = generateMarkdown(6000);
+
+      // First parse = miss
+      parseMarkdownToMdastCached(markdown);
+      expect(getCacheStats().misses).toBe(1);
+      expect(getCacheStats().hits).toBe(0);
+
+      // Second parse = hit
+      parseMarkdownToMdastCached(markdown);
+      expect(getCacheStats().misses).toBe(1);
+      expect(getCacheStats().hits).toBe(1);
+
+      // Third parse = hit
+      parseMarkdownToMdastCached(markdown);
+      expect(getCacheStats().hits).toBe(2);
+
+      // Hit rate should be 2/3
+      expect(getCacheStats().hitRate).toBeCloseTo(2 / 3, 2);
+    });
+
+    it("resets stats on clearCache", () => {
+      const markdown = generateMarkdown(6000);
+      parseMarkdownToMdastCached(markdown);
+      parseMarkdownToMdastCached(markdown);
+
+      expect(getCacheStats().hits).toBeGreaterThan(0);
+
+      clearCache();
+      expect(getCacheStats().hits).toBe(0);
+      expect(getCacheStats().misses).toBe(0);
+      expect(getCacheStats().hitRate).toBe(0);
+    });
   });
 
   describe("clearCache", () => {

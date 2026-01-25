@@ -46,6 +46,12 @@ const MIN_CACHE_SIZE = 5000;
 const mdastCache = new Map<string, CacheEntry>();
 
 /**
+ * Cache hit/miss statistics.
+ */
+let cacheHits = 0;
+let cacheMisses = 0;
+
+/**
  * Simple hash function for content-addressed caching.
  * Uses FNV-1a algorithm for fast, reasonable distribution.
  */
@@ -110,10 +116,12 @@ export function parseMarkdownToMdastCached(
   if (cached) {
     // Update timestamp for LRU
     cached.timestamp = Date.now();
+    cacheHits++;
     return cached.mdast;
   }
 
   // Parse and cache - use fast parser when applicable
+  cacheMisses++;
   const mdast = canUseFastParser(markdown)
     ? parseMarkdownToMdastFast(markdown)
     : parseMarkdownToMdast(markdown, options);
@@ -152,20 +160,27 @@ export function getCacheStats(): {
   size: number;
   maxSize: number;
   hitRate: number;
+  hits: number;
+  misses: number;
 } {
+  const total = cacheHits + cacheMisses;
   return {
     size: mdastCache.size,
     maxSize: MAX_CACHE_SIZE,
-    hitRate: 0, // Would need to track hits/misses for this
+    hitRate: total > 0 ? cacheHits / total : 0,
+    hits: cacheHits,
+    misses: cacheMisses,
   };
 }
 
 /**
- * Clear the cache.
+ * Clear the cache and reset statistics.
  * Useful for testing or when memory pressure is detected.
  */
 export function clearCache(): void {
   mdastCache.clear();
+  cacheHits = 0;
+  cacheMisses = 0;
 }
 
 /**

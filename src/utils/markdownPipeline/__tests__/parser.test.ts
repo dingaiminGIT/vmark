@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from "vitest";
 import { parseMarkdownToMdast } from "../parser";
-import type { Root, Heading, Paragraph, Code, Blockquote, List, ListItem } from "mdast";
+import type { Heading, Paragraph, Code, Blockquote, List, ListItem } from "mdast";
 
 describe("parseMarkdownToMdast", () => {
   describe("basic parsing", () => {
