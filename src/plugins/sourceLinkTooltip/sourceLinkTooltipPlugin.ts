@@ -3,6 +3,7 @@
  *
  * CodeMirror 6 plugin for showing read-only tooltip on link hover.
  * The edit popup is triggered by Cmd+K, not by hover.
+ * Cmd+Click opens the link or navigates to heading.
  */
 
 import { ViewPlugin, type EditorView, type ViewUpdate } from "@codemirror/view";
@@ -11,6 +12,7 @@ import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { SourceLinkTooltipView } from "./SourceLinkTooltipView";
 import { findMarkdownLinkAtPosition } from "@/utils/markdownLinkPatterns";
 import { getAnchorRectFromRange } from "@/plugins/sourcePopup";
+import { extractMarkdownHeadings } from "@/plugins/toolbarActions/sourceAdapterLinks";
 
 /** Delay before showing tooltip on hover (ms) */
 const HOVER_DELAY = 300;
@@ -163,11 +165,52 @@ export function createSourceLinkTooltipPlugin() {
         this.isMouseDown = false;
       };
 
-      private handleClick = () => {
-        // Close tooltip on click (cursor placement)
+      private handleClick = (e: MouseEvent) => {
+        // Close tooltip on any click
         if (useLinkTooltipStore.getState().isOpen) {
           useLinkTooltipStore.getState().hideTooltip();
         }
+
+        // Check for Cmd+Click (Mac) or Ctrl+Click (Windows)
+        const isCmdClick = e.metaKey || e.ctrlKey;
+        if (!isCmdClick) return;
+
+        const view = this.tooltipView["editorView"];
+        const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+        if (pos === null) return;
+
+        const link = findLinkAtPos(view, pos);
+        if (!link) return;
+
+        // Prevent default click behavior and cursor placement
+        e.preventDefault();
+
+        const { href } = link;
+
+        // Handle bookmark links - navigate to heading
+        if (href.startsWith("#")) {
+          const targetId = href.slice(1);
+          const docText = view.state.doc.toString();
+          const headings = extractMarkdownHeadings(docText);
+          const heading = headings.find((h) => h.id === targetId);
+
+          if (heading && heading.pos !== undefined) {
+            // Position cursor at the heading
+            view.dispatch({
+              selection: { anchor: heading.pos },
+              scrollIntoView: true,
+            });
+            view.focus();
+          }
+          return;
+        }
+
+        // External link - open in browser
+        import("@tauri-apps/plugin-opener").then(({ openUrl }) => {
+          openUrl(href).catch((error: unknown) => {
+            console.error("Failed to open link:", error);
+          });
+        });
       };
 
       private clearTimeouts() {
