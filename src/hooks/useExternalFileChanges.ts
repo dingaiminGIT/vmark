@@ -19,6 +19,7 @@ import { resolveExternalChangeAction } from "@/utils/openPolicy";
 import { normalizePath } from "@/utils/paths";
 import { saveToPath } from "@/utils/saveToPath";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
+import { isPendingSave } from "@/utils/pendingSaves";
 
 interface FsChangeEvent {
   watchId: string;
@@ -195,6 +196,11 @@ export function useExternalFileChanges(): void {
 
           // Handle file modification (create could be a recreation after delete)
           if (kind === "modify" || kind === "create") {
+            // Skip if this is our own save (prevents race condition on Windows)
+            if (isPendingSave(changedPath)) {
+              continue;
+            }
+
             const action = resolveExternalChangeAction({
               isDirty: doc.isDirty,
               hasFilePath: Boolean(doc.filePath),

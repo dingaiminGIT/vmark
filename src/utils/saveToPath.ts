@@ -15,6 +15,7 @@ import {
   normalizeHardBreaks,
   normalizeLineEndings,
 } from "@/utils/linebreaks";
+import { registerPendingSave, clearPendingSave } from "@/utils/pendingSaves";
 
 export async function saveToPath(
   tabId: string,
@@ -35,12 +36,18 @@ export async function saveToPath(
     const hardBreakNormalized = normalizeHardBreaks(content, targetHardBreakStyle);
     const output = normalizeLineEndings(hardBreakNormalized, targetLineEnding);
 
+    // Register pending save to prevent false "external modification" dialogs
+    registerPendingSave(path);
+
     await writeTextFile(path, output);
     useDocumentStore.getState().setFilePath(tabId, path);
     useDocumentStore
       .getState()
       .setLineMetadata(tabId, { lineEnding: targetLineEnding, hardBreakStyle: targetHardBreakStyle });
     useDocumentStore.getState().markSaved(tabId);
+
+    // Clear pending save after state is updated
+    clearPendingSave(path);
     // Update tab path for title sync
     useTabStore.getState().updateTabPath(tabId, path);
 

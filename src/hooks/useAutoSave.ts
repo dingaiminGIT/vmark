@@ -14,6 +14,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { createSnapshot } from "@/hooks/useHistoryOperations";
 import { autoSaveLog } from "@/utils/debug";
+import { registerPendingSave, clearPendingSave } from "@/utils/pendingSaves";
 
 export function useAutoSave() {
   const windowLabel = useWindowLabel();
@@ -43,8 +44,15 @@ export function useAutoSave() {
       if (now - lastSaveRef.current < DEBOUNCE_MS) return;
 
       try {
+        // Register pending save to prevent false "external modification" dialogs
+        registerPendingSave(doc.filePath);
+
         await writeTextFile(doc.filePath, doc.content);
         useDocumentStore.getState().markAutoSaved(tabId);
+
+        // Clear pending save after state is updated
+        clearPendingSave(doc.filePath);
+
         lastSaveRef.current = now;
         autoSaveLog("Saved:", doc.filePath);
 
