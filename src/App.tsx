@@ -85,6 +85,7 @@ import { useMcpBridge } from "@/hooks/useMcpBridge";
 import { useFileExplorerShortcuts } from "@/hooks/useFileExplorerShortcuts";
 import { useImagePasteToast } from "@/hooks/useImagePasteToast";
 import { useUpdateChecker } from "@/hooks/useUpdateChecker";
+import { useUpdateBroadcast } from "@/hooks/useUpdateSync";
 
 /** Height of the title bar area in pixels */
 const TITLEBAR_HEIGHT = 40;
@@ -104,6 +105,7 @@ function MainWindowHooks() {
   useMcpAutoStart(); // Auto-start MCP server if enabled
   useMcpBridge(); // Handle MCP bridge requests from AI assistants
   useUpdateChecker(); // Check for updates on startup
+  useUpdateBroadcast(); // Broadcast update state to other windows
   return null;
 }
 

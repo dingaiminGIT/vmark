@@ -23,6 +23,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
+import { useUpdateListener } from "@/hooks/useUpdateSync";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 
 // Settings sections
@@ -158,6 +159,22 @@ export function SettingsPage() {
   useSettingsClose();
   // Handle Cmd+Shift+D to toggle dev section
   useDevSectionShortcut();
+  // Listen for update state changes from main window
+  useUpdateListener();
+
+  // Listen for navigation events (e.g., from "Check for Updates" menu)
+  useEffect(() => {
+    const unlistenPromise = listen<string>("settings:navigate", (event) => {
+      const targetSection = event.payload;
+      if (isValidSection(targetSection)) {
+        setSection(targetSection);
+      }
+    });
+
+    return () => {
+      unlistenPromise.then((fn) => fn());
+    };
+  }, []);
 
   // Switch to appearance when dev sections are hidden while viewing them
   useEffect(() => {
