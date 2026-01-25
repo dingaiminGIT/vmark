@@ -84,6 +84,9 @@ function extractLinkData(
 
 /**
  * Create the Source link popup plugin.
+ *
+ * The edit popup is only opened via Cmd+K (handled in sourceShortcuts.ts).
+ * Hover shows a read-only tooltip (handled by sourceLinkTooltip plugin).
  */
 export function createSourceLinkPopupPlugin() {
   return createSourcePopupPlugin({
@@ -96,9 +99,8 @@ export function createSourceLinkPopupPlugin() {
       return { from: link.from, to: link.to };
     },
     extractData: extractLinkData,
-    triggerOnClick: true,
-    triggerOnHover: true,
-    hoverDelay: 300,
-    hoverHideDelay: 100,
+    // Disable click/hover triggers - popup is opened via Cmd+K only
+    triggerOnClick: false,
+    triggerOnHover: false,
   });
 }

@@ -179,6 +179,27 @@ export function detectAndNormalizeUrl(
 }
 
 /**
+ * Truncate a URL for display, keeping it readable.
+ * Preserves domain and end of path for context.
+ *
+ * @param url - The URL to truncate
+ * @param maxLength - Maximum length before truncating (default: 60)
+ * @returns Truncated URL with ellipsis if needed
+ *
+ * @example
+ * truncateUrl("https://example.com/very/long/path/to/resource")
+ * // "https://example.com/very/lo...th/to/resource"
+ */
+export function truncateUrl(url: string, maxLength = 60): string {
+  if (url.length <= maxLength) return url;
+
+  // Keep the domain and end of path visible
+  const start = url.slice(0, 30);
+  const end = url.slice(-25);
+  return `${start}...${end}`;
+}
+
+/**
  * Quick check if text looks like a URL (without full normalization).
  * Useful for fast filtering before detailed detection.
  */

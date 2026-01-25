@@ -1,0 +1,103 @@
+/**
+ * Link Tooltip Styles
+ *
+ * Compact, read-only tooltip showing URL + visit button on hover.
+ * Smaller and simpler than the edit popup.
+ */
+
+.link-tooltip {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-color);
+  box-shadow: var(--shadow-sm);
+  animation: link-tooltip-fade-in 0.1s ease-out;
+  max-width: 400px;
+}
+
+@keyframes link-tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* URL text - read only, truncated */
+.link-tooltip-url {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+/* Visit button */
+.link-tooltip-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: default;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.link-tooltip-btn:hover {
+  background: var(--hover-bg);
+  color: var(--primary-color);
+}
+
+.link-tooltip-btn:active {
+  opacity: 0.8;
+}
+
+/* Focus indicator: U-shaped underline */
+.link-tooltip-btn:focus-visible {
+  outline: none;
+}
+
+.link-tooltip-btn:focus-visible::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
+}
+
+.link-tooltip-btn svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* Dark theme */
+.dark-theme .link-tooltip-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

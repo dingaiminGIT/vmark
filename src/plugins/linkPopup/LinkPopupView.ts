@@ -7,6 +7,7 @@
 
 import { TextSelection } from "@tiptap/pm/state";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { useLinkTooltipStore } from "@/stores/linkTooltipStore";
 import {
   calculatePopupPosition,
   getBoundaryRects,
@@ -83,9 +84,6 @@ export class LinkPopupView {
 
     // Handle click outside
     document.addEventListener("mousedown", this.handleClickOutside);
-
-    // Handle mouse leaving the popup
-    this.container.addEventListener("mouseleave", this.handleMouseLeave);
 
     // Close popup on scroll (popup position becomes stale)
     this.editorView.dom.closest(".editor-container")?.addEventListener("scroll", this.handleScroll, true);
@@ -200,6 +198,9 @@ export class LinkPopupView {
   }
 
   private show(href: string, anchorRect: AnchorRect) {
+    // Close tooltip if open (edit popup takes precedence)
+    useLinkTooltipStore.getState().hideTooltip();
+
     const isBookmark = href.startsWith("#");
 
     this.input.value = href;
@@ -398,23 +399,6 @@ export class LinkPopupView {
     }
   };
 
-  private handleMouseLeave = (e: MouseEvent) => {
-    const relatedTarget = e.relatedTarget as HTMLElement | null;
-
-    // If moving back to a link in the editor, don't close
-    if (relatedTarget?.closest("a")) {
-      return;
-    }
-
-    // If input is focused (user is editing), don't close on mouse leave
-    if (document.activeElement === this.input) {
-      return;
-    }
-
-    // Close the popup
-    useLinkPopupStore.getState().closePopup();
-  };
-
   private handleScroll = () => {
     // Close popup on scroll - position becomes stale
     const { isOpen } = useLinkPopupStore.getState();
@@ -427,7 +411,6 @@ export class LinkPopupView {
     this.unsubscribe();
     this.removeKeyboardNavigation();
     document.removeEventListener("mousedown", this.handleClickOutside);
-    this.container.removeEventListener("mouseleave", this.handleMouseLeave);
     this.editorView.dom.closest(".editor-container")?.removeEventListener("scroll", this.handleScroll, true);
     this.container.remove();
   }

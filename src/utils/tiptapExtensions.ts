@@ -15,6 +15,8 @@ import {
 import { smartPasteExtension } from "@/plugins/smartPaste/tiptap";
 import { markdownPasteExtension } from "@/plugins/markdownPaste/tiptap";
 import { linkPopupExtension } from "@/plugins/linkPopup/tiptap";
+import { linkTooltipExtension } from "@/plugins/linkTooltip";
+import { linkCreatePopupExtension } from "@/plugins/linkCreatePopup";
 import { inlineNodeEditingExtension } from "@/plugins/inlineNodeEditing/tiptap";
 import { searchExtension } from "@/plugins/search/tiptap";
 import { spellCheckExtension } from "@/plugins/spellCheck/tiptap";
@@ -127,6 +129,8 @@ export function createTiptapExtensions(): Extensions {
     smartPasteExtension,
     markdownPasteExtension,
     linkPopupExtension,
+    linkTooltipExtension,
+    linkCreatePopupExtension,
     searchExtension,
     spellCheckExtension,
     autoPairExtension,

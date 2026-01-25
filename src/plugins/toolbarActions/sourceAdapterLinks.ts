@@ -6,10 +6,10 @@
  */
 
 import type { EditorView } from "@codemirror/view";
-import { applyFormat } from "@/plugins/sourceContextDetection";
 import { getAnchorRectFromRange } from "@/plugins/sourcePopup/sourcePopupUtils";
 import { useHeadingPickerStore } from "@/stores/headingPickerStore";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
+import { useLinkCreatePopupStore } from "@/stores/linkCreatePopupStore";
 import { generateSlug, makeUniqueSlug, type HeadingWithId } from "@/utils/headingSlug";
 import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
@@ -164,24 +164,25 @@ function insertLinkWithUrl(
 }
 
 /**
- * Insert a link template with cursor positioned in the URL part.
- * Used when no clipboard URL is available.
+ * Open the link create popup with given parameters.
  */
-function insertLinkTemplate(
+function openLinkCreatePopup(
   view: EditorView,
-  from: number,
-  to: number
+  text: string,
+  rangeFrom: number,
+  rangeTo: number,
+  showTextInput: boolean
 ): void {
-  const linkText = view.state.doc.sliceString(from, to);
-  const template = `[${linkText}](url)`;
-  // Position cursor at start of "url"
-  const cursorPos = from + linkText.length + 3; // After "[text]("
+  const anchorRect = getAnchorRectFromRange(view, rangeFrom, rangeTo);
+  if (!anchorRect) return;
 
-  view.dispatch({
-    changes: { from, to, insert: template },
-    selection: { anchor: cursorPos, head: cursorPos + 3 }, // Select "url"
+  useLinkCreatePopupStore.getState().openPopup({
+    text,
+    rangeFrom,
+    rangeTo,
+    anchorRect,
+    showTextInput,
   });
-  view.focus();
 }
 
 /**
@@ -190,11 +191,11 @@ function insertLinkTemplate(
  * Behavior:
  * - Cursor inside existing link → show popup for editing
  * - Has selection + clipboard URL → [selection](clipboard_url)
- * - Has selection, no URL → [selection](url) with cursor in url
+ * - Has selection, no URL → open create popup with URL input only
  * - No selection, word at cursor + clipboard URL → [word](clipboard_url)
- * - No selection, word at cursor, no URL → [word](url) with cursor in url
+ * - No selection, word at cursor, no URL → open create popup with URL input only
  * - No selection, no word + clipboard URL → [](clipboard_url) with cursor in text
- * - No selection, no word, no URL → [](url) with cursor in text
+ * - No selection, no word, no URL → open create popup with text + URL inputs
  */
 export async function insertLink(view: EditorView): Promise<boolean> {
   const { from, to } = view.state.selection.main;
@@ -209,6 +210,11 @@ export async function insertLink(view: EditorView): Promise<boolean> {
     return true;
   }
 
+  // Block if create popup is already open
+  if (useLinkCreatePopupStore.getState().isOpen) {
+    return true;
+  }
+
   const clipboardUrl = await readClipboardUrl();
 
   // Case 1: Has selection
@@ -216,8 +222,9 @@ export async function insertLink(view: EditorView): Promise<boolean> {
     if (clipboardUrl) {
       insertLinkWithUrl(view, from, to, clipboardUrl);
     } else {
-      // Use existing format behavior: wrap and position cursor in URL
-      applyFormat(view, "link");
+      // Open create popup with URL input only (text is selected)
+      const selectedText = view.state.doc.sliceString(from, to);
+      openLinkCreatePopup(view, selectedText, from, to, false);
     }
     return true;
   }
@@ -228,7 +235,9 @@ export async function insertLink(view: EditorView): Promise<boolean> {
     if (clipboardUrl) {
       insertLinkWithUrl(view, wordRange.from, wordRange.to, clipboardUrl);
     } else {
-      insertLinkTemplate(view, wordRange.from, wordRange.to);
+      // Open create popup with URL input only (word will be wrapped)
+      const wordText = view.state.doc.sliceString(wordRange.from, wordRange.to);
+      openLinkCreatePopup(view, wordText, wordRange.from, wordRange.to, false);
     }
     return true;
   }
@@ -241,15 +250,11 @@ export async function insertLink(view: EditorView): Promise<boolean> {
       changes: { from, to, insert: text },
       selection: { anchor: from + 1 }, // After "["
     });
+    view.focus();
   } else {
-    // Insert [](url) with "url" selected so user can replace it
-    const text = "[](url)";
-    view.dispatch({
-      changes: { from, to, insert: text },
-      selection: { anchor: from + 3, head: from + 6 }, // Select "url"
-    });
+    // Open create popup with both text and URL inputs
+    openLinkCreatePopup(view, "", from, to, true);
   }
-  view.focus();
   return true;
 }
 
