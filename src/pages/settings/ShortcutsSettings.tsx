@@ -161,11 +161,8 @@ export function ShortcutsSettings() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-        Keyboard Shortcuts
-      </h2>
       <p className="text-xs text-[var(--text-tertiary)] mb-4">
-        Customize keyboard shortcuts. Click a shortcut to change it.
+        Click a shortcut to change it.
       </p>
 
       {/* Toolbar */}

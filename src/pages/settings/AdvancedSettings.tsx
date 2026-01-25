@@ -17,10 +17,7 @@ export function AdvancedSettings() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-        Advanced
-      </h2>
-      <div className="space-y-1">
+      <SettingsGroup title="System">
         <SettingRow
           label="Enable terminal"
           description="Show integrated terminal panel (Ctrl+`)"
@@ -39,9 +36,9 @@ export function AdvancedSettings() {
         >
           <Toggle checked={hardwareAccel} onChange={setHardwareAccel} />
         </SettingRow>
-      </div>
+      </SettingsGroup>
 
-      <SettingsGroup title="Link Protocols" className="mt-6">
+      <SettingsGroup title="Link Protocols">
         <div className="py-2.5">
           <div className="text-sm font-medium text-[var(--text-primary)] mb-1">
             Custom link protocols

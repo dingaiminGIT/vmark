@@ -92,10 +92,6 @@ export function IntegrationsSettings() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-        Integrations
-      </h2>
-
       <SettingsGroup title="MCP Server">
         <SettingRow
           label="Enable MCP Server"

@@ -306,10 +306,6 @@ export function UpdateSettings() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-        Updates
-      </h2>
-
       {/* Update available/downloading/ready card */}
       <UpdateAvailableCard />
 

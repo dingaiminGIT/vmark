@@ -68,12 +68,12 @@ export function SettingsGroup({
   className?: string;
 }) {
   return (
-    <>
-      <div className="text-sm font-medium text-[var(--text-primary)] mb-3">
+    <div className={className}>
+      <div className="text-base font-semibold text-[var(--text-primary)] mb-3">
         {title}
       </div>
-      <div className={`space-y-1 ${className}`}>{children}</div>
-    </>
+      <div className="space-y-1">{children}</div>
+    </div>
   );
 }
 

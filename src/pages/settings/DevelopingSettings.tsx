@@ -101,14 +101,7 @@ export function DevelopingSettings() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-        Developing
-      </h2>
-      <p className="text-xs text-[var(--text-tertiary)] mb-4">
-        Experimental features under development. Press ⌃⌥⌘D to toggle this section.
-      </p>
-
-      <SettingsGroup title="Spell Check">
+      <SettingsGroup title="Spell Check (Experimental)">
         <SettingRow
           label="Enable spell check"
           description="Underline misspelled words with red wavy line"
