@@ -45,6 +45,12 @@ import {
   sortLinesAscending,
   sortLinesDescending,
 } from "@/utils/textTransformations";
+import {
+  findMarkdownLinkAtPosition,
+  findWikiLinkAtPosition,
+  type MarkdownLinkMatch,
+  type WikiLinkMatch,
+} from "@/utils/markdownLinkPatterns";
 
 const TABLE_TEMPLATE = "| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n";
 
@@ -146,47 +152,12 @@ function showImagePopupForExistingImage(view: EditorView): boolean {
 }
 
 /**
- * Link range result from detection.
+ * Find markdown link at cursor position using shared utility.
  */
-interface LinkRange {
-  from: number;
-  to: number;
-  text: string;
-  url: string;
-}
-
-/**
- * Find markdown link at cursor position.
- * Detects: [text](url) or [text](url "title")
- * Does NOT match images (preceded by !)
- */
-function findLinkAtCursor(view: EditorView, pos: number): LinkRange | null {
+function findLinkAtCursor(view: EditorView, pos: number): MarkdownLinkMatch | null {
   const doc = view.state.doc;
   const line = doc.lineAt(pos);
-  const lineText = line.text;
-  const lineStart = line.from;
-
-  const linkRegex = /\[([^\]]*)\]\((?:<([^>]+)>|([^)\s"]+))(?:\s+"[^"]*")?\)/g;
-
-  let match;
-  while ((match = linkRegex.exec(lineText)) !== null) {
-    const matchStart = lineStart + match.index;
-    const matchEnd = matchStart + match[0].length;
-
-    // Skip if this is an image (preceded by !)
-    if (match.index > 0 && lineText[match.index - 1] === "!") {
-      continue;
-    }
-
-    // Use pos < matchEnd since CodeMirror ranges are [from, to)
-    if (pos >= matchStart && pos < matchEnd) {
-      const text = match[1];
-      const url = match[2] || match[3];
-      return { from: matchStart, to: matchEnd, text, url };
-    }
-  }
-
-  return null;
+  return findMarkdownLinkAtPosition(line.text, line.from, pos);
 }
 
 /**
@@ -198,41 +169,12 @@ function isInsideLink(view: EditorView, pos: number): boolean {
 }
 
 /**
- * Wiki link range result from detection.
+ * Find wiki link at cursor position using shared utility.
  */
-interface WikiLinkRange {
-  from: number;
-  to: number;
-  target: string;
-  alias: string | null;
-}
-
-/**
- * Find wiki link at cursor position.
- * Detects: [[target]] or [[target|alias]]
- */
-function findWikiLinkAtCursor(view: EditorView, pos: number): WikiLinkRange | null {
+function findWikiLinkAtCursor(view: EditorView, pos: number): WikiLinkMatch | null {
   const doc = view.state.doc;
   const line = doc.lineAt(pos);
-  const lineText = line.text;
-  const lineStart = line.from;
-
-  // Regex to match wiki links: [[target]] or [[target|alias]]
-  const wikiLinkRegex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-
-  let match;
-  while ((match = wikiLinkRegex.exec(lineText)) !== null) {
-    const matchStart = lineStart + match.index;
-    const matchEnd = matchStart + match[0].length;
-
-    if (pos >= matchStart && pos < matchEnd) {
-      const target = match[1];
-      const alias = match[2] || null;
-      return { from: matchStart, to: matchEnd, target, alias };
-    }
-  }
-
-  return null;
+  return findWikiLinkAtPosition(line.text, line.from, pos);
 }
 
 /**

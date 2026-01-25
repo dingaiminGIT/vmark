@@ -436,8 +436,11 @@ function handleWikiLinkShortcut(view: EditorView): boolean {
             String(node.attrs.value ?? ""),
             nodePos
           );
-        } catch {
-          // Ignore if coords fail
+        } catch (err) {
+          // coords fail when view is not attached or node position is invalid
+          if (import.meta.env.DEV) {
+            console.debug("[WikiLink shortcut] Failed to open popup:", err);
+          }
         }
         break;
       }
@@ -468,12 +471,15 @@ function handleBookmarkLinkShortcut(view: EditorView): boolean {
   const selectedText = from !== to ? state.doc.textBetween(from, to) : "";
 
   // Get anchor rect for popup positioning
+  // When there's no selection width, we need a minimum width for the anchor rect
+  // so the popup positioning algorithm has something to align with.
+  const MINIMUM_ANCHOR_WIDTH = 10;
   const coords = view.coordsAtPos(from);
   const anchorRect = {
     top: coords.top,
     bottom: coords.bottom,
     left: coords.left,
-    right: coords.left + 10,
+    right: coords.left + MINIMUM_ANCHOR_WIDTH,
   };
 
   const containerEl = view.dom.closest(".editor-container") as HTMLElement;
