@@ -8,8 +8,6 @@
 import { describe, it, expect } from "vitest";
 import { markdownToHtml, generateHtmlDocument, escapeHtml } from "./exportUtils";
 
-const stripWhitespace = (value: string) => value.replace(/\s+/g, " ");
-
 describe("markdownToHtml", () => {
   describe("basic elements", () => {
     it("renders paragraphs", () => {
@@ -237,10 +235,9 @@ describe("markdownToHtml", () => {
   describe("details blocks", () => {
     it("renders details blocks", () => {
       const html = markdownToHtml("<details><summary>Click</summary>\n\nHello\n</details>");
-      const normalized = stripWhitespace(html);
-      expect(normalized).toContain("<details");
-      expect(normalized).toContain("<summary>Click</summary>");
-      expect(normalized).toContain("Hello");
+      expect(html).toContain("<details");
+      expect(html).toContain("<summary>Click</summary>");
+      expect(html).toContain("Hello");
     });
 
     it("renders details with open attribute", () => {
