@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from "vitest";
 import { parseMarkdownToMdast } from "./parser";
-import type { Paragraph, Text, Heading, Code } from "mdast";
+import type { Paragraph, Text, Heading, Code, Link, Image } from "mdast";
 
 describe("parseMarkdownToMdast", () => {
   describe("CommonMark basics", () => {
@@ -157,6 +157,88 @@ Content`;
       const md = "<details>\\n<summary>Info</summary>\\n\\nBody\\n</details>";
       const result = parseMarkdownToMdast(md);
       expect(result.children[0]?.type).toBe("details");
+    });
+  });
+
+  describe("reference-style links", () => {
+    it("resolves linkReference to link using definition", () => {
+      const md = `[Example][ex]
+
+[ex]: https://example.com "Example Title"`;
+      const result = parseMarkdownToMdast(md);
+
+      // First child should be paragraph with resolved link
+      const para = result.children[0] as Paragraph;
+      expect(para.type).toBe("paragraph");
+
+      const link = para.children[0] as Link;
+      expect(link.type).toBe("link");
+      expect(link.url).toBe("https://example.com");
+      expect(link.title).toBe("Example Title");
+
+      // Definition should still exist
+      const def = result.children[1];
+      expect(def.type).toBe("definition");
+    });
+
+    it("resolves shortcut linkReference [text]", () => {
+      const md = `[example]
+
+[example]: https://example.com`;
+      const result = parseMarkdownToMdast(md);
+
+      const para = result.children[0] as Paragraph;
+      const link = para.children[0] as Link;
+      expect(link.type).toBe("link");
+      expect(link.url).toBe("https://example.com");
+    });
+
+    it("resolves collapsed linkReference [text][]", () => {
+      const md = `[Example][]
+
+[Example]: https://example.com`;
+      const result = parseMarkdownToMdast(md);
+
+      const para = result.children[0] as Paragraph;
+      const link = para.children[0] as Link;
+      expect(link.type).toBe("link");
+      expect(link.url).toBe("https://example.com");
+    });
+
+    it("resolves imageReference to image using definition", () => {
+      const md = `![Alt text][img]
+
+[img]: https://example.com/image.png "Image Title"`;
+      const result = parseMarkdownToMdast(md);
+
+      const para = result.children[0] as Paragraph;
+      const img = para.children[0] as Image;
+      expect(img.type).toBe("image");
+      expect(img.url).toBe("https://example.com/image.png");
+      expect(img.title).toBe("Image Title");
+      expect(img.alt).toBe("Alt text");
+    });
+
+    it("handles case-insensitive definition matching", () => {
+      const md = `[Example][ID]
+
+[id]: https://example.com`;
+      const result = parseMarkdownToMdast(md);
+
+      const para = result.children[0] as Paragraph;
+      const link = para.children[0] as Link;
+      expect(link.type).toBe("link");
+      expect(link.url).toBe("https://example.com");
+    });
+
+    it("keeps linkReference as text when definition not found", () => {
+      const md = `[Example][missing]`;
+      const result = parseMarkdownToMdast(md);
+
+      const para = result.children[0] as Paragraph;
+      // GFM converts undefined references to literal text
+      expect(para.children[0].type).toBe("text");
+      expect((para.children[0] as Text).value).toBe("[Example][missing]");
     });
   });
 });

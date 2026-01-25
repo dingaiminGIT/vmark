@@ -14,6 +14,7 @@ import remarkMath from "remark-math";
 import remarkFrontmatter from "remark-frontmatter";
 import type { Details } from "../types";
 import { remarkCustomInline } from "./customInline";
+import { remarkResolveReferences } from "./resolveReferences";
 import { remarkWikiLinks } from "./wikiLinks";
 
 interface ToMarkdownExtension {
@@ -49,7 +50,8 @@ const innerProcessor = unified()
   .use(remarkMath)
   .use(remarkFrontmatter, ["yaml"])
   .use(remarkWikiLinks)
-  .use(remarkCustomInline);
+  .use(remarkCustomInline)
+  .use(remarkResolveReferences);
 
 export const remarkDetailsBlock: Plugin<[], Root> = function () {
   const data = this.data() as { toMarkdownExtensions?: ToMarkdownExtension[] };

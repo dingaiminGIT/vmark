@@ -15,7 +15,7 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkBreaks from "remark-breaks";
 import type { Root, Parent } from "mdast";
 import type { InlineMath } from "mdast-util-math";
-import { remarkCustomInline, remarkDetailsBlock, remarkWikiLinks } from "./plugins";
+import { remarkCustomInline, remarkDetailsBlock, remarkResolveReferences, remarkWikiLinks } from "./plugins";
 import type { MarkdownPipelineOptions } from "./types";
 
 /**
@@ -90,7 +90,8 @@ function createProcessor(options: MarkdownPipelineOptions = {}) {
     .use(remarkFrontmatter, ["yaml"])
     .use(remarkWikiLinks)
     .use(remarkDetailsBlock)
-    .use(remarkCustomInline);
+    .use(remarkCustomInline)
+    .use(remarkResolveReferences);
 
   if (options.preserveLineBreaks) {
     processor.use(remarkBreaks);
