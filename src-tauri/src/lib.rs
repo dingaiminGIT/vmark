@@ -10,6 +10,7 @@ mod window_manager;
 mod workspace;
 mod file_tree;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::Manager;
 
@@ -23,9 +24,15 @@ pub struct PendingFileOpen {
 
 static PENDING_FILE_OPENS: Mutex<Vec<PendingFileOpen>> = Mutex::new(Vec::new());
 
+/// Tracks whether frontend has initialized (called get_pending_file_opens)
+/// After this, file opens should emit events instead of queueing
+static FRONTEND_READY: AtomicBool = AtomicBool::new(false);
+
 /// Get and clear pending file opens - called by frontend when ready
+/// Also marks frontend as ready so future file opens emit events
 #[tauri::command]
 fn get_pending_file_opens() -> Vec<PendingFileOpen> {
+    FRONTEND_READY.store(true, Ordering::SeqCst);
     let mut pending = PENDING_FILE_OPENS.lock().unwrap();
     pending.drain(..).collect()
 }
@@ -213,14 +220,26 @@ pub fn run() {
                                     .any(|label| label == "main" || label.starts_with("doc-"));
 
                                 if has_doc_window {
-                                    // Queue file for frontend to process when ready
-                                    // This solves the cold start race condition where
-                                    // React hasn't mounted yet when RunEvent::Opened fires
-                                    if let Ok(mut pending) = PENDING_FILE_OPENS.lock() {
-                                        pending.push(PendingFileOpen {
-                                            path: path_str.to_string(),
-                                            workspace_root,
-                                        });
+                                    // Check if frontend is ready (has called get_pending_file_opens)
+                                    if FRONTEND_READY.load(Ordering::SeqCst) {
+                                        // Frontend is ready - emit event directly
+                                        use tauri::Emitter;
+                                        if let Some(main_window) = app.get_webview_window("main") {
+                                            let payload = PendingFileOpen {
+                                                path: path_str.to_string(),
+                                                workspace_root,
+                                            };
+                                            let _ = main_window.emit("app:open-file", payload);
+                                        }
+                                    } else {
+                                        // Cold start - queue for later
+                                        // React hasn't mounted yet when RunEvent::Opened fires
+                                        if let Ok(mut pending) = PENDING_FILE_OPENS.lock() {
+                                            pending.push(PendingFileOpen {
+                                                path: path_str.to_string(),
+                                                workspace_root,
+                                            });
+                                        }
                                     }
                                 } else {
                                     // No document windows - create a new one
