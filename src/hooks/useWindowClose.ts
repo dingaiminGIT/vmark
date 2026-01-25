@@ -13,8 +13,10 @@ const closeLog = import.meta.env.DEV
   ? (label: string, ...args: unknown[]) => {
       const msg = `[WindowClose:${label}] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`;
       console.log(msg);
-      // Log to terminal via Rust (fire-and-forget)
-      invoke("debug_log", { message: msg }).catch(() => {});
+      // Log to terminal via Rust (fire-and-forget, but log failures in dev)
+      invoke("debug_log", { message: msg }).catch((e) => {
+        console.warn("[closeLog] debug_log invoke failed:", e);
+      });
     }
   : () => {};
 
@@ -154,7 +156,11 @@ export function useWindowClose() {
           isQuitRequestRef.current = true;
           const closed = await handleCloseRequest();
           if (!closed) {
-            invoke("cancel_quit").catch(() => {});
+            invoke("cancel_quit").catch((e) => {
+              if (import.meta.env.DEV) {
+                console.warn("[WindowClose] cancel_quit failed:", e);
+              }
+            });
           }
           isQuitRequestRef.current = false;
         }
