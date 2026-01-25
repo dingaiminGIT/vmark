@@ -1,6 +1,7 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
+import { isSelectionInCode } from "@/utils/pasteUtils";
 
 const smartPastePluginKey = new PluginKey("smartPaste");
 
@@ -12,6 +13,9 @@ function handlePaste(view: EditorView, event: ClipboardEvent): boolean {
   const { from, to, empty } = view.state.selection;
 
   if (empty) return false;
+
+  // Don't apply link in code contexts
+  if (isSelectionInCode(view.state)) return false;
 
   const url = event.clipboardData?.getData("text/plain")?.trim();
   if (!url || !isValidUrl(url)) return false;

@@ -7,6 +7,7 @@ import { parseMarkdown } from "@/utils/markdownPipeline";
 import type { MarkdownPipelineOptions } from "@/utils/markdownPipeline/types";
 import { isMarkdownPasteCandidate } from "@/utils/markdownPasteDetection";
 import { useSettingsStore, type MarkdownPasteMode } from "@/stores/settingsStore";
+import { isMultiSelection, isSelectionInCode } from "@/utils/pasteUtils";
 
 const markdownPastePluginKey = new PluginKey("markdownPaste");
 
@@ -30,34 +31,6 @@ function ensureBlockContent(content: Fragment, paragraphType: NodeType | undefin
 
 function hasValidUrl(text: string): boolean {
   return /^https?:\/\//i.test(text.trim());
-}
-
-function isSelectionInCode(state: EditorState): boolean {
-  const { selection, schema, storedMarks } = state;
-  const codeBlock = schema.nodes.codeBlock;
-  const codeMark = schema.marks.code;
-
-  if (codeBlock) {
-    for (let depth = selection.$from.depth; depth > 0; depth -= 1) {
-      if (selection.$from.node(depth).type === codeBlock) return true;
-    }
-    for (let depth = selection.$to.depth; depth > 0; depth -= 1) {
-      if (selection.$to.node(depth).type === codeBlock) return true;
-    }
-  }
-
-  if (!codeMark) return false;
-
-  const fromMarks = selection.$from.marks();
-  const toMarks = selection.$to.marks();
-  if (codeMark.isInSet(fromMarks) || codeMark.isInSet(toMarks)) return true;
-  if (storedMarks && codeMark.isInSet(storedMarks)) return true;
-
-  return false;
-}
-
-function isMultiSelection(state: EditorState): boolean {
-  return state.selection.ranges.length > 1;
 }
 
 export function createMarkdownPasteSlice(
