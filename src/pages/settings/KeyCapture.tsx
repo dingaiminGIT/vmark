@@ -7,6 +7,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { formatKeyForDisplay, type ShortcutDefinition } from "@/stores/shortcutsStore";
 import { isImeKeyEvent } from "@/utils/imeGuard";
+import { Button } from "./components";
 
 interface KeyCaptureProps {
   shortcut: ShortcutDefinition;
@@ -67,7 +68,7 @@ export function KeyCapture({ shortcut, conflict, onCapture, onCancel }: KeyCaptu
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-[var(--bg-primary)] rounded-lg shadow-xl p-6 w-80 border border-[var(--border-primary)]">
+      <div className="bg-[var(--bg-primary)] rounded-lg shadow-xl p-6 w-80 border border-[var(--border-color)]">
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
           Set Shortcut
         </h3>
@@ -90,7 +91,7 @@ export function KeyCapture({ shortcut, conflict, onCapture, onCancel }: KeyCaptu
 
         {/* Conflict warning */}
         {conflict && (
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200
+          <div className="bg-[var(--warning-bg)] text-[var(--warning-color)] border border-[var(--warning-border)]
                           rounded-lg p-3 mb-4 text-sm">
             <strong>Conflict:</strong> This key is already used by{" "}
             <strong>{conflict.label}</strong>
@@ -99,20 +100,17 @@ export function KeyCapture({ shortcut, conflict, onCapture, onCancel }: KeyCaptu
 
         {/* Actions */}
         <div className="flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] rounded"
-          >
+          <Button size="md" onClick={onCancel}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            size="md"
+            variant="primary"
             onClick={handleConfirm}
             disabled={!capturedKey}
-            className="px-4 py-2 text-sm bg-[var(--accent-primary)] text-white rounded
-                       disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
           >
             {conflict ? "Assign Anyway" : "Assign"}
-          </button>
+          </Button>
         </div>
 
         <p className="text-xs text-[var(--text-tertiary)] mt-4 text-center">

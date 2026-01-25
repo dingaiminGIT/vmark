@@ -42,7 +42,7 @@ export function AdvancedSettings() {
       </div>
 
       <SettingsGroup title="Link Protocols" className="mt-6">
-        <div className="py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="py-2.5">
           <div className="text-sm font-medium text-[var(--text-primary)] mb-1">
             Custom link protocols
           </div>

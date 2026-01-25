@@ -14,7 +14,7 @@ function StatusBadge({ running, loading }: { running: boolean; loading: boolean 
   if (loading) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
-        <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+        <span className="w-2 h-2 rounded-full bg-[var(--warning-color)] animate-pulse" />
         Starting...
       </span>
     );
@@ -22,8 +22,8 @@ function StatusBadge({ running, loading }: { running: boolean; loading: boolean 
 
   if (running) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-        <span className="w-2 h-2 rounded-full bg-green-500" />
+      <span className="inline-flex items-center gap-1.5 text-xs text-[var(--success-color)]">
+        <span className="w-2 h-2 rounded-full bg-[var(--success-color)]" />
         Running
       </span>
     );
@@ -31,7 +31,7 @@ function StatusBadge({ running, loading }: { running: boolean; loading: boolean 
 
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-tertiary)]">
-      <span className="w-2 h-2 rounded-full bg-gray-400" />
+      <span className="w-2 h-2 rounded-full bg-[var(--text-tertiary)]" />
       Stopped
     </span>
   );
@@ -122,13 +122,13 @@ export function IntegrationsSettings() {
         </SettingRow>
 
         {error && (
-          <div className="mt-2 text-xs text-red-500">
+          <div className="mt-2 text-xs text-[var(--error-color)]">
             {error}
           </div>
         )}
 
         {running && port && (
-          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-4 pt-3 border-t border-[var(--border-color)]">
             <div className="text-xs text-[var(--text-tertiary)] flex items-center gap-1.5">
               <span>Listening on</span>
               <code className="px-1 py-0.5 rounded bg-[var(--bg-tertiary)] font-mono">
@@ -141,7 +141,7 @@ export function IntegrationsSettings() {
                 title={copied ? "Copied!" : "Copy address"}
               >
                 {copied ? (
-                  <svg className="w-3.5 h-3.5 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg className="w-3.5 h-3.5 text-[var(--success-color)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 ) : (

@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { SettingsGroup } from "./components";
+import { SettingsGroup, Button } from "./components";
 import { McpConfigPreviewDialog } from "./McpConfigPreviewDialog";
 import { getFileName, normalizePath } from "@/utils/paths";
 
@@ -51,7 +51,7 @@ function DiagnosticIcon({ status }: { status: DiagnosticStatus }) {
   switch (status) {
     case "Valid":
       return (
-        <span className="w-4 h-4 text-green-600 dark:text-green-400">
+        <span className="w-4 h-4 text-[var(--success-color)]">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="20 6 9 17 4 12" />
           </svg>
@@ -59,7 +59,7 @@ function DiagnosticIcon({ status }: { status: DiagnosticStatus }) {
       );
     case "PathMismatch":
       return (
-        <span className="w-4 h-4 text-amber-500 dark:text-amber-400">
+        <span className="w-4 h-4 text-[var(--warning-color)]">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             <line x1="12" y1="9" x2="12" y2="13" />
@@ -69,7 +69,7 @@ function DiagnosticIcon({ status }: { status: DiagnosticStatus }) {
       );
     case "BinaryMissing":
       return (
-        <span className="w-4 h-4 text-red-500 dark:text-red-400">
+        <span className="w-4 h-4 text-[var(--error-color)]">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
             <line x1="15" y1="9" x2="9" y2="15" />
@@ -109,7 +109,7 @@ function CopyButton({ text, size = "sm" }: { text: string; size?: "sm" | "xs" })
       title={copied ? "Copied!" : "Copy path"}
     >
       {copied ? (
-        <svg className={`${iconSize} text-green-500`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg className={`${iconSize} text-[var(--success-color)]`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="20 6 9 17 4 12" />
         </svg>
       ) : (
@@ -150,7 +150,7 @@ function ProviderRow({ diagnostic, onPreview, onRepair, onUninstall, loading }: 
   const showInstall = !diagnostic.hasVmark;
 
   return (
-    <div className="flex flex-col py-2.5 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+    <div className="flex flex-col py-2.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <DiagnosticIcon status={diagnostic.status} />
@@ -172,78 +172,36 @@ function ProviderRow({ diagnostic, onPreview, onRepair, onUninstall, loading }: 
         <div className="flex items-center gap-2 ml-3">
           {showRepairButton && (
             <>
-              <button
-                onClick={onRepair}
-                disabled={loading}
-                className="px-2.5 py-1 text-xs font-medium rounded
-                          bg-amber-500 text-white
-                          hover:bg-amber-600
-                          disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <Button size="sm" variant="warning" onClick={onRepair} disabled={loading}>
                 Repair
-              </button>
-              <button
-                onClick={onPreview}
-                disabled={loading}
-                className="px-2.5 py-1 text-xs font-medium rounded border
-                          border-gray-200 dark:border-gray-700 bg-transparent
-                          text-[var(--text-primary)] hover:bg-[var(--hover-bg)]
-                          disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              </Button>
+              <Button size="sm" onClick={onPreview} disabled={loading}>
                 Update
-              </button>
-              <button
-                onClick={onUninstall}
-                disabled={loading}
-                className="px-2.5 py-1 text-xs font-medium rounded border
-                          border-gray-200 dark:border-gray-700 bg-transparent
-                          text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
-                          disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              </Button>
+              <Button size="sm" variant="danger" onClick={onUninstall} disabled={loading}>
                 Remove
-              </button>
+              </Button>
             </>
           )}
           {showUpdateRemove && (
             <>
-              <button
-                onClick={onPreview}
-                disabled={loading}
-                className="px-2.5 py-1 text-xs font-medium rounded border
-                          border-gray-200 dark:border-gray-700 bg-transparent
-                          text-[var(--text-primary)] hover:bg-[var(--hover-bg)]
-                          disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <Button size="sm" onClick={onPreview} disabled={loading}>
                 Update
-              </button>
-              <button
-                onClick={onUninstall}
-                disabled={loading}
-                className="px-2.5 py-1 text-xs font-medium rounded border
-                          border-gray-200 dark:border-gray-700 bg-transparent
-                          text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
-                          disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              </Button>
+              <Button size="sm" variant="danger" onClick={onUninstall} disabled={loading}>
                 Remove
-              </button>
+              </Button>
             </>
           )}
           {showInstall && (
-            <button
-              onClick={onPreview}
-              disabled={loading}
-              className="px-2.5 py-1 text-xs font-medium rounded
-                        bg-[var(--accent-primary)] text-white
-                        hover:opacity-90
-                        disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button size="sm" variant="primary" onClick={onPreview} disabled={loading}>
               Install
-            </button>
+            </Button>
           )}
         </div>
       </div>
       {diagnostic.message && (
-        <div className="mt-1 ml-6.5 text-xs text-amber-600 dark:text-amber-400">
+        <div className="mt-1 ml-6.5 text-xs text-[var(--warning-color)]">
           {diagnostic.message}
         </div>
       )}
@@ -371,7 +329,7 @@ export function McpConfigInstaller({ onInstallSuccess }: McpConfigInstallerProps
         Configure AI assistants to connect to VMark MCP server.
       </div>
 
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <div>
         {diagnostics.map((diagnostic) => (
           <ProviderRow
             key={diagnostic.provider}
@@ -390,13 +348,13 @@ export function McpConfigInstaller({ onInstallSuccess }: McpConfigInstallerProps
       </div>
 
       {error && (
-        <div className="mt-2 text-xs text-red-500">
+        <div className="mt-2 text-xs text-[var(--error-color)]">
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div className="mt-2 text-xs text-green-600 dark:text-green-400">
+        <div className="mt-2 text-xs text-[var(--success-color)]">
           {successMessage}
           {showRestartHint && (
             <span className="text-[var(--text-tertiary)] ml-1">

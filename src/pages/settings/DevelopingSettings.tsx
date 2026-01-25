@@ -38,7 +38,7 @@ function LanguageCheckboxes({
             type="checkbox"
             checked={selected.includes(lang.value)}
             onChange={() => toggleLanguage(lang.value)}
-            className="w-3.5 h-3.5 rounded border-gray-300 text-[var(--accent-primary)]
+            className="w-3.5 h-3.5 rounded border-[var(--border-color)] text-[var(--accent-primary)]
                        focus:ring-[var(--accent-primary)] focus:ring-offset-0"
           />
           {lang.label}
@@ -127,7 +127,7 @@ export function DevelopingSettings() {
             onChange={(v) => updateSetting("spellCheckLanguages", v)}
           />
         </SettingRow>
-        <div className="py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="py-2.5">
           <div className="text-sm font-medium text-[var(--text-primary)] mb-2">
             Personal Dictionary
           </div>

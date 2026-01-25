@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { Button } from "./components";
 
 interface ConfigPreview {
   provider: string;
@@ -155,25 +156,12 @@ export function McpConfigPreviewDialog({
 
         {/* Footer */}
         <div className="flex justify-end gap-2 px-4 py-3 border-t border-[var(--border-color)]">
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            className="px-3 py-1.5 text-sm font-medium rounded border
-                      border-[var(--border-color)] bg-transparent
-                      text-[var(--text-primary)] hover:bg-[var(--hover-bg)]
-                      disabled:opacity-50"
-          >
+          <Button size="md" onClick={onCancel} disabled={loading}>
             Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="px-3 py-1.5 text-sm font-medium rounded
-                      bg-[var(--accent-primary)] text-white hover:opacity-90
-                      disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          </Button>
+          <Button size="md" variant="primary" onClick={onConfirm} disabled={loading}>
             {loading ? "Installing..." : "Install"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>,
@@ -232,8 +220,8 @@ function InfoRow({
         <span
           className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
             badgeColor === "amber"
-              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-              : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              ? "bg-[var(--warning-bg)] text-[var(--warning-color)]"
+              : "bg-[var(--success-color)]/10 text-[var(--success-color)]"
           }`}
         >
           {badge}

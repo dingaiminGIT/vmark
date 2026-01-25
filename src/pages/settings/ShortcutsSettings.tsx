@@ -16,6 +16,7 @@ import {
   type ShortcutCategory,
 } from "@/stores/shortcutsStore";
 import { KeyCapture } from "./KeyCapture";
+import { Button } from "./components";
 
 export function ShortcutsSettings() {
   const [search, setSearch] = useState("");
@@ -176,27 +177,19 @@ export function ShortcutsSettings() {
             placeholder="Search shortcuts..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded border border-gray-200 dark:border-gray-700
+            className="w-full px-3 py-2 text-sm rounded border border-[var(--border-color)]
                        bg-[var(--bg-primary)] text-[var(--text-primary)]
                        placeholder:text-[var(--text-tertiary)]"
           />
         </div>
 
         {/* Import/Export */}
-        <button
-          onClick={handleExport}
-          className="px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]
-                     rounded border border-gray-200 dark:border-gray-700"
-        >
+        <Button size="md" onClick={handleExport}>
           Export
-        </button>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]
-                     rounded border border-gray-200 dark:border-gray-700"
-        >
+        </Button>
+        <Button size="md" onClick={() => fileInputRef.current?.click()}>
           Import
-        </button>
+        </Button>
         <input
           ref={fileInputRef}
           type="file"
@@ -206,17 +199,17 @@ export function ShortcutsSettings() {
         />
 
         {/* Reset All */}
-        <button
+        <Button
+          size="md"
+          variant="danger"
           onClick={() => {
             if (confirm("Reset all shortcuts to defaults?")) {
               resetAllShortcuts();
             }
           }}
-          className="px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
-                     rounded border border-red-200 dark:border-red-800"
         >
           Reset All
-        </button>
+        </Button>
       </div>
 
       {/* Shortcuts list */}

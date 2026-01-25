@@ -21,7 +21,7 @@ export function LanguageSettings() {
   const updateMarkdownSetting = useSettingsStore((state) => state.updateMarkdownSetting);
   const updateCJKSetting = useSettingsStore((state) => state.updateCJKFormattingSetting);
 
-  const selectClass = `px-2 py-1 rounded border border-gray-200 dark:border-gray-700
+  const selectClass = `px-2 py-1 rounded border border-[var(--border-color)]
                        bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]`;
 
   return (

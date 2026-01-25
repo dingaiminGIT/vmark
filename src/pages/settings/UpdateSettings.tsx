@@ -43,7 +43,7 @@ function StatusIndicator() {
   if (status === "up-to-date") {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-        <CheckCircle2 className="w-3 h-3 text-green-600" />
+        <CheckCircle2 className="w-3 h-3 text-[var(--success-color)]" />
         Up to date
       </span>
     );
@@ -69,7 +69,7 @@ function StatusIndicator() {
 
   if (status === "ready") {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-green-600">
+      <span className="inline-flex items-center gap-1.5 text-xs text-[var(--success-color)]">
         <CheckCircle2 className="w-3 h-3" />
         Ready to install
       </span>
@@ -237,9 +237,9 @@ function UpdateAvailableCard() {
                 onClick={handleRestart}
                 disabled={isRestarting}
                 className="px-3 py-1.5 rounded text-sm font-medium
-                           bg-green-600 text-white
-                           hover:bg-green-700 disabled:opacity-50
-                           disabled:cursor-not-allowed transition-colors
+                           bg-[var(--success-color)] text-[var(--contrast-text)]
+                           hover:opacity-90 disabled:opacity-50
+                           disabled:cursor-not-allowed transition-opacity
                            flex items-center gap-1.5"
               >
                 {isRestarting ? (

@@ -2,6 +2,7 @@
  * Shared Settings Components
  *
  * Common UI components used across settings pages.
+ * All colors use CSS variables for theme consistency.
  */
 
 interface SettingRowProps {
@@ -13,7 +14,7 @@ interface SettingRowProps {
 
 export function SettingRow({ label, description, children, disabled }: SettingRowProps) {
   return (
-    <div className={`flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700
+    <div className={`flex items-center justify-between py-2.5
                      ${disabled ? "opacity-50" : ""}`}>
       <div className="flex-1">
         <div className="text-sm font-medium text-[var(--text-primary)]">
@@ -92,7 +93,7 @@ export function Select<T extends string>({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as T)}
-      className={`px-2 py-1 rounded border border-gray-200 dark:border-gray-700
+      className={`px-2 py-1 rounded border border-[var(--border-color)]
                  bg-[var(--bg-primary)] text-sm text-[var(--text-primary)]
                  ${disabled ? "cursor-not-allowed" : ""}`}
     >
@@ -184,8 +185,8 @@ export function TagInput({
 
   return (
     <div
-      className="flex flex-wrap items-center gap-1.5 p-2 rounded border border-gray-200
-                 dark:border-gray-700 bg-[var(--bg-primary)] min-h-[38px] cursor-text"
+      className="flex flex-wrap items-center gap-1.5 p-2 rounded border border-[var(--border-color)]
+                 bg-[var(--bg-primary)] min-h-[38px] cursor-text"
       onClick={() => inputRef.current?.focus()}
     >
       {value.map((tag) => (
@@ -221,5 +222,97 @@ export function TagInput({
                    text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)]"
       />
     </div>
+  );
+}
+
+// ============================================================================
+// Button Components
+// ============================================================================
+
+type ButtonVariant = "primary" | "secondary" | "danger" | "warning" | "success";
+type ButtonSize = "sm" | "md";
+
+interface ButtonProps {
+  children: React.ReactNode;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  disabled?: boolean;
+  className?: string;
+  onClick?: (e: React.MouseEvent) => void;
+}
+
+const buttonVariants: Record<ButtonVariant, string> = {
+  primary: `bg-[var(--primary-color)] text-[var(--contrast-text)]
+            hover:opacity-90`,
+  secondary: `bg-transparent text-[var(--text-secondary)] border border-[var(--border-color)]
+              hover:bg-[var(--hover-bg)]`,
+  danger: `bg-transparent text-[var(--error-color)] border border-[var(--error-color)]/30
+           hover:bg-[var(--error-bg)]`,
+  warning: `bg-[var(--warning-color)] text-[var(--contrast-text)]
+            hover:opacity-90`,
+  success: `bg-[var(--success-color)] text-[var(--contrast-text)]
+            hover:opacity-90`,
+};
+
+const buttonSizes: Record<ButtonSize, string> = {
+  sm: "px-2 py-1 text-xs",
+  md: "px-3 py-1.5 text-sm",
+};
+
+export function Button({
+  children,
+  variant = "secondary",
+  size = "sm",
+  disabled,
+  className = "",
+  onClick,
+}: ButtonProps) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className={`rounded font-medium transition-colors
+                  ${buttonVariants[variant]}
+                  ${buttonSizes[size]}
+                  ${disabled ? "opacity-50 cursor-not-allowed" : ""}
+                  ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+interface IconButtonProps {
+  children: React.ReactNode;
+  onClick?: (e: React.MouseEvent) => void;
+  title?: string;
+  disabled?: boolean;
+  className?: string;
+  size?: "sm" | "md";
+}
+
+export function IconButton({
+  children,
+  onClick,
+  title,
+  disabled,
+  className = "",
+  size = "sm",
+}: IconButtonProps) {
+  const sizeClass = size === "sm" ? "w-6 h-6" : "w-7 h-7";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+      className={`${sizeClass} flex items-center justify-center rounded
+                  text-[var(--text-tertiary)] hover:text-[var(--text-primary)]
+                  hover:bg-[var(--hover-bg)] transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  ${className}`}
+    >
+      {children}
+    </button>
   );
 }
