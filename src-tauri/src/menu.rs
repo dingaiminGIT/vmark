@@ -57,7 +57,8 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         ],
     )?;
 
-    // File menu
+    // File menu (Settings added for non-macOS platforms)
+    #[cfg(target_os = "macos")]
     let file_menu = Submenu::with_items(
         app,
         "File",
@@ -89,6 +90,49 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &export_submenu,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "close", "Close", true, Some("CmdOrCtrl+W"))?,
+        ],
+    )?;
+
+    #[cfg(not(target_os = "macos"))]
+    let file_menu = Submenu::with_items(
+        app,
+        "File",
+        true,
+        &[
+            &MenuItem::with_id(app, "new", "New", true, Some("CmdOrCtrl+N"))?,
+            &MenuItem::with_id(app, "new-window", "New Window", true, Some("CmdOrCtrl+Shift+N"))?,
+            &MenuItem::with_id(app, "open", "Open...", true, Some("CmdOrCtrl+O"))?,
+            &MenuItem::with_id(
+                app,
+                "open-folder",
+                "Open Folder...",
+                true,
+                Some("CmdOrCtrl+Shift+O"),
+            )?,
+            &recent_submenu,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(
+                app,
+                "close-workspace",
+                "Close Workspace",
+                true,
+                None::<&str>,
+            )?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "save", "Save", true, Some("CmdOrCtrl+S"))?,
+            &MenuItem::with_id(app, "save-as", "Save As...", true, Some("CmdOrCtrl+Shift+S"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &export_submenu,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "close", "Close", true, Some("CmdOrCtrl+W"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(
+                app,
+                "preferences",
+                "Settings...",
+                true,
+                Some("CmdOrCtrl+,"),
+            )?,
         ],
     )?;
 
@@ -731,7 +775,8 @@ fn create_menu_with_shortcuts(
         ],
     )?;
 
-    // File menu
+    // File menu (Settings added for non-macOS platforms)
+    #[cfg(target_os = "macos")]
     let file_menu = Submenu::with_items(
         app,
         "File",
@@ -751,6 +796,31 @@ fn create_menu_with_shortcuts(
             &export_submenu,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "close", "Close", true, get_accel("close", "CmdOrCtrl+W"))?,
+        ],
+    )?;
+
+    #[cfg(not(target_os = "macos"))]
+    let file_menu = Submenu::with_items(
+        app,
+        "File",
+        true,
+        &[
+            &MenuItem::with_id(app, "new", "New", true, get_accel("new", "CmdOrCtrl+N"))?,
+            &MenuItem::with_id(app, "new-window", "New Window", true, get_accel("new-window", "CmdOrCtrl+Shift+N"))?,
+            &MenuItem::with_id(app, "open", "Open...", true, get_accel("open", "CmdOrCtrl+O"))?,
+            &MenuItem::with_id(app, "open-folder", "Open Folder...", true, get_accel("open-folder", "CmdOrCtrl+Shift+O"))?,
+            &recent_submenu,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "close-workspace", "Close Workspace", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "save", "Save", true, get_accel("save", "CmdOrCtrl+S"))?,
+            &MenuItem::with_id(app, "save-as", "Save As...", true, get_accel("save-as", "CmdOrCtrl+Shift+S"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &export_submenu,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "close", "Close", true, get_accel("close", "CmdOrCtrl+W"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "preferences", "Settings...", true, get_accel("preferences", "CmdOrCtrl+,"))?,
         ],
     )?;
 
