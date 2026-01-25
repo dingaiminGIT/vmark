@@ -3,150 +3,75 @@
  *
  * DOM management for the link editing popup.
  * Shows when clicking on a link, allows editing/opening/copying/removing.
+ *
+ * Extends WysiwygPopupView for common popup lifecycle management.
  */
 
 import { TextSelection } from "@tiptap/pm/state";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { useLinkTooltipStore } from "@/stores/linkTooltipStore";
-import {
-  calculatePopupPosition,
-  getBoundaryRects,
-  getViewportBounds,
-  type AnchorRect,
-} from "@/utils/popupPosition";
 import { findHeadingById } from "@/utils/headingSlug";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { popupIcons } from "@/utils/popupComponents";
-import { getPopupHostForDom, toHostCoordsForDom } from "@/plugins/sourcePopup";
+import { WysiwygPopupView, type EditorViewLike, type PopupStoreBase } from "@/plugins/shared";
 
-type EditorViewLike = {
-  dom: HTMLElement;
-  // We keep this structural because ProseMirror's internal types are nominal across packages.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  state: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  dispatch: (tr: any) => void;
-  focus: () => void;
-};
+/** Link popup store state (extends base with link-specific fields) */
+interface LinkPopupState extends PopupStoreBase {
+  href: string;
+  linkFrom: number;
+  linkTo: number;
+  setHref: (href: string) => void;
+}
 
 /**
  * Link popup view - manages the floating popup UI.
  */
-export class LinkPopupView {
-  private container: HTMLElement;
-  private input: HTMLInputElement;
-  private openBtn: HTMLElement;
-  private saveBtn: HTMLElement;
-  private unsubscribe: () => void;
-  private editorView: EditorViewLike;
-  private justOpened = false;
-  private wasOpen = false;
-  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
-  private host: HTMLElement | null = null;
-
+export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
   constructor(view: EditorViewLike) {
-    this.editorView = view;
-
-    // Build DOM structure
-    this.container = this.buildContainer();
-    this.input = this.container.querySelector(
-      ".link-popup-input"
-    ) as HTMLInputElement;
-    this.openBtn = this.container.querySelector(
-      ".link-popup-btn-open"
-    ) as HTMLElement;
-    this.saveBtn = this.container.querySelector(
-      ".link-popup-btn-save"
-    ) as HTMLElement;
-
-    // Container will be appended to host in show()
-
-    // Subscribe to store changes - only show() on open transition
-    this.unsubscribe = useLinkPopupStore.subscribe((state) => {
-      if (state.isOpen && state.anchorRect) {
-        // Only call show() when transitioning from closed to open
-        if (!this.wasOpen) {
-          this.show(state.href, state.anchorRect);
-        }
-        this.wasOpen = true;
-      } else {
-        this.hide();
-        this.wasOpen = false;
-      }
-    });
-
-    // Handle click outside
-    document.addEventListener("mousedown", this.handleClickOutside);
-
-    // Close popup on scroll (popup position becomes stale)
-    this.editorView.dom.closest(".editor-container")?.addEventListener("scroll", this.handleScroll, true);
+    super(view, useLinkPopupStore);
+    // Attach event listeners after super() (arrow functions are now initialized)
+    this.attachEventListeners();
   }
 
-  private getFocusableElements(): HTMLElement[] {
-    return Array.from(
-      this.container.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      )
-    ).filter((el) => el.offsetParent !== null); // Exclude hidden elements
+  private attachEventListeners(): void {
+    this.input.addEventListener("input", this.handleInputChange);
+    this.input.addEventListener("keydown", this.handleInputKeydown);
+    this.openBtn.addEventListener("click", this.handleOpen);
+    this.copyBtn.addEventListener("click", this.handleCopy);
+    this.saveBtn.addEventListener("click", this.handleSave);
+    this.deleteBtn.addEventListener("click", this.handleRemove);
   }
 
-  private setupKeyboardNavigation() {
-    this.keydownHandler = (e: KeyboardEvent) => {
-      if (isImeKeyEvent(e)) return;
-
-      if (e.key === "Tab") {
-        const focusable = this.getFocusableElements();
-        if (focusable.length === 0) return;
-
-        const activeEl = document.activeElement as HTMLElement;
-        const currentIndex = focusable.indexOf(activeEl);
-
-        // Only handle Tab if focus is inside the popup
-        if (currentIndex === -1) return;
-
-        e.preventDefault();
-
-        if (e.shiftKey) {
-          const prevIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
-          focusable[prevIndex].focus();
-        } else {
-          const nextIndex = currentIndex >= focusable.length - 1 ? 0 : currentIndex + 1;
-          focusable[nextIndex].focus();
-        }
-      } else if (e.key === "Enter") {
-        // Handle Enter on focused buttons (input has its own handler)
-        const activeEl = document.activeElement as HTMLElement;
-        if (activeEl && activeEl.tagName === "BUTTON" && this.container.contains(activeEl)) {
-          e.preventDefault();
-          activeEl.click();
-        }
-      } else if (e.key === "Escape") {
-        // Handle ESC from any element inside the popup
-        const activeEl = document.activeElement as HTMLElement;
-        if (activeEl && this.container.contains(activeEl)) {
-          e.preventDefault();
-          useLinkPopupStore.getState().closePopup();
-          this.editorView.focus();
-        }
-      }
-    };
-
-    document.addEventListener("keydown", this.keydownHandler);
+  protected getPopupDimensions() {
+    return { width: 320, height: 36, gap: 6, preferAbove: true };
   }
 
-  private removeKeyboardNavigation() {
-    if (this.keydownHandler) {
-      document.removeEventListener("keydown", this.keydownHandler);
-      this.keydownHandler = null;
-    }
+  // Lazy getters for DOM elements (avoids constructor timing issues)
+  private get input(): HTMLInputElement {
+    return this.container.querySelector(".link-popup-input") as HTMLInputElement;
   }
 
-  private buildContainer(): HTMLElement {
+  private get openBtn(): HTMLElement {
+    return this.container.querySelector(".link-popup-btn-open") as HTMLElement;
+  }
+
+  private get copyBtn(): HTMLElement {
+    return this.container.querySelector(".link-popup-btn-copy") as HTMLElement;
+  }
+
+  private get saveBtn(): HTMLElement {
+    return this.container.querySelector(".link-popup-btn-save") as HTMLElement;
+  }
+
+  private get deleteBtn(): HTMLElement {
+    return this.container.querySelector(".link-popup-btn-delete") as HTMLElement;
+  }
+
+  protected buildContainer(): HTMLElement {
     const container = document.createElement("div");
     container.className = "link-popup";
-    container.style.display = "none";
 
-    // Input field
+    // Input field (event listeners attached in attachEventListeners)
     const input = document.createElement("input");
     input.type = "text";
     input.className = "link-popup-input";
@@ -155,17 +80,12 @@ export class LinkPopupView {
     input.autocomplete = "off";
     input.spellcheck = false;
     input.setAttribute("autocorrect", "off");
-    input.addEventListener("input", this.handleInputChange);
-    input.addEventListener("keydown", this.handleInputKeydown);
 
-    // Icon buttons: open, copy, save, delete
-    const openBtn = this.buildIconButton(popupIcons.open, "Open link", this.handleOpen);
-    openBtn.classList.add("link-popup-btn-open");
-    const copyBtn = this.buildIconButton(popupIcons.copy, "Copy URL", this.handleCopy);
-    const saveBtn = this.buildIconButton(popupIcons.save, "Save", this.handleSave);
-    saveBtn.classList.add("link-popup-btn-save");
-    const deleteBtn = this.buildIconButton(popupIcons.delete, "Remove link", this.handleRemove);
-    deleteBtn.classList.add("link-popup-btn-delete");
+    // Icon buttons (event listeners attached in attachEventListeners)
+    const openBtn = this.buildButton(popupIcons.open, "Open link", "link-popup-btn-open");
+    const copyBtn = this.buildButton(popupIcons.copy, "Copy URL", "link-popup-btn-copy");
+    const saveBtn = this.buildButton(popupIcons.save, "Save", "link-popup-btn-save");
+    const deleteBtn = this.buildButton(popupIcons.delete, "Remove link", "link-popup-btn-delete");
 
     container.appendChild(input);
     container.appendChild(openBtn);
@@ -176,93 +96,41 @@ export class LinkPopupView {
     return container;
   }
 
-  private buildIconButton(
-    iconSvg: string,
-    title: string,
-    onClick: () => void
-  ): HTMLElement {
+  /** Build a button without click handler (attached later in constructor) */
+  private buildButton(iconSvg: string, title: string, className: string): HTMLButtonElement {
     const btn = document.createElement("button");
-    btn.className = "link-popup-btn";
     btn.type = "button";
+    btn.className = `link-popup-btn ${className}`;
     btn.title = title;
     btn.innerHTML = iconSvg;
-    btn.addEventListener("click", onClick);
     return btn;
   }
 
-  private show(href: string, anchorRect: AnchorRect) {
+  protected onShow(state: LinkPopupState): void {
     // Close tooltip if open (edit popup takes precedence)
     useLinkTooltipStore.getState().hideTooltip();
 
-    const isBookmark = href.startsWith("#");
+    const isBookmark = state.href.startsWith("#");
 
-    this.input.value = href;
-
-    // Mount to editor container if available, otherwise document.body
-    this.host = getPopupHostForDom(this.editorView.dom) ?? document.body;
-    if (this.container.parentElement !== this.host) {
-      this.container.style.position = this.host === document.body ? "fixed" : "absolute";
-      this.host.appendChild(this.container);
-    }
-
-    this.container.style.display = "flex";
-
-    // Configure for bookmark vs regular link
-    // Both allow editing - bookmarks can be manually edited too
+    this.input.value = state.href;
     this.input.disabled = false;
     this.input.classList.remove("disabled");
     this.saveBtn.style.display = "";
     this.openBtn.title = isBookmark ? "Go to heading" : "Open link";
 
-    // Set guard to prevent immediate close from same click event
-    this.justOpened = true;
-    requestAnimationFrame(() => {
-      this.justOpened = false;
-    });
-
-    // Get boundaries: horizontal from ProseMirror, vertical from container
-    const containerEl = this.editorView.dom.closest(".editor-container") as HTMLElement;
-    const bounds = containerEl
-      ? getBoundaryRects(this.editorView.dom as HTMLElement, containerEl)
-      : getViewportBounds();
-
-    // Calculate position using utility
-    const { top, left } = calculatePopupPosition({
-      anchor: anchorRect,
-      popup: { width: 320, height: 36 },
-      bounds,
-      gap: 6,
-      preferAbove: true,
-    });
-
-    // Convert to host-relative coordinates if mounted inside editor container
-    if (this.host !== document.body) {
-      const hostPos = toHostCoordsForDom(this.host, { top, left });
-      this.container.style.top = `${hostPos.top}px`;
-      this.container.style.left = `${hostPos.left}px`;
-    } else {
-      this.container.style.top = `${top}px`;
-      this.container.style.left = `${left}px`;
-    }
-
-    // Set up keyboard navigation
-    this.setupKeyboardNavigation();
-
-    // Focus input and select all
+    // Focus and select input
     requestAnimationFrame(() => {
       this.input.focus();
       this.input.select();
     });
   }
 
-  private hide() {
-    this.container.style.display = "none";
-    this.host = null;
-    this.removeKeyboardNavigation();
+  protected onHide(): void {
+    // No special cleanup needed
   }
 
   private handleInputChange = () => {
-    useLinkPopupStore.getState().setHref(this.input.value);
+    this.store.getState().setHref(this.input.value);
   };
 
   private handleInputKeydown = (e: KeyboardEvent) => {
@@ -272,23 +140,21 @@ export class LinkPopupView {
       this.handleSave();
     } else if (e.key === "Escape") {
       e.preventDefault();
-      useLinkPopupStore.getState().closePopup();
-      this.editorView.focus();
+      this.closePopup();
+      this.focusEditor();
     }
   };
 
   private handleSave = () => {
-    const state = useLinkPopupStore.getState();
+    const state = this.store.getState();
     const { href, linkFrom, linkTo } = state;
 
     if (!href.trim()) {
-      // Empty URL - remove the link
       this.handleRemove();
       return;
     }
 
     try {
-      // Update the link mark
       const { state: editorState, dispatch } = this.editorView;
       if (!editorState) return;
 
@@ -296,22 +162,20 @@ export class LinkPopupView {
       if (!linkMark) return;
 
       const tr = editorState.tr;
-
-      // Remove existing link mark and add new one with updated href
       tr.removeMark(linkFrom, linkTo, linkMark);
       tr.addMark(linkFrom, linkTo, linkMark.create({ href }));
 
       dispatch(tr);
-      state.closePopup();
-      this.editorView.focus();
+      this.closePopup();
+      this.focusEditor();
     } catch (error) {
       console.error("[LinkPopup] Save failed:", error);
-      state.closePopup();
+      this.closePopup();
     }
   };
 
   private handleOpen = () => {
-    const { href } = useLinkPopupStore.getState();
+    const { href } = this.store.getState();
     if (!href) return;
 
     // Handle bookmark links - navigate to heading
@@ -325,8 +189,8 @@ export class LinkPopupView {
           this.editorView.dispatch(
             this.editorView.state.tr.setSelection(selection).scrollIntoView()
           );
-          useLinkPopupStore.getState().closePopup();
-          this.editorView.focus();
+          this.closePopup();
+          this.focusEditor();
         } catch (error) {
           console.error("[LinkPopup] Navigation failed:", error);
         }
@@ -343,11 +207,10 @@ export class LinkPopupView {
   };
 
   private handleCopy = async () => {
-    const { href } = useLinkPopupStore.getState();
+    const { href } = this.store.getState();
     if (href) {
       try {
         await navigator.clipboard.writeText(href);
-        // Keep popup open for further actions - don't close
       } catch (err) {
         console.error("Failed to copy URL:", err);
       }
@@ -355,11 +218,10 @@ export class LinkPopupView {
   };
 
   private handleRemove = () => {
-    const state = useLinkPopupStore.getState();
+    const state = this.store.getState();
     const { linkFrom, linkTo } = state;
 
     try {
-      // Remove the link mark, keeping the text
       const { state: editorState, dispatch } = this.editorView;
       if (!editorState) return;
 
@@ -369,42 +231,11 @@ export class LinkPopupView {
       const tr = editorState.tr.removeMark(linkFrom, linkTo, linkMark);
 
       dispatch(tr);
-      state.closePopup();
-      this.editorView.focus();
+      this.closePopup();
+      this.focusEditor();
     } catch (error) {
       console.error("[LinkPopup] Remove failed:", error);
-      state.closePopup();
+      this.closePopup();
     }
   };
-
-  private handleClickOutside = (e: MouseEvent) => {
-    // Guard against race condition where same click opens and closes popup
-    if (this.justOpened) return;
-
-    const { isOpen } = useLinkPopupStore.getState();
-    if (!isOpen) return;
-
-    const target = e.target as Node;
-    if (!this.container.contains(target)) {
-      // Just close the popup - don't auto-save to avoid issues
-      // User can press Enter to save, or click buttons for actions
-      useLinkPopupStore.getState().closePopup();
-    }
-  };
-
-  private handleScroll = () => {
-    // Close popup on scroll - position becomes stale
-    const { isOpen } = useLinkPopupStore.getState();
-    if (isOpen) {
-      useLinkPopupStore.getState().closePopup();
-    }
-  };
-
-  destroy() {
-    this.unsubscribe();
-    this.removeKeyboardNavigation();
-    document.removeEventListener("mousedown", this.handleClickOutside);
-    this.editorView.dom.closest(".editor-container")?.removeEventListener("scroll", this.handleScroll, true);
-    this.container.remove();
-  }
 }
