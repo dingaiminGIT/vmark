@@ -14,6 +14,7 @@ import type { EditorView } from "@tiptap/pm/view";
 import type { Mark } from "@tiptap/pm/model";
 import { useLinkPopupStore } from "@/stores/linkPopupStore";
 import { useLinkTooltipStore } from "@/stores/linkTooltipStore";
+import { useLinkCreatePopupStore } from "@/stores/linkCreatePopupStore";
 import { findHeadingById } from "@/utils/headingSlug";
 import { LinkPopupView } from "./LinkPopupView";
 
@@ -159,12 +160,15 @@ function handleClick(view: EditorView, pos: number, event: MouseEvent): boolean 
       return false;
     }
 
-    // Regular click: close popups, let default cursor placement happen
+    // Regular click: close all link popups, let default cursor placement happen
     if (useLinkPopupStore.getState().isOpen) {
       useLinkPopupStore.getState().closePopup();
     }
     if (useLinkTooltipStore.getState().isOpen) {
       useLinkTooltipStore.getState().hideTooltip();
+    }
+    if (useLinkCreatePopupStore.getState().isOpen) {
+      useLinkCreatePopupStore.getState().closePopup();
     }
 
     return false;
