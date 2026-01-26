@@ -5,10 +5,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock Tauri APIs
-const mockInvoke = vi.fn(() => Promise.resolve());
-const mockClose = vi.fn(() => Promise.resolve());
-const mockCloseTab = vi.fn();
+// Hoist mocks to avoid "Cannot access before initialization" errors
+const { mockInvoke, mockClose, mockCloseTab } = vi.hoisted(() => ({
+  mockInvoke: vi.fn(() => Promise.resolve()),
+  mockClose: vi.fn(() => Promise.resolve()),
+  mockCloseTab: vi.fn(),
+}));
 
 vi.mock("@tauri-apps/api/webviewWindow", () => ({
   getCurrentWebviewWindow: vi.fn(() => ({
@@ -17,7 +19,7 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: (...args: unknown[]) => mockInvoke(...args),
+  invoke: mockInvoke,
 }));
 
 vi.mock("@/stores/workspaceStore", () => ({
