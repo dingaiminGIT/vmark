@@ -131,7 +131,7 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 | Save | `Mod + S` |
 | Save As | `Mod + Shift + S` |
 | Close | `Mod + W` |
-| Export HTML | `Mod + Shift + E` |
+| Export HTML | `Alt + Mod + E` |
 | Print | `Mod + P` |
 | Settings | `Mod + ,` |
 
