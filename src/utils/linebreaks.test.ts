@@ -7,11 +7,24 @@ import {
 } from "./linebreaks";
 
 describe("linebreaks helpers", () => {
-  it("resolves hard break style from preference", () => {
+  it("resolves hard break style from explicit preference", () => {
+    // Explicit preference always wins, regardless of document style
     expect(resolveHardBreakStyle("unknown", "backslash")).toBe("backslash");
     expect(resolveHardBreakStyle("unknown", "twoSpaces")).toBe("twoSpaces");
+    expect(resolveHardBreakStyle("twoSpaces", "backslash")).toBe("backslash");
+    expect(resolveHardBreakStyle("backslash", "twoSpaces")).toBe("twoSpaces");
+    expect(resolveHardBreakStyle("mixed", "backslash")).toBe("backslash");
+    expect(resolveHardBreakStyle("mixed", "twoSpaces")).toBe("twoSpaces");
+  });
+
+  it("preserves detected document style when preference is preserve", () => {
     expect(resolveHardBreakStyle("twoSpaces", "preserve")).toBe("twoSpaces");
-    expect(resolveHardBreakStyle("unknown", "preserve")).toBe("backslash");
+    expect(resolveHardBreakStyle("backslash", "preserve")).toBe("backslash");
+  });
+
+  it("defaults to twoSpaces for unknown/new documents (wider compatibility)", () => {
+    expect(resolveHardBreakStyle("unknown", "preserve")).toBe("twoSpaces");
+    expect(resolveHardBreakStyle("mixed", "preserve")).toBe("twoSpaces");
   });
 
   it("resolves line ending on save", () => {

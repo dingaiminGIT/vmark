@@ -9,10 +9,14 @@ export function resolveHardBreakStyle(
   docStyle: HardBreakStyle,
   preference: HardBreakStyleOnSave
 ): "backslash" | "twoSpaces" {
+  // Explicit user preference takes priority
   if (preference === "backslash") return "backslash";
   if (preference === "twoSpaces") return "twoSpaces";
+  // Preserve detected document style
+  if (docStyle === "backslash") return "backslash";
   if (docStyle === "twoSpaces") return "twoSpaces";
-  return "backslash";
+  // Default to twoSpaces for new/unknown docs (wider compatibility)
+  return "twoSpaces";
 }
 
 export function resolveLineEndingOnSave(

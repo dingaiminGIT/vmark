@@ -116,7 +116,7 @@ describe("saveToPath", () => {
     expect(writeTextFile).toHaveBeenCalledWith("/tmp/doc.md", "a\r\nb\r\n");
     expect(mockSetLineMetadata).toHaveBeenCalledWith("tab-1", {
       lineEnding: "crlf",
-      hardBreakStyle: "backslash",
+      hardBreakStyle: "twoSpaces", // Default for unknown docs (wider compatibility)
     });
   });
 
