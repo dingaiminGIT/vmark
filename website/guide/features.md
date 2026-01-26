@@ -54,6 +54,12 @@ Quickly change text case via Format → Transform:
 - Horizontal rules
 - Tables with full editing support
 
+### Hard Line Breaks
+
+Press `Shift+Enter` to insert a hard line break within a paragraph.
+VMark uses two-space style by default for maximum compatibility.
+Configure in **Settings > Editor > Whitespace**.
+
 ### Line Operations
 
 Powerful line manipulation via Block → Lines:

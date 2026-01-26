@@ -217,14 +217,14 @@ export function EditorSettings() {
         </SettingRow>
         <SettingRow
           label="Hard break style on save"
-          description="Preserve source style or normalize hard line breaks"
+          description="Two spaces works everywhere. Backslash may fail on Reddit/Jekyll."
         >
           <Select
             value={markdown.hardBreakStyleOnSave}
             options={[
+              { value: "twoSpaces", label: "Two spaces (Recommended)" },
               { value: "preserve", label: "Preserve existing" },
-              { value: "backslash", label: "Backslash (\\\\)" },
-              { value: "twoSpaces", label: "Two spaces" },
+              { value: "backslash", label: "Backslash (\\)" },
             ]}
             onChange={(v) => updateMarkdownSetting("hardBreakStyleOnSave", v as typeof markdown.hardBreakStyleOnSave)}
           />
