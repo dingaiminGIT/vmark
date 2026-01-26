@@ -61,8 +61,11 @@ cd vmark
 # Install dependencies
 pnpm install
 
-# Run in development mode
+# Run in development mode (with dev icons)
 pnpm tauri:dev
+
+# Or without dev icons
+pnpm tauri dev
 
 # Run tests
 pnpm test
@@ -76,7 +79,8 @@ pnpm tauri build
 | Command | Description |
 |---------|-------------|
 | `pnpm dev` | Start Vite dev server (web only) |
-| `pnpm tauri:dev` | Start Tauri development mode |
+| `pnpm tauri dev` | Start Tauri development mode |
+| `pnpm tauri:dev` | Start Tauri dev mode with dev icons |
 | `pnpm test` | Run unit tests |
 | `pnpm test:watch` | Run tests in watch mode |
 | `pnpm lint` | Run ESLint |
