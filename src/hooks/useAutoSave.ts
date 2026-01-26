@@ -3,18 +3,20 @@
  *
  * Automatically saves the document at configurable intervals when dirty.
  * Skips untitled documents (no filePath).
- * Also creates history snapshots when history is enabled.
+ *
+ * Uses saveToPath() to ensure:
+ * - Consistent line ending normalization
+ * - Correct pending save registration
+ * - Proper history snapshots
  */
 
 import { useEffect, useRef } from "react";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useWindowLabel } from "@/contexts/WindowContext";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { createSnapshot } from "@/hooks/useHistoryOperations";
+import { saveToPath } from "@/utils/saveToPath";
 import { autoSaveLog } from "@/utils/debug";
-import { registerPendingSave, clearPendingSave } from "@/utils/pendingSaves";
 
 export function useAutoSave() {
   const windowLabel = useWindowLabel();
@@ -43,33 +45,12 @@ export function useAutoSave() {
       const now = Date.now();
       if (now - lastSaveRef.current < DEBOUNCE_MS) return;
 
-      try {
-        // Register pending save with content for content-based verification
-        registerPendingSave(doc.filePath, doc.content);
+      // Use saveToPath for consistent normalization, pending save handling, and history
+      const success = await saveToPath(tabId, doc.filePath, doc.content, "auto");
 
-        await writeTextFile(doc.filePath, doc.content);
-        useDocumentStore.getState().markAutoSaved(tabId);
-
-        // Clear pending save after state is updated
-        clearPendingSave(doc.filePath);
-
+      if (success) {
         lastSaveRef.current = now;
         autoSaveLog("Saved:", doc.filePath);
-
-        // Create history snapshot if enabled
-        const { general } = useSettingsStore.getState();
-        if (general.historyEnabled) {
-          try {
-            await createSnapshot(doc.filePath, doc.content, "auto", {
-              maxSnapshots: general.historyMaxSnapshots,
-              maxAgeDays: general.historyMaxAgeDays,
-            });
-          } catch (historyError) {
-            console.warn("[AutoSave] Failed to create snapshot:", historyError);
-          }
-        }
-      } catch (error) {
-        console.error("[AutoSave] Failed:", error);
       }
     };
 

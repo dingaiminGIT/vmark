@@ -222,6 +222,30 @@ export function useFileOperations() {
       });
       if (path) {
         await saveToPath(tabId, path, doc.content, "manual");
+
+        // Check if saved outside workspace - if so, move to new window
+        const workspaceRoot = useWorkspaceStore.getState().rootPath;
+        const isOutsideWorkspace = workspaceRoot && !path.startsWith(workspaceRoot);
+
+        if (isOutsideWorkspace) {
+          const windowTabs = useTabStore.getState().tabs[windowLabel] || [];
+          const isLastTab = windowTabs.length === 1;
+
+          // Open in new window first - derive workspace from new path's parent folder
+          await invoke("open_workspace_in_new_window", {
+            workspaceRoot: path.substring(0, path.lastIndexOf("/")),
+            filePath: path,
+          });
+
+          if (isLastTab) {
+            // Close current window since file was "moved" to new workspace
+            const currentWindow = getCurrentWebviewWindow();
+            await currentWindow.close();
+          } else {
+            // Close just the tab, leaving other tabs intact
+            useTabStore.getState().closeTab(windowLabel, tabId);
+          }
+        }
       }
     });
   }, [windowLabel]);

@@ -45,15 +45,23 @@ export async function saveToPath(
     useDocumentStore
       .getState()
       .setLineMetadata(tabId, { lineEnding: targetLineEnding, hardBreakStyle: targetHardBreakStyle });
-    useDocumentStore.getState().markSaved(tabId);
+
+    // Use correct mark function based on save type
+    if (saveType === "auto") {
+      useDocumentStore.getState().markAutoSaved(tabId);
+    } else {
+      useDocumentStore.getState().markSaved(tabId);
+    }
 
     // Clear pending save after state is updated
     clearPendingSave(path);
     // Update tab path for title sync
     useTabStore.getState().updateTabPath(tabId, path);
 
-    // Add to recent files
-    useRecentFilesStore.getState().addFile(path);
+    // Add to recent files (skip for auto-save to avoid noise)
+    if (saveType === "manual") {
+      useRecentFilesStore.getState().addFile(path);
+    }
 
     // Create history snapshot if enabled
     const { general } = useSettingsStore.getState();
@@ -71,6 +79,8 @@ export async function saveToPath(
 
     return true;
   } catch (error) {
+    // Clear pending save to prevent stale entries blocking file watcher
+    clearPendingSave(path);
     console.error("Failed to save file:", error);
     const message = error instanceof Error ? error.message : String(error);
     toast.error(`Failed to save: ${message}`);
