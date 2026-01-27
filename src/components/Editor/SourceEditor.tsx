@@ -47,8 +47,10 @@ export function SourceEditor() {
   // Refs to capture callbacks for use in CodeMirror listener
   const setContentRef = useRef(setContent);
   const setCursorInfoRef = useRef(setCursorInfo);
+  const cursorInfoRef = useRef(cursorInfo);
   setContentRef.current = setContent;
   setCursorInfoRef.current = setCursorInfo;
+  cursorInfoRef.current = cursorInfo;
 
   // Use editor store for global settings
   const wordWrap = useEditorStore((state) => state.wordWrap);
@@ -176,6 +178,7 @@ export function SourceEditor() {
     showBrTags,
     autoPairEnabled,
     showLineNumbers,
+    getCursorInfo: () => cursorInfoRef.current,
   });
 
   useSourceEditorSearch(viewRef);

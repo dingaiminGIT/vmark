@@ -22,6 +22,7 @@ interface SyncConfig {
   showBrTags: boolean;
   autoPairEnabled: boolean | undefined;
   showLineNumbers: boolean;
+  getCursorInfo?: () => unknown | null;
 }
 
 /**
@@ -32,7 +33,8 @@ interface SyncConfig {
 export function useSourceEditorContentSync(
   viewRef: MutableRefObject<EditorView | null>,
   isInternalChange: MutableRefObject<boolean>,
-  content: string
+  content: string,
+  getCursorInfo?: () => unknown | null
 ): void {
   // Track the latest external content to apply after internal changes settle
   const pendingContentRef = useRef<string | null>(null);
@@ -60,6 +62,8 @@ export function useSourceEditorContentSync(
     }
 
     lastAppliedContentRef.current = targetContent;
+    // Track if this is a fresh document load (empty -> content)
+    const wasFreshLoad = currentContent.length === 0 && targetContent.length > 0;
     runOrQueueCodeMirrorAction(view, () => {
       view.dispatch({
         changes: {
@@ -68,8 +72,16 @@ export function useSourceEditorContentSync(
           insert: targetContent,
         },
       });
+      // For fresh document load (no saved cursor position), set cursor to start
+      // This handles the case where editor was created with empty content and
+      // actual content was loaded asynchronously
+      if (wasFreshLoad && getCursorInfo && !getCursorInfo()) {
+        view.dispatch({
+          selection: { anchor: 0 },
+        });
+      }
     });
-  }, [viewRef, isInternalChange, content]);
+  }, [viewRef, isInternalChange, content, getCursorInfo]);
 
   // Poll for pending content when internal change completes
   useEffect(() => {
@@ -189,9 +201,9 @@ export function useSourceEditorLineNumbersSync(
  * Combined sync hook for all settings.
  */
 export function useSourceEditorSync(config: SyncConfig): void {
-  const { viewRef, isInternalChange, content, wordWrap, showBrTags, autoPairEnabled, showLineNumbers } = config;
+  const { viewRef, isInternalChange, content, wordWrap, showBrTags, autoPairEnabled, showLineNumbers, getCursorInfo } = config;
 
-  useSourceEditorContentSync(viewRef, isInternalChange, content);
+  useSourceEditorContentSync(viewRef, isInternalChange, content, getCursorInfo);
   useSourceEditorWordWrapSync(viewRef, wordWrap);
   useSourceEditorBrVisibilitySync(viewRef, showBrTags);
   useSourceEditorAutoPairSync(viewRef, autoPairEnabled);

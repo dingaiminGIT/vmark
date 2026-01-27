@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
+import { Selection } from "@tiptap/pm/state";
 import { useDocumentActions, useDocumentContent, useDocumentCursorInfo } from "@/hooks/useDocumentState";
 import { useImageContextMenu } from "@/hooks/useImageContextMenu";
 import { useOutlineSync } from "@/hooks/useOutlineSync";
@@ -312,6 +313,21 @@ export function TiptapEditorInner() {
         editor.commands.setContent(doc, { emitUpdate: false });
         // Only update lastExternalContent after successful parse to allow retry on failure
         lastExternalContent.current = contentToLoad;
+
+        // For fresh document load (no saved cursor position), set cursor to start
+        // This handles the case where editor was created with empty content and
+        // actual content was loaded asynchronously via this effect
+        if (!cursorInfoRef.current) {
+          const view = getTiptapEditorView(editor);
+          if (view) {
+            try {
+              const tr = view.state.tr.setSelection(Selection.atStart(view.state.doc));
+              view.dispatch(tr);
+            } catch {
+              // Ignore selection errors
+            }
+          }
+        }
       } catch (error) {
         if (!cancelled) {
           console.error("[TiptapEditor] Failed to parse external markdown:", error);
