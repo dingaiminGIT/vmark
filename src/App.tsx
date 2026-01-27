@@ -66,6 +66,8 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { useTheme } from "@/hooks/useTheme";
 import { useSettingsSync } from "@/hooks/useSettingsSync";
 import { useRecentFilesSync } from "@/hooks/useRecentFilesSync";
+import { useRecentWorkspacesSync } from "@/hooks/useRecentWorkspacesSync";
+import { useRecentWorkspacesMenuEvents } from "@/hooks/useRecentWorkspacesMenuEvents";
 import { useWindowClose } from "@/hooks/useWindowClose";
 import { useWindowTitle } from "@/hooks/useWindowTitle";
 import { useDisableContextMenu } from "@/hooks/useDisableContextMenu";
@@ -172,6 +174,8 @@ function MainLayout() {
   useTheme();
   useAutoSave(); // Auto-save when dirty
   useRecentFilesSync(); // Sync recent files to native menu
+  useRecentWorkspacesSync(); // Sync recent workspaces to native menu
+  useRecentWorkspacesMenuEvents(); // Handle recent workspace menu events
   useDisableContextMenu(); // Disable browser context menu
   useViewShortcuts(); // F8, F9 view shortcuts
   useTabShortcuts(); // Cmd+T, Cmd+W tab shortcuts

@@ -62,6 +62,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_pending_file_opens,
             menu::update_recent_files,
+            menu::update_recent_workspaces,
             menu::rebuild_menu,
             window_manager::new_window,
             window_manager::open_file_in_new_window,

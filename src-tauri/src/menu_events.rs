@@ -176,6 +176,14 @@ fn make_recent_file_event(path: &str) -> PendingMenuEvent {
     }
 }
 
+/// Create a PendingMenuEvent for a recent-workspace event (payload includes workspace path)
+fn make_recent_workspace_event(path: &str) -> PendingMenuEvent {
+    PendingMenuEvent {
+        event_name: "menu:open-recent-workspace".to_string(),
+        recent_file_path: Some(path.to_string()),
+    }
+}
+
 /// Create a new document window and queue an event to it.
 /// The event will be emitted when the window becomes ready.
 fn create_window_and_queue(app: &AppHandle, event: PendingMenuEvent) {
@@ -221,6 +229,31 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
             }
             return;
         }
+    }
+
+    // Handle recent workspace clicks - similar to recent files
+    if let Some(index_str) = id.strip_prefix("recent-workspace-") {
+        if let Ok(index) = index_str.parse::<usize>() {
+            if let Some(path) = crate::menu::get_recent_workspace_path(index) {
+                let event = make_recent_workspace_event(&path);
+                if let Some(focused) = get_focused_window(app) {
+                    emit_event(&focused, &event);
+                } else if !has_document_windows(app) {
+                    create_window_and_queue(app, event);
+                } else if let Some(window) = get_any_document_window(app) {
+                    emit_or_queue_atomic(&window, event);
+                }
+            }
+            return;
+        }
+    }
+
+    // Handle clear-recent-workspaces
+    if id == "clear-recent-workspaces" {
+        if let Some(focused) = get_focused_window(app) {
+            let _ = focused.emit("menu:clear-recent-workspaces", focused.label());
+        }
+        return;
     }
 
     // "new-window" creates a new window directly in Rust

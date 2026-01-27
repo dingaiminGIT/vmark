@@ -4,11 +4,15 @@ use tauri::menu::{Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu};
 use tauri::AppHandle;
 
 pub const RECENT_FILES_SUBMENU_ID: &str = "recent-files-submenu";
+pub const RECENT_WORKSPACES_SUBMENU_ID: &str = "recent-workspaces-submenu";
 
 /// Stores the recent files list snapshot at menu build time.
 /// This ensures that when a menu item is clicked, we can look up
 /// the correct path even if the store changed since menu creation.
 static RECENT_FILES_SNAPSHOT: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+/// Stores the recent workspaces list snapshot at menu build time.
+static RECENT_WORKSPACES_SNAPSHOT: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
 /// Get the path for a recent file by its menu index.
 /// Returns None if index is out of bounds.
@@ -17,6 +21,15 @@ pub fn get_recent_file_path(index: usize) -> Option<String> {
         .lock()
         .ok()
         .and_then(|files| files.get(index).cloned())
+}
+
+/// Get the path for a recent workspace by its menu index.
+/// Returns None if index is out of bounds.
+pub fn get_recent_workspace_path(index: usize) -> Option<String> {
+    RECENT_WORKSPACES_SNAPSHOT
+        .lock()
+        .ok()
+        .and_then(|workspaces| workspaces.get(index).cloned())
 }
 
 pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
@@ -59,6 +72,19 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         ],
     )?;
 
+    // Open Recent Workspace submenu (initially empty)
+    let recent_workspaces_submenu = Submenu::with_id_and_items(
+        app,
+        RECENT_WORKSPACES_SUBMENU_ID,
+        "Open Recent Workspace",
+        true,
+        &[
+            &MenuItem::with_id(app, "no-recent-workspace", "No Recent Workspaces", false, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "clear-recent-workspaces", "Clear Recent Workspaces", true, None::<&str>)?,
+        ],
+    )?;
+
     // Export submenu
     let export_submenu = Submenu::with_items(
         app,
@@ -91,6 +117,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
                 Some("CmdOrCtrl+Shift+O"),
             )?,
             &recent_submenu,
+            &recent_workspaces_submenu,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(
                 app,
@@ -127,6 +154,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
                 Some("CmdOrCtrl+Shift+O"),
             )?,
             &recent_submenu,
+            &recent_workspaces_submenu,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(
                 app,
@@ -700,6 +728,73 @@ pub fn update_recent_files(app: AppHandle, files: Vec<String>) -> Result<(), Str
     update_recent_files_menu(&app, files).map_err(|e| e.to_string())
 }
 
+/// Update the Open Recent Workspace submenu with the given list of workspace paths
+pub fn update_recent_workspaces_menu(app: &AppHandle, workspaces: Vec<String>) -> tauri::Result<()> {
+    // Store snapshot of workspaces for lookup when menu items are clicked
+    if let Ok(mut snapshot) = RECENT_WORKSPACES_SNAPSHOT.lock() {
+        *snapshot = workspaces.clone();
+    }
+
+    // Get the menu
+    let Some(menu) = app.menu() else {
+        return Ok(());
+    };
+
+    // Find the recent workspaces submenu - it's nested inside File menu
+    let mut submenu_opt = None;
+    for item in menu.items()? {
+        if let MenuItemKind::Submenu(sub) = item {
+            if let Some(found) = sub.get(RECENT_WORKSPACES_SUBMENU_ID) {
+                if let MenuItemKind::Submenu(recent) = found {
+                    submenu_opt = Some(recent);
+                    break;
+                }
+            }
+        }
+    }
+
+    let Some(submenu) = submenu_opt else {
+        return Ok(());
+    };
+
+    // Remove all existing items
+    while let Some(item) = submenu.items()?.first() {
+        submenu.remove(item)?;
+    }
+
+    // Add workspace items
+    if workspaces.is_empty() {
+        let no_recent = MenuItem::with_id(app, "no-recent-workspace", "No Recent Workspaces", false, None::<&str>)?;
+        submenu.append(&no_recent)?;
+    } else {
+        for (index, path) in workspaces.iter().enumerate() {
+            // Extract folder name from path
+            let foldername = std::path::Path::new(path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(path);
+
+            let item_id = format!("recent-workspace-{}", index);
+            let item = MenuItem::with_id(app, &item_id, foldername, true, None::<&str>)?;
+            submenu.append(&item)?;
+        }
+    }
+
+    // Add separator and clear option
+    let separator = PredefinedMenuItem::separator(app)?;
+    submenu.append(&separator)?;
+
+    let clear_item = MenuItem::with_id(app, "clear-recent-workspaces", "Clear Recent Workspaces", !workspaces.is_empty(), None::<&str>)?;
+    submenu.append(&clear_item)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_recent_workspaces(app: AppHandle, workspaces: Vec<String>) -> Result<(), String> {
+    update_recent_workspaces_menu(&app, workspaces).map_err(|e| e.to_string())
+}
+
 /// Rebuild the application menu with custom keyboard shortcuts.
 /// The shortcuts map is: menu_item_id -> accelerator_string (e.g., "bold" -> "CmdOrCtrl+B")
 #[tauri::command]
@@ -764,6 +859,19 @@ fn create_menu_with_shortcuts(
         ],
     )?;
 
+    // Open Recent Workspace submenu
+    let recent_workspaces_submenu = Submenu::with_id_and_items(
+        app,
+        RECENT_WORKSPACES_SUBMENU_ID,
+        "Open Recent Workspace",
+        true,
+        &[
+            &MenuItem::with_id(app, "no-recent-workspace", "No Recent Workspaces", false, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "clear-recent-workspaces", "Clear Recent Workspaces", true, None::<&str>)?,
+        ],
+    )?;
+
     // Export submenu
     let export_submenu = Submenu::with_items(
         app,
@@ -790,6 +898,7 @@ fn create_menu_with_shortcuts(
             &MenuItem::with_id(app, "open", "Open...", true, get_accel("open", "CmdOrCtrl+O"))?,
             &MenuItem::with_id(app, "open-folder", "Open Folder...", true, get_accel("open-folder", "CmdOrCtrl+Shift+O"))?,
             &recent_submenu,
+            &recent_workspaces_submenu,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "close-workspace", "Close Workspace", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
@@ -814,6 +923,7 @@ fn create_menu_with_shortcuts(
             &MenuItem::with_id(app, "open", "Open...", true, get_accel("open", "CmdOrCtrl+O"))?,
             &MenuItem::with_id(app, "open-folder", "Open Folder...", true, get_accel("open-folder", "CmdOrCtrl+Shift+O"))?,
             &recent_submenu,
+            &recent_workspaces_submenu,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "close-workspace", "Close Workspace", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,

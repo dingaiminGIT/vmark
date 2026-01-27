@@ -8,6 +8,7 @@ import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
+import { useRecentWorkspacesStore } from "@/stores/recentWorkspacesStore";
 import { persistWorkspaceSession } from "@/hooks/workspaceSession";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
@@ -76,6 +77,8 @@ export function useWorkspaceMenuEvents() {
           const existing = await openWorkspaceWithConfig(path);
           // Show sidebar with files view
           useUIStore.getState().showSidebarWithView("files");
+          // Add to recent workspaces
+          useRecentWorkspacesStore.getState().addWorkspace(path);
 
           // Restore tabs from lastOpenTabs if available
           if (existing?.lastOpenTabs && existing.lastOpenTabs.length > 0) {
