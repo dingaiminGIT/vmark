@@ -54,14 +54,12 @@ describe("useSettingsSync cross-window sync", () => {
       const newMarkdown = {
         ...useSettingsStore.getState().markdown,
         preserveLineBreaks: true,
-        spellCheckEnabled: true,
         autoPairEnabled: false,
       };
 
       handleSettingsStorageEvent(createStorageEvent({ markdown: newMarkdown }));
 
       expect(useSettingsStore.getState().markdown.preserveLineBreaks).toBe(true);
-      expect(useSettingsStore.getState().markdown.spellCheckEnabled).toBe(true);
       expect(useSettingsStore.getState().markdown.autoPairEnabled).toBe(false);
     });
 
@@ -185,14 +183,14 @@ describe("useSettingsSync cross-window sync", () => {
           },
           markdown: {
             ...useSettingsStore.getState().markdown,
-            spellCheckEnabled: true,
+            autoPairEnabled: false,
           },
         })
       );
 
       expect(useSettingsStore.getState().appearance.theme).toBe("night");
       expect(useSettingsStore.getState().general.tabSize).toBe(4);
-      expect(useSettingsStore.getState().markdown.spellCheckEnabled).toBe(true);
+      expect(useSettingsStore.getState().markdown.autoPairEnabled).toBe(false);
     });
   });
 });

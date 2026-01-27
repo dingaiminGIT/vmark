@@ -157,8 +157,6 @@ export type MediaBorderStyle = "none" | "always" | "hover";
 // - guillemets: «» ‹› (French, Russian)
 export type QuoteStyle = "curly" | "corner" | "guillemets";
 
-export type SpellCheckLanguage = "en" | "de" | "es" | "fr" | "ko";
-
 export type AutoPairCJKStyle = "off" | "auto";
 
 export type HtmlRenderingMode = "hidden" | "sanitized" | "sanitizedWithStyles";
@@ -197,9 +195,6 @@ export interface MarkdownSettings {
   autoPairEnabled: boolean; // Auto-insert closing brackets/quotes
   autoPairCJKStyle: AutoPairCJKStyle; // CJK bracket pairing style
   autoPairCurlyQuotes: boolean; // Include curly quotes in CJK pairing (may conflict with IME)
-  // Spell check
-  spellCheckEnabled: boolean;
-  spellCheckLanguages: SpellCheckLanguage[];
 }
 
 // Image auto-resize options (0 = off, positive = max dimension in pixels)
@@ -349,8 +344,6 @@ const initialState: SettingsState = {
     autoPairEnabled: true,
     autoPairCJKStyle: "auto",
     autoPairCurlyQuotes: false, // OFF by default (may conflict with IME smart quotes)
-    spellCheckEnabled: false,
-    spellCheckLanguages: ["en"],
   },
   image: {
     autoResizeMax: 0, // Off by default

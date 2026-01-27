@@ -1,24 +1,14 @@
 /**
  * Language Settings Section
  *
- * Spell check and CJK formatting configuration.
+ * CJK formatting configuration.
  */
 
-import { useSettingsStore, type SpellCheckLanguage, type QuoteStyle } from "@/stores/settingsStore";
+import { useSettingsStore, type QuoteStyle } from "@/stores/settingsStore";
 import { SettingRow, Toggle, SettingsGroup, Select } from "./components";
 
-const spellCheckLanguageOptions: { value: SpellCheckLanguage; label: string }[] = [
-  { value: "en", label: "English" },
-  { value: "de", label: "German" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-  { value: "ko", label: "Korean" },
-];
-
 export function LanguageSettings() {
-  const markdown = useSettingsStore((state) => state.markdown);
   const cjkFormatting = useSettingsStore((state) => state.cjkFormatting);
-  const updateMarkdownSetting = useSettingsStore((state) => state.updateMarkdownSetting);
   const updateCJKSetting = useSettingsStore((state) => state.updateCJKFormattingSetting);
 
   const selectClass = `px-2 py-1 rounded border border-[var(--border-color)]
@@ -26,31 +16,6 @@ export function LanguageSettings() {
 
   return (
     <div>
-      {/* Spell Check */}
-      <SettingsGroup title="Spell Check">
-        <SettingRow
-          label="Enable spell check"
-          description="Underline misspelled words"
-        >
-          <Toggle
-            checked={markdown.spellCheckEnabled}
-            onChange={(v) => updateMarkdownSetting("spellCheckEnabled", v)}
-          />
-        </SettingRow>
-        <SettingRow
-          label="Language"
-          description="Primary language for spell checking"
-          disabled={!markdown.spellCheckEnabled}
-        >
-          <Select<SpellCheckLanguage>
-            value={markdown.spellCheckLanguages[0] ?? "en"}
-            options={spellCheckLanguageOptions}
-            onChange={(v) => updateMarkdownSetting("spellCheckLanguages", [v])}
-            disabled={!markdown.spellCheckEnabled}
-          />
-        </SettingRow>
-      </SettingsGroup>
-
       {/* CJK Formatting */}
       <SettingsGroup title="CJK Formatting">
         <p className="text-xs text-[var(--text-tertiary)] -mt-2 mb-3">

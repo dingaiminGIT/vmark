@@ -13,7 +13,6 @@ import {
   Zap,
   Languages,
   FileText,
-  FlaskConical,
   Keyboard,
   Plug,
   RefreshCw,
@@ -35,7 +34,6 @@ import { MarkdownSettings } from "./settings/MarkdownSettings";
 import { ShortcutsSettings } from "./settings/ShortcutsSettings";
 import { UpdateSettings } from "./settings/UpdateSettings";
 import { AdvancedSettings } from "./settings/AdvancedSettings";
-import { DevelopingSettings } from "./settings/DevelopingSettings";
 
 // Hook to handle Cmd+W for settings window
 function useSettingsClose() {
@@ -81,8 +79,7 @@ type Section =
   | "markdown"
   | "shortcuts"
   | "updates"
-  | "advanced"
-  | "developing";
+  | "advanced";
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -124,7 +121,7 @@ const navConfig = [
 // Valid section IDs for URL param validation
 const validSections = new Set<string>([
   "appearance", "editor", "files", "integrations", "language",
-  "markdown", "shortcuts", "updates", "advanced", "developing"
+  "markdown", "shortcuts", "updates", "advanced"
 ]);
 
 function isValidSection(value: string): value is Section {
@@ -170,7 +167,7 @@ export function SettingsPage() {
 
   // Switch to appearance when dev sections are hidden while viewing them
   useEffect(() => {
-    if (!showDevSection && (section === "developing" || section === "advanced")) {
+    if (!showDevSection && section === "advanced") {
       setSection("appearance");
     }
   }, [showDevSection, section]);
@@ -182,18 +179,13 @@ export function SettingsPage() {
         icon: <item.icon className="w-4 h-4" />,
         label: item.label,
       })),
-    // Advanced and Developing sections toggled together via Ctrl+Option+Cmd+D
+    // Advanced section toggled via Ctrl+Option+Cmd+D
     ...(showDevSection
       ? [
           {
             id: "advanced" as const,
             icon: <Zap className="w-4 h-4" />,
             label: "Advanced",
-          },
-          {
-            id: "developing" as const,
-            icon: <FlaskConical className="w-4 h-4" />,
-            label: "Developing",
           },
         ]
       : []),
@@ -239,7 +231,6 @@ export function SettingsPage() {
           {section === "shortcuts" && <ShortcutsSettings />}
           {section === "updates" && <UpdateSettings />}
           {section === "advanced" && <AdvancedSettings />}
-          {section === "developing" && <DevelopingSettings />}
         </div>
       </div>
 

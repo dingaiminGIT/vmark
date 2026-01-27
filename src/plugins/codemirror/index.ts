@@ -20,7 +20,6 @@ export { createSourceCursorContextPlugin } from "./sourceCursorContext";
 export { createSourceMathPreviewPlugin } from "./sourceMathPreview";
 export { createSourceImagePreviewPlugin } from "./sourceImagePreview";
 export { sourceMultiCursorExtensions } from "./sourceMultiCursorPlugin";
-export { sourceSpellCheckExtensions } from "./sourceSpellCheck";
 export { sourceTableContextMenuExtensions } from "./sourceTableContextMenu";
 export { sourceTableCellHighlightExtensions } from "./sourceTableCellHighlight";
 export { sourceMermaidPreviewExtensions } from "./sourceMermaidPreview";

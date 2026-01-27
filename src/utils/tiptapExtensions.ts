@@ -21,7 +21,6 @@ import { linkTooltipExtension } from "@/plugins/linkTooltip";
 import { linkCreatePopupExtension } from "@/plugins/linkCreatePopup";
 import { inlineNodeEditingExtension } from "@/plugins/inlineNodeEditing/tiptap";
 import { searchExtension } from "@/plugins/search/tiptap";
-import { spellCheckExtension } from "@/plugins/spellCheck/tiptap";
 import { autoPairExtension } from "@/plugins/autoPair/tiptap";
 import { compositionGuardExtension } from "@/plugins/compositionGuard/tiptap";
 import { focusModeExtension } from "@/plugins/focusMode/tiptap";
@@ -139,7 +138,6 @@ export function createTiptapExtensions(): Extensions {
     linkTooltipExtension,
     linkCreatePopupExtension,
     searchExtension,
-    spellCheckExtension,
     autoPairExtension,
     focusModeExtension,
     typewriterModeExtension,

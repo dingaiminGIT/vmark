@@ -33,7 +33,6 @@ import {
   createSourceMathPreviewPlugin,
   createSourceImagePreviewPlugin,
   sourceMultiCursorExtensions,
-  sourceSpellCheckExtensions,
   sourceTableContextMenuExtensions,
   sourceTableCellHighlightExtensions,
   sourceMermaidPreviewExtensions,
@@ -206,8 +205,6 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
     createSourceWikiLinkPopupPlugin(),
     // Footnote popup editor
     createSourceFootnotePopupPlugin(),
-    // Spell check
-    ...sourceSpellCheckExtensions,
     // Table context menu
     ...sourceTableContextMenuExtensions,
     // Table cell highlight

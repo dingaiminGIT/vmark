@@ -135,9 +135,8 @@ export function TiptapEditorInner() {
     editorProps: {
       attributes: {
         class: "ProseMirror",
-        // Disable browser spellcheck - causes 2+ minute freeze on large documents (83K+ chars)
-        // as browser tries to spellcheck every word asynchronously blocking main thread
-        spellcheck: "false",
+        // Enable native browser spellcheck for system-level spell checking
+        spellcheck: "true",
       },
     },
     onCreate: ({ editor }) => {
