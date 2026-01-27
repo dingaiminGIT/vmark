@@ -76,12 +76,15 @@ pub struct McpResponse {
 }
 
 /// Event payload sent to frontend.
+/// Note: args is serialized as a JSON string to avoid Tauri IPC double-encoding issues
+/// with nested serde_json::Value. The frontend must parse this string.
 #[derive(Clone, Debug, Serialize)]
 pub struct McpRequestEvent {
     pub id: String,
     #[serde(rename = "type")]
     pub request_type: String,
-    pub args: serde_json::Value,
+    /// JSON-serialized args string (frontend must JSON.parse this)
+    pub args_json: String,
 }
 
 /// Response from frontend via command.
@@ -478,6 +481,12 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr, app: AppHandle) 
 
 /// Handle an incoming WebSocket message.
 async fn handle_message(text: &str, client_id: u64, app: &AppHandle) -> Result<(), String> {
+    // Debug: Log raw WebSocket message to trace markdown escaping
+    #[cfg(debug_assertions)]
+    if text.contains("insert") {
+        eprintln!("[MCP Bridge DEBUG] Raw WebSocket message: {}", text);
+    }
+
     let msg: WsMessage =
         serde_json::from_str(text).map_err(|e| format!("Invalid message format: {}", e))?;
 
@@ -505,6 +514,14 @@ async fn handle_message(text: &str, client_id: u64, app: &AppHandle) -> Result<(
     }
 
     let request = McpRequest::from_value(msg.payload.clone())?;
+
+    // Debug: Log request args to trace markdown escaping issues
+    #[cfg(debug_assertions)]
+    if request.request_type.starts_with("document.insert") || request.request_type == "selection.replace" {
+        eprintln!("[MCP Bridge DEBUG] Request type: {}", request.request_type);
+        eprintln!("[MCP Bridge DEBUG] Args: {}", serde_json::to_string_pretty(&request.args).unwrap_or_default());
+    }
+
     let is_read = is_read_only_operation(&request.request_type);
 
     // Get client's tx channel
@@ -550,10 +567,13 @@ async fn handle_message(text: &str, client_id: u64, app: &AppHandle) -> Result<(
     }
 
     // Emit event to frontend
+    // Serialize args to JSON string to avoid Tauri IPC double-encoding
+    let args_json = serde_json::to_string(&request.args)
+        .unwrap_or_else(|_| "{}".to_string());
     let event = McpRequestEvent {
         id: request_id.clone(),
         request_type: request.request_type.clone(),
-        args: request.args,
+        args_json,
     };
 
     if let Err(e) = app.emit("mcp-bridge:request", &event) {

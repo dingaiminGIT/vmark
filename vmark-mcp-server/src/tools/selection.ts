@@ -3,7 +3,7 @@
  */
 
 import { VMarkMcpServer, resolveWindowId, validateNonNegativeInteger } from '../server.js';
-import type { Selection, CursorContext } from '../bridge/types.js';
+import type { Selection, CursorContext, EditResult } from '../bridge/types.js';
 
 /**
  * Register all selection tools on the server.
@@ -141,15 +141,20 @@ export function registerSelectionTools(server: VMarkMcpServer): void {
       }
 
       try {
-        await server.sendBridgeRequest<null>({
+        const result = await server.sendBridgeRequest<EditResult>({
           type: 'selection.replace',
           text,
           windowId,
         });
 
-        return VMarkMcpServer.successResult(
-          `Replaced selection with ${text.length} characters`
-        );
+        // Return structured result including suggestionId if edit was staged
+        return VMarkMcpServer.successJsonResult({
+          message: result.message,
+          range: result.range,
+          originalContent: result.originalContent,
+          suggestionId: result.suggestionId,
+          applied: !result.suggestionId,
+        });
       } catch (error) {
         return VMarkMcpServer.errorResult(
           `Failed to replace selection: ${error instanceof Error ? error.message : String(error)}`
@@ -180,12 +185,19 @@ export function registerSelectionTools(server: VMarkMcpServer): void {
       const windowId = resolveWindowId(args.windowId as string | undefined);
 
       try {
-        await server.sendBridgeRequest<null>({
+        const result = await server.sendBridgeRequest<EditResult>({
           type: 'selection.delete',
           windowId,
         });
 
-        return VMarkMcpServer.successResult('Selection deleted');
+        // Return structured result including suggestionId if edit was staged
+        return VMarkMcpServer.successJsonResult({
+          message: result.message,
+          range: result.range,
+          content: result.content,
+          suggestionId: result.suggestionId,
+          applied: !result.suggestionId,
+        });
       } catch (error) {
         return VMarkMcpServer.errorResult(
           `Failed to delete selection: ${error instanceof Error ? error.message : String(error)}`

@@ -7,7 +7,7 @@
 
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import type { McpRequestEvent } from "./types";
+import type { McpRequestEvent, McpRequestEventRaw } from "./types";
 import { respond } from "./utils";
 
 // Document handlers (read-only operations)
@@ -84,6 +84,8 @@ import {
   handleWorkspaceSaveDocumentAs,
   handleWorkspaceGetDocumentInfo,
   handleWorkspaceCloseWindow,
+  handleWorkspaceListRecentFiles,
+  handleWorkspaceGetInfo,
   handleAiNotImplemented,
 } from "./workspaceHandlers";
 
@@ -95,6 +97,7 @@ import {
   handleTabsClose,
   handleTabsCreate,
   handleTabsGetInfo,
+  handleTabsReopenClosed,
 } from "./tabHandlers";
 
 // VMark-specific handlers
@@ -297,6 +300,12 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
       case "workspace.closeWindow":
         await handleWorkspaceCloseWindow(id, args);
         break;
+      case "workspace.listRecentFiles":
+        await handleWorkspaceListRecentFiles(id);
+        break;
+      case "workspace.getInfo":
+        await handleWorkspaceGetInfo(id);
+        break;
 
       // Tab operations
       case "tabs.list":
@@ -316,6 +325,9 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
         break;
       case "tabs.getInfo":
         await handleTabsGetInfo(id, args);
+        break;
+      case "tabs.reopenClosed":
+        await handleTabsReopenClosed(id, args);
         break;
 
       // VMark-specific operations
@@ -371,8 +383,32 @@ export function useMcpBridge(): void {
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
-    listen<McpRequestEvent>("mcp-bridge:request", (event) => {
-      handleRequest(event.payload);
+    listen<McpRequestEventRaw>("mcp-bridge:request", (event) => {
+      // Parse args_json to avoid Tauri IPC double-encoding issues
+      const raw = event.payload;
+
+      // Try both snake_case and camelCase (Tauri might convert)
+      const argsJsonStr = raw.args_json ?? raw.argsJson ?? "{}";
+
+      let args: Record<string, unknown>;
+      try {
+        args = JSON.parse(argsJsonStr);
+      } catch {
+        // Malformed JSON - respond with error
+        respond({
+          id: raw.id,
+          success: false,
+          error: "Invalid JSON in request args",
+        });
+        return;
+      }
+
+      const parsed: McpRequestEvent = {
+        id: raw.id,
+        type: raw.type,
+        args,
+      };
+      handleRequest(parsed);
     }).then((fn) => {
       unlisten = fn;
     });

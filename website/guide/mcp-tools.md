@@ -30,8 +30,17 @@ Insert text at the current cursor position.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `text` | string | Yes | Text to insert. |
+| `text` | string | Yes | Text to insert (markdown supported). |
 | `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ message, position, suggestionId?, applied }`
+
+::: tip Markdown Support
+The `text` parameter supports markdown syntax. Content like `# Heading`, `**bold**`, `- list items`, and `` `code` `` will be parsed and rendered as rich formatted content.
+:::
+
+- `suggestionId` - Present when edit is staged (auto-approve disabled). Use with `suggestion_accept` to apply.
+- `applied` - `true` if immediately applied, `false` if staged as suggestion.
 
 ::: tip Suggestion System
 By default, this tool creates a **suggestion** that requires user approval. The text appears as ghost text preview. Users can accept (Enter) or reject (Escape) the suggestion. This preserves undo/redo integrity.
@@ -45,9 +54,11 @@ Insert text at a specific character position.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `text` | string | Yes | Text to insert. |
+| `text` | string | Yes | Text to insert (markdown supported). |
 | `position` | number | Yes | Character position (0-indexed). |
 | `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ message, position, suggestionId?, applied }`
 
 ### document_search
 
@@ -68,11 +79,15 @@ Replace text occurrences in the document.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `search` | string | Yes | Text to find. |
-| `replace` | string | Yes | Replacement text. |
+| `replace` | string | Yes | Replacement text (markdown supported). |
 | `all` | boolean | No | Replace all occurrences. Default: false. |
 | `windowId` | string | No | Window identifier. |
 
-**Returns:** Number of replacements made.
+**Returns:** `{ count, message, suggestionIds?, applied }`
+
+- `count` - Number of replacements made.
+- `suggestionIds` - Array of suggestion IDs when edits are staged (auto-approve disabled).
+- `applied` - `true` if immediately applied, `false` if staged as suggestions.
 
 ---
 
@@ -110,8 +125,10 @@ Replace selected text with new text.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `text` | string | Yes | Replacement text. |
+| `text` | string | Yes | Replacement text (markdown supported). |
 | `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ message, range, originalContent, suggestionId?, applied }`
 
 ::: tip Suggestion System
 By default, this tool creates a **suggestion** that requires user approval. The original text appears with strikethrough, and the new text appears as ghost text. Users can accept (Enter) or reject (Escape) the suggestion.
@@ -126,6 +143,8 @@ Delete the selected text.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ message, range, content, suggestionId?, applied }`
 
 ::: tip Suggestion System
 By default, this tool creates a **suggestion** that requires user approval. The text to be deleted appears with strikethrough. Users can accept (Enter) or reject (Escape) the deletion.
@@ -517,6 +536,28 @@ Close a window.
 |-----------|------|----------|-------------|
 | `windowId` | string | No | Window to close. Defaults to focused. |
 
+### workspace_list_recent_files
+
+List recently opened files.
+
+**Returns:** Array of `{ path, name, timestamp }` (up to 10 files, most recent first).
+
+Useful for quickly accessing previously edited documents without knowing their full paths.
+
+### workspace_get_info
+
+Get information about the current workspace state.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ isWorkspaceMode, rootPath, workspaceName }`
+
+- `isWorkspaceMode` - `true` if a folder was opened, `false` for single-file mode.
+- `rootPath` - The workspace root directory path (null if not in workspace mode).
+- `workspaceName` - The folder name (null if not in workspace mode).
+
 ---
 
 ## Tab Management Tools
@@ -582,6 +623,18 @@ Get detailed tab information.
 
 **Returns:** `{ id, title, filePath, isDirty, isActive }`
 
+### tabs_reopen_closed
+
+Reopen the most recently closed tab.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ tabId, filePath, title }` or `"No closed tabs to reopen"` if none available.
+
+VMark keeps track of the last 10 closed tabs per window. Use this to restore accidentally closed tabs.
+
 ---
 
 ## AI Suggestion Tools
@@ -600,6 +653,10 @@ If **Auto-approve edits** is enabled in Settings → Integrations, these tools a
 
 List all pending suggestions.
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
+
 **Returns:** `{ suggestions: [...], count, focusedId }`
 
 Each suggestion includes:
@@ -616,6 +673,7 @@ Accept a specific suggestion, applying its changes to the document.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `suggestionId` | string | Yes | ID of the suggestion to accept. |
+| `windowId` | string | No | Window identifier. |
 
 ### suggestion_reject
 
@@ -624,14 +682,23 @@ Reject a specific suggestion, discarding it without changes.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `suggestionId` | string | Yes | ID of the suggestion to reject. |
+| `windowId` | string | No | Window identifier. |
 
 ### suggestion_accept_all
 
 Accept all pending suggestions in document order.
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
+
 ### suggestion_reject_all
 
 Reject all pending suggestions.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
 
 ---
 

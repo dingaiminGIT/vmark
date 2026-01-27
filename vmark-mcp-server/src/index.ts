@@ -40,7 +40,7 @@ export { registerTableTools } from './tools/tables.js';
 export { registerVMarkTools } from './tools/vmark.js';
 export { registerWorkspaceTools } from './tools/workspace.js';
 export { registerTabTools } from './tools/tabs.js';
-export { registerPromptTools } from './tools/prompts.js';
+export { registerSuggestionTools } from './tools/suggestions.js';
 
 // Resource registrations
 export { registerDocumentResources } from './resources/document.js';
@@ -63,6 +63,13 @@ export type {
   SearchResult,
   SearchMatch,
   ReplaceResult,
+  SuggestionType,
+  Suggestion,
+  SuggestionListResult,
+  EditResult,
+  RecentFile,
+  WorkspaceInfo,
+  ReopenedTabResult,
 } from './bridge/types.js';
 
 export type {
@@ -86,7 +93,7 @@ import { registerTableTools } from './tools/tables.js';
 import { registerVMarkTools } from './tools/vmark.js';
 import { registerWorkspaceTools } from './tools/workspace.js';
 import { registerTabTools } from './tools/tabs.js';
-import { registerPromptTools } from './tools/prompts.js';
+import { registerSuggestionTools } from './tools/suggestions.js';
 import { registerDocumentResources } from './resources/document.js';
 import type { Bridge } from './bridge/types.js';
 
@@ -107,7 +114,7 @@ export function createVMarkMcpServer(bridge: Bridge): VMarkMcpServer {
   registerVMarkTools(server);
   registerWorkspaceTools(server);
   registerTabTools(server);
-  registerPromptTools(server);
+  registerSuggestionTools(server);
 
   // Register resources
   registerDocumentResources(server);
@@ -201,6 +208,8 @@ export const TOOL_CATEGORIES = [
       'workspace_save_document_as',
       'workspace_get_document_info',
       'workspace_close_window',
+      'workspace_list_recent_files',
+      'workspace_get_info',
     ],
   },
   {
@@ -213,17 +222,18 @@ export const TOOL_CATEGORIES = [
       'tabs_close',
       'tabs_create',
       'tabs_get_info',
+      'tabs_reopen_closed',
     ],
   },
   {
-    name: 'AI Prompt Tools',
-    description: 'AI-powered writing assistance',
+    name: 'Suggestion Tools',
+    description: 'Manage AI-generated edit suggestions pending user approval',
     tools: [
-      'improve_writing',
-      'fix_grammar',
-      'translate',
-      'summarize',
-      'expand',
+      'suggestion_list',
+      'suggestion_accept',
+      'suggestion_reject',
+      'suggestion_accept_all',
+      'suggestion_reject_all',
     ],
   },
 ] as const;

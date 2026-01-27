@@ -35,3 +35,17 @@ export function getDocumentContent(): string {
   }
   return serializeMarkdown(editor.state.schema, editor.state.doc);
 }
+
+/**
+ * Resolve windowId parameter to actual window label.
+ * Maps "focused" to the currently focused window (currently always "main").
+ * Defaults undefined to "main".
+ */
+export function resolveWindowId(windowId: string | undefined): string {
+  if (windowId === "focused") {
+    // For now, VMark is single-window, so "focused" always means "main"
+    // Future: look up actual focused window from window manager
+    return "main";
+  }
+  return windowId ?? "main";
+}

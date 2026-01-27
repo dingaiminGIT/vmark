@@ -14,6 +14,7 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { runOrQueueProseMirrorAction } from "@/utils/imeGuard";
+import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
 import type { AiSuggestion } from "./types";
 import { AI_SUGGESTION_EVENTS } from "./types";
 
@@ -301,20 +302,21 @@ export const aiSuggestionExtension = Extension.create({
 
               switch (suggestion.type) {
                 case "insert": {
-                  // Insert the new content at the stored position
+                  // Insert the new content at the stored position, parsing markdown
+                  // Use replaceRange to preserve slice open depth and block structure
                   if (suggestion.newContent) {
-                    const tr = state.tr.insertText(suggestion.newContent, suggestion.from);
+                    const slice = createMarkdownPasteSlice(state, suggestion.newContent);
+                    const tr = state.tr.replaceRange(suggestion.from, suggestion.from, slice);
                     editorView.dispatch(tr);
                   }
                   break;
                 }
 
                 case "replace": {
-                  // Delete original and insert new content
+                  // Delete original and insert new content, parsing markdown
                   if (suggestion.newContent) {
-                    const tr = state.tr
-                      .delete(suggestion.from, suggestion.to)
-                      .insertText(suggestion.newContent, suggestion.from);
+                    const slice = createMarkdownPasteSlice(state, suggestion.newContent);
+                    const tr = state.tr.replaceRange(suggestion.from, suggestion.to, slice);
                     editorView.dispatch(tr);
                   }
                   break;
@@ -347,23 +349,25 @@ export const aiSuggestionExtension = Extension.create({
             if (suggestions.length === 0) return;
 
             runOrQueueProseMirrorAction(editorView, () => {
-              let { tr } = editorView.state;
+              const { state } = editorView;
+              let { tr } = state;
 
               // Apply all suggestions in reverse order (they're already sorted reverse)
               // This maintains correct positions as we modify the document
               for (const suggestion of suggestions) {
                 switch (suggestion.type) {
                   case "insert": {
+                    // Use replaceRange to preserve slice open depth and block structure
                     if (suggestion.newContent) {
-                      tr = tr.insertText(suggestion.newContent, suggestion.from);
+                      const slice = createMarkdownPasteSlice(state, suggestion.newContent);
+                      tr = tr.replaceRange(suggestion.from, suggestion.from, slice);
                     }
                     break;
                   }
                   case "replace": {
                     if (suggestion.newContent) {
-                      tr = tr
-                        .delete(suggestion.from, suggestion.to)
-                        .insertText(suggestion.newContent, suggestion.from);
+                      const slice = createMarkdownPasteSlice(state, suggestion.newContent);
+                      tr = tr.replaceRange(suggestion.from, suggestion.to, slice);
                     }
                     break;
                   }

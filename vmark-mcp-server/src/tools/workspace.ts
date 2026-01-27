@@ -3,7 +3,7 @@
  */
 
 import { VMarkMcpServer, resolveWindowId } from '../server.js';
-import type { WindowInfo } from '../bridge/types.js';
+import type { WindowInfo, RecentFile, WorkspaceInfo } from '../bridge/types.js';
 
 /**
  * Register all workspace tools on the server.
@@ -330,6 +330,72 @@ export function registerWorkspaceTools(server: VMarkMcpServer): void {
       } catch (error) {
         return VMarkMcpServer.errorResult(
           `Failed to get document info: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+  );
+
+  // workspace_list_recent_files - List recently opened files
+  server.registerTool(
+    {
+      name: 'workspace_list_recent_files',
+      description:
+        'List recently opened files. Returns up to 10 files with paths, names, ' +
+        'and timestamps (most recent first). Useful for accessing previously edited documents.',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
+    async () => {
+      try {
+        const files = await server.sendBridgeRequest<RecentFile[]>({
+          type: 'workspace.listRecentFiles',
+        });
+
+        if (files.length === 0) {
+          return VMarkMcpServer.successResult('No recent files');
+        }
+
+        return VMarkMcpServer.successJsonResult(files);
+      } catch (error) {
+        return VMarkMcpServer.errorResult(
+          `Failed to list recent files: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+  );
+
+  // workspace_get_info - Get workspace information
+  server.registerTool(
+    {
+      name: 'workspace_get_info',
+      description:
+        'Get information about the current workspace state. ' +
+        'Returns whether in workspace mode, the workspace root path, and workspace name.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          windowId: {
+            type: 'string',
+            description: 'Optional window identifier. Defaults to focused window.',
+          },
+        },
+      },
+    },
+    async (args) => {
+      const windowId = resolveWindowId(args.windowId as string | undefined);
+
+      try {
+        const info = await server.sendBridgeRequest<WorkspaceInfo>({
+          type: 'workspace.getInfo',
+          windowId,
+        });
+
+        return VMarkMcpServer.successJsonResult(info);
+      } catch (error) {
+        return VMarkMcpServer.errorResult(
+          `Failed to get workspace info: ${error instanceof Error ? error.message : String(error)}`
         );
       }
     }

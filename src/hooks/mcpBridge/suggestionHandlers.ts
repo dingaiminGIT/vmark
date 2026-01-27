@@ -9,6 +9,7 @@
 
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
 import { respond, getEditor } from "./utils";
 
 /**
@@ -52,7 +53,10 @@ export async function handleInsertAtCursorWithSuggestion(
 
     // Auto-approve: apply directly without suggestion preview
     if (isAutoApproveEnabled()) {
-      editor.commands.insertContent(text);
+      // Parse markdown and insert as rich content
+      const slice = createMarkdownPasteSlice(editor.state, text);
+      const tr = editor.state.tr.replaceSelection(slice);
+      editor.view.dispatch(tr);
       await respond({
         id,
         success: true,
@@ -121,8 +125,11 @@ export async function handleInsertAtPositionWithSuggestion(
 
     // Auto-approve: apply directly without suggestion preview
     if (isAutoApproveEnabled()) {
-      // Set selection to position and insert
-      editor.chain().setTextSelection(position).insertContent(text).run();
+      // Parse markdown and insert as rich content at position
+      // Use replaceRange to preserve slice open depth and block structure
+      const slice = createMarkdownPasteSlice(editor.state, text);
+      const tr = editor.state.tr.replaceRange(position, position, slice);
+      editor.view.dispatch(tr);
       await respond({
         id,
         success: true,
@@ -216,12 +223,14 @@ export async function handleDocumentReplaceWithSuggestion(
 
     // Auto-approve: apply replacements directly
     if (isAutoApproveEnabled()) {
+      // Parse markdown once for replacement content
+      const slice = createMarkdownPasteSlice(editor.state, replace);
       // Apply in reverse order to maintain correct positions
-      const chain = editor.chain();
+      let tr = editor.state.tr;
       for (const match of [...matches].reverse()) {
-        chain.setTextSelection({ from: match.from, to: match.to }).insertContent(replace);
+        tr = tr.replaceRange(match.from, match.to, slice);
       }
-      chain.run();
+      editor.view.dispatch(tr);
 
       await respond({
         id,
@@ -295,7 +304,10 @@ export async function handleSelectionReplaceWithSuggestion(
 
     // Auto-approve: apply directly without suggestion preview
     if (isAutoApproveEnabled()) {
-      editor.chain().setTextSelection({ from, to }).insertContent(text).run();
+      // Parse markdown and replace selection with rich content
+      const slice = createMarkdownPasteSlice(editor.state, text);
+      const tr = editor.state.tr.replaceRange(from, to, slice);
+      editor.view.dispatch(tr);
       await respond({
         id,
         success: true,

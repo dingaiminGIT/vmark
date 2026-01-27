@@ -3,7 +3,7 @@
  */
 
 import { VMarkMcpServer, resolveWindowId, validateNonNegativeInteger } from '../server.js';
-import type { SearchResult, ReplaceResult } from '../bridge/types.js';
+import type { SearchResult, ReplaceResult, EditResult } from '../bridge/types.js';
 
 /**
  * Register all document tools on the server.
@@ -47,14 +47,16 @@ export function registerDocumentTools(server: VMarkMcpServer): void {
     }
   );
 
-  // document_set_content - Replace the entire document content
+  // document_set_content - BLOCKED for AI safety
+  // This tool is intentionally disabled to prevent AI from replacing entire documents.
+  // AI assistants should use incremental edit tools instead.
   server.registerTool(
     {
       name: 'document_set_content',
       description:
-        'Replace the entire document content with new markdown text. ' +
-        'Warning: This will overwrite all existing content. ' +
-        'Consider using document_insert_at_cursor or selection_replace for partial edits.',
+        '[BLOCKED] This tool is disabled for AI safety. ' +
+        'Use document_insert_at_cursor, document_insert_at_position, ' +
+        'document_replace, or selection_replace for partial edits instead.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -70,27 +72,14 @@ export function registerDocumentTools(server: VMarkMcpServer): void {
         required: ['content'],
       },
     },
-    async (args) => {
-      const content = args.content as string;
-      const windowId = resolveWindowId(args.windowId as string | undefined);
-
-      if (typeof content !== 'string') {
-        return VMarkMcpServer.errorResult('content must be a string');
-      }
-
-      try {
-        await server.sendBridgeRequest<null>({
-          type: 'document.setContent',
-          content,
-          windowId,
-        });
-
-        return VMarkMcpServer.successResult('Document content updated successfully');
-      } catch (error) {
-        return VMarkMcpServer.errorResult(
-          `Failed to set document content: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
+    async () => {
+      // Return local error without calling bridge - this tool is intentionally blocked
+      return VMarkMcpServer.errorResult(
+        'document_set_content is disabled for AI safety. ' +
+          'AI assistants should not replace entire documents. ' +
+          'Use document_insert_at_cursor, document_insert_at_position, ' +
+          'document_replace, or selection_replace for incremental edits.'
+      );
     }
   );
 
@@ -126,13 +115,19 @@ export function registerDocumentTools(server: VMarkMcpServer): void {
       }
 
       try {
-        await server.sendBridgeRequest<null>({
+        const result = await server.sendBridgeRequest<EditResult>({
           type: 'document.insertAtCursor',
           text,
           windowId,
         });
 
-        return VMarkMcpServer.successResult(`Inserted ${text.length} characters at cursor`);
+        // Return structured result including suggestionId if edit was staged
+        return VMarkMcpServer.successJsonResult({
+          message: result.message,
+          position: result.position,
+          suggestionId: result.suggestionId,
+          applied: !result.suggestionId, // Applied if no suggestionId (auto-approved)
+        });
       } catch (error) {
         return VMarkMcpServer.errorResult(
           `Failed to insert at cursor: ${error instanceof Error ? error.message : String(error)}`
@@ -181,16 +176,20 @@ export function registerDocumentTools(server: VMarkMcpServer): void {
       }
 
       try {
-        await server.sendBridgeRequest<null>({
+        const result = await server.sendBridgeRequest<EditResult>({
           type: 'document.insertAtPosition',
           text,
           position,
           windowId,
         });
 
-        return VMarkMcpServer.successResult(
-          `Inserted ${text.length} characters at position ${position}`
-        );
+        // Return structured result including suggestionId if edit was staged
+        return VMarkMcpServer.successJsonResult({
+          message: result.message,
+          position: result.position,
+          suggestionId: result.suggestionId,
+          applied: !result.suggestionId,
+        });
       } catch (error) {
         return VMarkMcpServer.errorResult(
           `Failed to insert at position: ${error instanceof Error ? error.message : String(error)}`
@@ -304,11 +303,18 @@ export function registerDocumentTools(server: VMarkMcpServer): void {
         });
 
         const message =
-          result.count === 0
+          result.message ??
+          (result.count === 0
             ? 'No matches found'
-            : `Replaced ${result.count} occurrence${result.count > 1 ? 's' : ''}`;
+            : `Replaced ${result.count} occurrence${result.count > 1 ? 's' : ''}`);
 
-        return VMarkMcpServer.successJsonResult({ ...result, message });
+        // Return structured result including suggestionIds if edits were staged
+        return VMarkMcpServer.successJsonResult({
+          count: result.count,
+          message,
+          suggestionIds: result.suggestionIds,
+          applied: !result.suggestionIds || result.suggestionIds.length === 0,
+        });
       } catch (error) {
         return VMarkMcpServer.errorResult(
           `Failed to replace text: ${error instanceof Error ? error.message : String(error)}`

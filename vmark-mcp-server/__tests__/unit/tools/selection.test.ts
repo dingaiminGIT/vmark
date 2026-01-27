@@ -211,7 +211,7 @@ describe('selection tools', () => {
       expect(bridge.getWindowState()?.content).toBe('Hello world');
     });
 
-    it('should report number of characters', async () => {
+    it('should return structured result with range', async () => {
       bridge.setContent('test');
       bridge.setSelection(0, 4);
 
@@ -219,7 +219,11 @@ describe('selection tools', () => {
         text: 'replacement',
       });
 
-      expect(McpTestClient.getTextContent(result)).toContain('11 characters');
+      expect(result.success).toBe(true);
+      const content = McpTestClient.getTextContent(result);
+      expect(content).toContain('"message"');
+      expect(content).toContain('"range"');
+      expect(content).toContain('"applied"');
     });
 
     it('should handle empty replacement (delete)', async () => {

@@ -2,9 +2,10 @@
  * MCP Bridge - Tab Management Handlers
  */
 
+import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
-import { respond } from "./utils";
+import { respond, resolveWindowId } from "./utils";
 
 /**
  * Tab information for MCP responses.
@@ -26,7 +27,7 @@ export async function handleTabsList(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
     const docStore = useDocumentStore.getState();
 
@@ -63,7 +64,7 @@ export async function handleTabsGetActive(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
     const docStore = useDocumentStore.getState();
 
@@ -109,7 +110,7 @@ export async function handleTabsSwitch(
 ): Promise<void> {
   try {
     const tabId = args.tabId as string;
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
 
     if (!tabId) {
       throw new Error("tabId is required");
@@ -145,7 +146,7 @@ export async function handleTabsClose(
 ): Promise<void> {
   try {
     const tabId = args.tabId as string | undefined;
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
 
     const targetTabId = tabId ?? tabStore.activeTabId[windowId];
@@ -174,7 +175,7 @@ export async function handleTabsCreate(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
     const docStore = useDocumentStore.getState();
 
@@ -201,7 +202,7 @@ export async function handleTabsGetInfo(
 ): Promise<void> {
   try {
     const tabId = args.tabId as string | undefined;
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
     const docStore = useDocumentStore.getState();
 
@@ -228,6 +229,64 @@ export async function handleTabsGetInfo(
     };
 
     await respond({ id, success: true, data: tabInfo });
+  } catch (error) {
+    await respond({
+      id,
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Handle tabs.reopenClosed request.
+ * Reopens the most recently closed tab.
+ */
+export async function handleTabsReopenClosed(
+  id: string,
+  args: Record<string, unknown>
+): Promise<void> {
+  try {
+    const windowId = resolveWindowId(args.windowId as string | undefined);
+    const tabStore = useTabStore.getState();
+    const docStore = useDocumentStore.getState();
+
+    // Reopen the most recently closed tab
+    const reopenedTab = tabStore.reopenClosedTab(windowId);
+
+    if (!reopenedTab) {
+      await respond({
+        id,
+        success: true,
+        data: null, // No closed tabs to reopen
+      });
+      return;
+    }
+
+    // Initialize document for reopened tab
+    if (reopenedTab.filePath) {
+      // Load content from file
+      try {
+        const content = await readTextFile(reopenedTab.filePath);
+        docStore.initDocument(reopenedTab.id, content, reopenedTab.filePath);
+      } catch {
+        // File may have been deleted, init with empty content
+        docStore.initDocument(reopenedTab.id, "", reopenedTab.filePath);
+      }
+    } else {
+      // Untitled tab - init with empty content
+      docStore.initDocument(reopenedTab.id, "", null);
+    }
+
+    await respond({
+      id,
+      success: true,
+      data: {
+        tabId: reopenedTab.id,
+        filePath: reopenedTab.filePath,
+        title: reopenedTab.title,
+      },
+    });
   } catch (error) {
     await respond({
       id,

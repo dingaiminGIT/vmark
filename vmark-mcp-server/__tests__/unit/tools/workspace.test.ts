@@ -258,4 +258,88 @@ describe('Workspace Tools', () => {
       expect(result.content[0].text).toContain('unsaved changes');
     });
   });
+
+  describe('workspace_list_recent_files', () => {
+    it('should return empty message when no recent files', async () => {
+      const result = await server.callTool('workspace_list_recent_files', {});
+
+      expect(result.success).toBe(true);
+      expect(result.content[0].text).toBe('No recent files');
+    });
+
+    it('should return list of recent files', async () => {
+      bridge.addRecentFile('/path/to/file1.md', 'file1.md');
+      bridge.addRecentFile('/path/to/file2.md', 'file2.md');
+
+      const result = await server.callTool('workspace_list_recent_files', {});
+
+      expect(result.success).toBe(true);
+      const files = JSON.parse(result.content[0].text!);
+      expect(files).toHaveLength(2);
+      expect(files[0].path).toBe('/path/to/file2.md'); // Most recent first
+      expect(files[0].name).toBe('file2.md');
+      expect(files[0].timestamp).toBeDefined();
+    });
+
+    it('should send correct bridge request', async () => {
+      await server.callTool('workspace_list_recent_files', {});
+
+      const requests = bridge.getRequestsOfType('workspace.listRecentFiles');
+      expect(requests).toHaveLength(1);
+    });
+
+    it('should handle bridge errors', async () => {
+      bridge.setNextError(new Error('Storage error'));
+
+      const result = await server.callTool('workspace_list_recent_files', {});
+
+      expect(result.success).toBe(false);
+      expect(result.content[0].text).toContain('Storage error');
+    });
+  });
+
+  describe('workspace_get_info', () => {
+    it('should return workspace info when not in workspace mode', async () => {
+      const result = await server.callTool('workspace_get_info', {});
+
+      expect(result.success).toBe(true);
+      const info = JSON.parse(result.content[0].text!);
+      expect(info.isWorkspaceMode).toBe(false);
+      expect(info.rootPath).toBeNull();
+      expect(info.workspaceName).toBeNull();
+    });
+
+    it('should return workspace info when in workspace mode', async () => {
+      bridge.setWorkspaceInfo({
+        isWorkspaceMode: true,
+        rootPath: '/Users/test/my-project',
+        workspaceName: 'my-project',
+      });
+
+      const result = await server.callTool('workspace_get_info', {});
+
+      expect(result.success).toBe(true);
+      const info = JSON.parse(result.content[0].text!);
+      expect(info.isWorkspaceMode).toBe(true);
+      expect(info.rootPath).toBe('/Users/test/my-project');
+      expect(info.workspaceName).toBe('my-project');
+    });
+
+    it('should send correct bridge request with windowId', async () => {
+      await server.callTool('workspace_get_info', { windowId: 'editor' });
+
+      const requests = bridge.getRequestsOfType('workspace.getInfo');
+      expect(requests).toHaveLength(1);
+      expect(requests[0].request.windowId).toBe('editor');
+    });
+
+    it('should handle bridge errors', async () => {
+      bridge.setNextError(new Error('Failed to read workspace'));
+
+      const result = await server.callTool('workspace_get_info', {});
+
+      expect(result.success).toBe(false);
+      expect(result.content[0].text).toContain('Failed to read workspace');
+    });
+  });
 });

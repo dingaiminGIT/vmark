@@ -42,6 +42,13 @@ vi.mock("@/stores/aiSuggestionStore", () => ({
   },
 }));
 
+// Mock markdownPaste plugin
+vi.mock("@/plugins/markdownPaste/tiptap", () => ({
+  createMarkdownPasteSlice: vi.fn(() => ({
+    content: { size: 10 },
+  })),
+}));
+
 import { respond, getEditor } from "./utils";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
@@ -64,6 +71,13 @@ function createMockEditor(options: {
     run: vi.fn(),
   };
 
+  const mockTr = {
+    replaceSelection: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    replaceRange: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+  };
+
   return {
     state: {
       selection: { from: selectionFrom, to: selectionTo },
@@ -75,11 +89,16 @@ function createMockEditor(options: {
           callback({ isText: true, text: docText }, 0);
         }),
       },
+      tr: mockTr,
+    },
+    view: {
+      dispatch: vi.fn(),
     },
     commands: {
       insertContent: vi.fn(),
     },
     chain: vi.fn(() => mockChain),
+    mockTr, // expose for assertions
   };
 }
 
@@ -151,7 +170,9 @@ describe("suggestionHandlers", () => {
 
       await handleInsertAtCursorWithSuggestion("req-2", { text: "inserted text" });
 
-      expect(editor.commands.insertContent).toHaveBeenCalledWith("inserted text");
+      // New implementation uses createMarkdownPasteSlice + tr.replaceSelection
+      expect(editor.mockTr.replaceSelection).toHaveBeenCalled();
+      expect(editor.view.dispatch).toHaveBeenCalled();
       expect(respond).toHaveBeenCalledWith({
         id: "req-2",
         success: true,
@@ -220,15 +241,13 @@ describe("suggestionHandlers", () => {
     it("applies directly when autoApproveEdits is ON", async () => {
       setAutoApprove(true);
       const editor = createMockEditor({ docSize: 100 });
-      const mockChain = editor.chain();
       vi.mocked(getEditor).mockReturnValue(editor as never);
 
       await handleInsertAtPositionWithSuggestion("req-2", { text: "new text", position: 10 });
 
-      expect(editor.chain).toHaveBeenCalled();
-      expect(mockChain.setTextSelection).toHaveBeenCalledWith(10);
-      expect(mockChain.insertContent).toHaveBeenCalledWith("new text");
-      expect(mockChain.run).toHaveBeenCalled();
+      // New implementation uses createMarkdownPasteSlice + tr.replaceRange
+      expect(editor.mockTr.replaceRange).toHaveBeenCalledWith(10, 10, expect.anything());
+      expect(editor.view.dispatch).toHaveBeenCalled();
       expect(respond).toHaveBeenCalledWith({
         id: "req-2",
         success: true,
@@ -303,7 +322,6 @@ describe("suggestionHandlers", () => {
     it("applies directly when autoApproveEdits is ON", async () => {
       setAutoApprove(true);
       const editor = createMockEditor({ docText: "hello world" });
-      const mockChain = editor.chain();
       vi.mocked(getEditor).mockReturnValue(editor as never);
 
       await handleDocumentReplaceWithSuggestion("req-2", {
@@ -312,10 +330,9 @@ describe("suggestionHandlers", () => {
         all: false,
       });
 
-      expect(editor.chain).toHaveBeenCalled();
-      expect(mockChain.setTextSelection).toHaveBeenCalled();
-      expect(mockChain.insertContent).toHaveBeenCalledWith("hi");
-      expect(mockChain.run).toHaveBeenCalled();
+      // New implementation uses createMarkdownPasteSlice + tr.replaceRange
+      expect(editor.mockTr.replaceRange).toHaveBeenCalled();
+      expect(editor.view.dispatch).toHaveBeenCalled();
       expect(respond).toHaveBeenCalledWith({
         id: "req-2",
         success: true,
@@ -398,15 +415,13 @@ describe("suggestionHandlers", () => {
         selectionTo: 5,
         docText: "hello",
       });
-      const mockChain = editor.chain();
       vi.mocked(getEditor).mockReturnValue(editor as never);
 
       await handleSelectionReplaceWithSuggestion("req-2", { text: "hi" });
 
-      expect(editor.chain).toHaveBeenCalled();
-      expect(mockChain.setTextSelection).toHaveBeenCalledWith({ from: 0, to: 5 });
-      expect(mockChain.insertContent).toHaveBeenCalledWith("hi");
-      expect(mockChain.run).toHaveBeenCalled();
+      // New implementation uses createMarkdownPasteSlice + tr.replaceRange
+      expect(editor.mockTr.replaceRange).toHaveBeenCalledWith(0, 5, expect.anything());
+      expect(editor.view.dispatch).toHaveBeenCalled();
       expect(respond).toHaveBeenCalledWith({
         id: "req-2",
         success: true,
