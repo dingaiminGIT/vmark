@@ -1,5 +1,7 @@
 use tauri::{AppHandle, Emitter, Listener, Manager};
 
+use crate::quit;
+
 /// Check if there are any document windows open (ignores settings window)
 fn has_document_windows(app: &AppHandle) -> bool {
     app.webview_windows()
@@ -35,6 +37,12 @@ fn create_window_and_emit(app: &AppHandle, event_name: &str) {
 
 pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
     let id = event.id().as_ref();
+
+    // Custom Quit (Cmd+Q) is handled in Rust so we can coordinate unsaved-changes prompts.
+    if id == "quit" {
+        quit::start_quit(app);
+        return;
+    }
 
     // Handle recent file clicks specially - look up path from snapshot and emit
     // Emit to focused window with (path, windowLabel) tuple

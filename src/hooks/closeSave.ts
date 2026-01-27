@@ -22,6 +22,12 @@ export type CloseSaveResult =
   | { action: "discarded" }
   | { action: "cancelled" };
 
+const CLOSE_SAVE_BUTTONS = {
+  save: "Save",
+  dontSave: "Don't Save",
+  cancel: "Cancel",
+} as const;
+
 /**
  * Prompt user to save a dirty document before closing.
  * Returns a tri-state result for callers to decide close behavior.
@@ -40,18 +46,20 @@ export async function promptSaveForDirtyDocument(
       title: "Unsaved Changes",
       kind: "warning",
       buttons: {
-        yes: "Save",
-        no: "Don't Save",
-        cancel: "Cancel",
+        yes: CLOSE_SAVE_BUTTONS.save,
+        no: CLOSE_SAVE_BUTTONS.dontSave,
+        cancel: CLOSE_SAVE_BUTTONS.cancel,
       },
     }
   );
 
-  if (result === "Cancel") {
+  // With custom buttons, plugin-dialog returns the clicked button label string.
+  // With default buttons, it returns 'Yes' | 'No' | 'Cancel' | 'Ok'.
+  if (result === "Cancel" || result === CLOSE_SAVE_BUTTONS.cancel) {
     return { action: "cancelled" };
   }
 
-  if (result === "No") {
+  if (result === "No" || result === CLOSE_SAVE_BUTTONS.dontSave) {
     return { action: "discarded" };
   }
 

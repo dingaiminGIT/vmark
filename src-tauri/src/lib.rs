@@ -143,10 +143,11 @@ pub fn run() {
                     #[cfg(debug_assertions)]
                     eprintln!("[Tauri] ExitRequested received, code={:?}", _code);
 
-                    // If quit is in progress, we called app.exit() - allow it through
-                    if quit::is_quit_in_progress() {
+                    // If we explicitly allowed exit (we're done with coordinated quit), allow it through.
+                    // IMPORTANT: Quit can be "in progress" while we still need to block OS quit requests.
+                    if quit::is_exit_allowed() {
                         #[cfg(debug_assertions)]
-                        eprintln!("[Tauri] ExitRequested: quit in progress, allowing exit");
+                        eprintln!("[Tauri] ExitRequested: exit allowed, allowing exit");
                         return;
                     }
 

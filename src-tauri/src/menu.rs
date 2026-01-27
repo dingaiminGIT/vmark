@@ -41,7 +41,8 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::hide_others(app, Some("Hide Others"))?,
             &PredefinedMenuItem::show_all(app, Some("Show All"))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::quit(app, Some("Quit VMark"))?,
+            // Custom Quit so we can run coordinated unsaved-changes handling before exit.
+            &MenuItem::with_id(app, "quit", "Quit VMark", true, Some("CmdOrCtrl+Q"))?,
         ],
     )?;
 
@@ -745,7 +746,8 @@ fn create_menu_with_shortcuts(
             &PredefinedMenuItem::hide_others(app, Some("Hide Others"))?,
             &PredefinedMenuItem::show_all(app, Some("Show All"))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::quit(app, Some("Quit VMark"))?,
+            // Custom Quit so we can run coordinated unsaved-changes handling before exit.
+            &MenuItem::with_id(app, "quit", "Quit VMark", true, get_accel("quit", "CmdOrCtrl+Q"))?,
         ],
     )?;
 

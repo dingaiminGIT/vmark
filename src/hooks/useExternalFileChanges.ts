@@ -89,6 +89,12 @@ export function useExternalFileChanges(): void {
   // Cancel/dismiss preserves user's changes (safe default)
   const handleDirtyChange = useCallback(
     async (tabId: string, filePath: string) => {
+      const dialogButtons = {
+        saveAs: "Save As...",
+        reload: "Reload",
+        keep: "Keep my changes",
+      } as const;
+
       const fileName = getFileName(filePath) || "file";
       const doc = useDocumentStore.getState().getDocument(tabId);
 
@@ -103,14 +109,16 @@ export function useExternalFileChanges(): void {
           title: "File Changed",
           kind: "warning",
           buttons: {
-            yes: "Save As...",
-            no: "Reload",
-            cancel: "Keep my changes",
+            yes: dialogButtons.saveAs,
+            no: dialogButtons.reload,
+            cancel: dialogButtons.keep,
           },
         }
       );
 
-      if (result === "Yes" && doc) {
+      // With custom buttons, plugin-dialog returns the clicked button label string.
+      // With default buttons, it returns 'Yes' | 'No' | 'Cancel' | 'Ok'.
+      if ((result === "Yes" || result === dialogButtons.saveAs) && doc) {
         // Open Save As dialog
         const savePath = await save({
           title: "Save your version as...",
@@ -130,7 +138,7 @@ export function useExternalFileChanges(): void {
         return;
       }
 
-      if (result === "No") {
+      if (result === "No" || result === dialogButtons.reload) {
         // User explicitly chose to reload - discard their changes
         try {
           const content = await readTextFile(filePath);

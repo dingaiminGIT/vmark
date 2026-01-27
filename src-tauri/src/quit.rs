@@ -5,6 +5,10 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::mcp_server;
 
 static QUIT_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+// IMPORTANT: A coordinated quit can be "in progress" while we still need to
+// block OS quit requests until all windows have handled unsaved changes.
+// This flag is only set to true immediately before calling `app.exit(0)`.
+static EXIT_ALLOWED: AtomicBool = AtomicBool::new(false);
 static QUIT_TARGETS: LazyLock<Mutex<HashSet<String>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
 
@@ -14,8 +18,13 @@ pub fn is_document_window_label(label: &str) -> bool {
 }
 
 /// Check if a coordinated quit is in progress.
-pub fn is_quit_in_progress() -> bool {
-    QUIT_IN_PROGRESS.load(Ordering::SeqCst)
+/// Whether ExitRequested should be allowed through.
+pub fn is_exit_allowed() -> bool {
+    EXIT_ALLOWED.load(Ordering::SeqCst)
+}
+
+fn set_exit_allowed(allowed: bool) {
+    EXIT_ALLOWED.store(allowed, Ordering::SeqCst);
 }
 
 fn set_quit_targets(targets: HashSet<String>) {
@@ -37,6 +46,7 @@ pub fn start_quit(app: &AppHandle) {
     if QUIT_IN_PROGRESS.swap(true, Ordering::SeqCst) {
         return;
     }
+    set_exit_allowed(false);
 
     let mut targets = HashSet::new();
     for (label, window) in app.webview_windows() {
@@ -51,6 +61,7 @@ pub fn start_quit(app: &AppHandle) {
 
     if targets.is_empty() {
         // Keep QUIT_IN_PROGRESS true so ExitRequested handler allows exit
+        set_exit_allowed(true);
         mcp_server::cleanup();
         app.exit(0);
         return;
@@ -63,6 +74,7 @@ pub fn start_quit(app: &AppHandle) {
 #[tauri::command]
 pub fn cancel_quit() {
     QUIT_IN_PROGRESS.store(false, Ordering::SeqCst);
+    set_exit_allowed(false);
     set_quit_targets(HashSet::new());
 }
 
@@ -83,7 +95,8 @@ pub fn handle_window_destroyed(app: &AppHandle, label: &str) {
     if remove_quit_target(label) {
         #[cfg(debug_assertions)]
         eprintln!("[Tauri] handle_window_destroyed: all targets done, calling app.exit(0)");
-        // Keep QUIT_IN_PROGRESS true so ExitRequested handler allows exit
+        // Allow the ExitRequested handler through (some platforms trigger it again during quit).
+        set_exit_allowed(true);
         mcp_server::cleanup();
         app.exit(0);
     }

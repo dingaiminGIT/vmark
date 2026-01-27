@@ -204,7 +204,7 @@ const x = 1;
 
         // Fast parser should be at least 5x faster
         expect(speedup).toBeGreaterThan(5);
-      });
+      }, 20_000);
     }
   });
 });

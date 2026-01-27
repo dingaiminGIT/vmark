@@ -69,6 +69,20 @@ describe("closeTabWithDirtyCheck", () => {
     expect(useTabStore.getState().tabs[WINDOW_LABEL]?.length ?? 0).toBe(0);
   });
 
+  it("closes dirty tab when dialog returns custom button label (Don't Save)", async () => {
+    const tabId = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/dirty.md");
+    useDocumentStore.getState().initDocument(tabId, "hello", "/tmp/dirty.md");
+    useDocumentStore.getState().setContent(tabId, "changed");
+
+    vi.mocked(message).mockResolvedValueOnce("Don't Save");
+
+    const result = await closeTabWithDirtyCheck(WINDOW_LABEL, tabId);
+
+    expect(result).toBe(true);
+    expect(saveToPath).not.toHaveBeenCalled();
+    expect(useTabStore.getState().tabs[WINDOW_LABEL]?.length ?? 0).toBe(0);
+  });
+
   it("saves and closes dirty tab when user chooses Save and file has path", async () => {
     const tabId = useTabStore.getState().createTab(WINDOW_LABEL, "/tmp/dirty.md");
     useDocumentStore.getState().initDocument(tabId, "hello", "/tmp/dirty.md");

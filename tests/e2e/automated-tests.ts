@@ -113,6 +113,26 @@ await tauri_webview_screenshot({ label: "main" });
 await tauri_webview_keyboard({ keys: ["Escape"], label: "main" });
 `;
 
+/**
+ * Test: Cmd+Q With Dirty Window Shows Dialog (and can be cancelled)
+ * Expected: Save/Don't Save/Cancel dialog appears
+ */
+export const testQuitDirtyWindow = `
+// 1. Type content
+await tauri_webview_keyboard({ text: "Unsaved content", label: "main" });
+await sleep(${DELAY.SHORT});
+
+// 2. Press Cmd+Q
+await tauri_webview_keyboard({ keys: ["Meta", "q"], label: "main" });
+await sleep(${DELAY.DIALOG});
+
+// 3. Screenshot to verify dialog
+await tauri_webview_screenshot({ label: "main" });
+
+// 4. Cancel the dialog (should keep app running)
+await tauri_webview_keyboard({ keys: ["Escape"], label: "main" });
+`;
+
 // ============================================================================
 // SECTION 2: Text Formatting Tests
 // ============================================================================
