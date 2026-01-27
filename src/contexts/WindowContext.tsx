@@ -16,6 +16,14 @@ import {
 import { resolveWorkspaceRootForExternalFile } from "../utils/openPolicy";
 import { isWithinRoot } from "../utils/paths";
 
+/**
+ * Delay before emitting "ready" event to Rust.
+ * This ensures child components' useEffect hooks have run and set up menu listeners.
+ * Without sufficient delay, menu events (e.g., menu:open) arrive before
+ * useFileOperations has registered its listener.
+ */
+const READY_EVENT_DELAY_MS = 100;
+
 interface WindowContextValue {
   windowLabel: string;
   isDocumentWindow: boolean;
@@ -160,21 +168,29 @@ export function WindowProvider({ children }: WindowProviderProps) {
         }
 
         setIsReady(true);
-        // Notify Rust that the window is ready to receive events
-        window.emit("ready", null);
+        // Notify Rust that the window is ready to receive events.
+        // Delay ensures:
+        // 1. Rust's window.once("ready") listener is registered
+        // 2. Child components' useEffect hooks have run and set up menu listeners
+        // Without sufficient delay, menu events (e.g., menu:open) arrive before
+        // useFileOperations has registered its listener.
+        // Pass the window label so Rust can track which windows are ready.
+        setTimeout(() => window.emit("ready", label), READY_EVENT_DELAY_MS);
       } catch (error) {
         console.error("[WindowContext] Init failed:", error);
         // Still set ready to allow error boundary to catch render errors
         setIsReady(true);
         // Notify Rust even on error so waiting handlers don't hang
-        getCurrentWebviewWindow().emit("ready", null);
+        const errorWindow = getCurrentWebviewWindow();
+        setTimeout(() => errorWindow.emit("ready", errorWindow.label), READY_EVENT_DELAY_MS);
       }
     };
 
     init().catch((e) => {
       console.error("[WindowContext] Unhandled init error:", e);
       setIsReady(true);
-      getCurrentWebviewWindow().emit("ready", null);
+      const errorWindow = getCurrentWebviewWindow();
+      setTimeout(() => errorWindow.emit("ready", errorWindow.label), READY_EVENT_DELAY_MS);
     });
   }, []);
 

@@ -11,7 +11,7 @@ mod file_tree;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
-use tauri::Manager;
+use tauri::{Listener, Manager};
 
 /// Pending files queued during cold start before frontend is ready
 /// This solves the race condition where Finder opens a file but React hasn't mounted yet
@@ -97,6 +97,20 @@ pub fn run() {
         .setup(|app| {
             let menu = menu::create_menu(app.handle())?;
             app.set_menu(menu)?;
+
+            // Listen for "ready" events from frontend windows
+            // This is used by menu_events to know when it's safe to emit events
+            // The payload contains the window label as a string
+            let app_handle = app.handle().clone();
+            app.listen("ready", move |event| {
+                // The payload is the window label
+                if let Ok(label) = serde_json::from_str::<String>(event.payload()) {
+                    #[cfg(debug_assertions)]
+                    eprintln!("[Tauri] Window '{}' is ready", label);
+                    menu_events::mark_window_ready(&app_handle, &label);
+                }
+            });
+
             Ok(())
         })
         .on_menu_event(menu_events::handle_menu_event)
@@ -172,6 +186,7 @@ pub fn run() {
                 tauri::RunEvent::WindowEvent { label, event, .. } => {
                     if let tauri::WindowEvent::Destroyed = event {
                         quit::handle_window_destroyed(&app, &label);
+                        menu_events::clear_window_ready(&label);
                     }
                 }
                 // macOS: Clicking dock icon when no windows visible -> create new window
