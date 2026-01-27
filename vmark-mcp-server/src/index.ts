@@ -67,6 +67,9 @@ export type {
   Suggestion,
   SuggestionListResult,
   EditResult,
+  RecentFile,
+  WorkspaceInfo,
+  ReopenedTabResult,
 } from './bridge/types.js';
 
 export type {
@@ -205,6 +208,8 @@ export const TOOL_CATEGORIES = [
       'workspace_save_document_as',
       'workspace_get_document_info',
       'workspace_close_window',
+      'workspace_list_recent_files',
+      'workspace_get_info',
     ],
   },
   {
@@ -217,6 +222,7 @@ export const TOOL_CATEGORIES = [
       'tabs_close',
       'tabs_create',
       'tabs_get_info',
+      'tabs_reopen_closed',
     ],
   },
   {

@@ -194,6 +194,8 @@ export type BridgeRequest =
   | { type: 'workspace.saveDocumentAs'; path: string; windowId?: WindowId }
   | { type: 'workspace.getDocumentInfo'; windowId?: WindowId }
   | { type: 'workspace.closeWindow'; windowId?: WindowId }
+  | { type: 'workspace.listRecentFiles' }
+  | { type: 'workspace.getInfo'; windowId?: WindowId }
   // Tab commands
   | { type: 'tabs.list'; windowId?: WindowId }
   | { type: 'tabs.getActive'; windowId?: WindowId }
@@ -201,6 +203,7 @@ export type BridgeRequest =
   | { type: 'tabs.close'; tabId?: string; windowId?: WindowId }
   | { type: 'tabs.create'; windowId?: WindowId }
   | { type: 'tabs.getInfo'; tabId?: string; windowId?: WindowId }
+  | { type: 'tabs.reopenClosed'; windowId?: WindowId }
   // VMark-specific commands
   | { type: 'vmark.insertMathInline'; latex: string; windowId?: WindowId }
   | { type: 'vmark.insertMathBlock'; latex: string; windowId?: WindowId }
@@ -345,4 +348,40 @@ export interface SuggestionListResult {
   count: number;
   /** Currently focused suggestion ID */
   focusedId: string | null;
+}
+
+/**
+ * Recent file entry.
+ */
+export interface RecentFile {
+  /** Absolute file path */
+  path: string;
+  /** File name (basename) */
+  name: string;
+  /** Timestamp when file was last opened */
+  timestamp: number;
+}
+
+/**
+ * Workspace info response.
+ */
+export interface WorkspaceInfo {
+  /** Whether currently in workspace mode */
+  isWorkspaceMode: boolean;
+  /** Workspace root path (null if not in workspace mode) */
+  rootPath: string | null;
+  /** Workspace name (folder name, null if not in workspace mode) */
+  workspaceName: string | null;
+}
+
+/**
+ * Reopened tab result.
+ */
+export interface ReopenedTabResult {
+  /** ID of the reopened tab */
+  tabId: string;
+  /** File path of the reopened tab (null if untitled) */
+  filePath: string | null;
+  /** Title of the reopened tab */
+  title: string;
 }

@@ -16,6 +16,9 @@ import type {
   ReplaceResult,
   Suggestion,
   SuggestionListResult,
+  RecentFile,
+  WorkspaceInfo,
+  ReopenedTabResult,
 } from '../../src/bridge/types.js';
 
 /**
@@ -75,6 +78,19 @@ export class MockBridge implements Bridge {
   /** Current mock state */
   private windows: Map<string, MockWindowState> = new Map();
   private focusedWindowLabel: string = 'main';
+
+  /** Recent files list */
+  private recentFiles: RecentFile[] = [];
+
+  /** Workspace state */
+  private workspaceInfo: WorkspaceInfo = {
+    isWorkspaceMode: false,
+    rootPath: null,
+    workspaceName: null,
+  };
+
+  /** Closed tabs per window (for reopen) */
+  private closedTabs: Map<string, Array<{ id: string; filePath: string | null; title: string }>> = new Map();
 
   /** Custom response handlers */
   private responseHandlers: Map<
@@ -344,6 +360,71 @@ export class MockBridge implements Bridge {
     if (window) {
       window.suggestions = [];
     }
+  }
+
+  /**
+   * Add a recent file (for testing).
+   */
+  addRecentFile(path: string, name?: string): void {
+    this.recentFiles.unshift({
+      path,
+      name: name ?? path.split('/').pop() ?? path,
+      timestamp: Date.now(),
+    });
+    // Keep max 10
+    if (this.recentFiles.length > 10) {
+      this.recentFiles = this.recentFiles.slice(0, 10);
+    }
+  }
+
+  /**
+   * Get recent files (for assertions).
+   */
+  getRecentFiles(): RecentFile[] {
+    return this.recentFiles;
+  }
+
+  /**
+   * Clear all recent files.
+   */
+  clearRecentFiles(): void {
+    this.recentFiles = [];
+  }
+
+  /**
+   * Set workspace info (for testing).
+   */
+  setWorkspaceInfo(info: Partial<WorkspaceInfo>): void {
+    this.workspaceInfo = { ...this.workspaceInfo, ...info };
+  }
+
+  /**
+   * Get workspace info (for assertions).
+   */
+  getWorkspaceInfo(): WorkspaceInfo {
+    return this.workspaceInfo;
+  }
+
+  /**
+   * Add a closed tab to the history (for testing reopen).
+   */
+  addClosedTab(tab: { id: string; filePath: string | null; title: string }, windowId: string = 'main'): void {
+    if (!this.closedTabs.has(windowId)) {
+      this.closedTabs.set(windowId, []);
+    }
+    const closed = this.closedTabs.get(windowId)!;
+    closed.unshift(tab);
+    // Keep max 10
+    if (closed.length > 10) {
+      closed.splice(10);
+    }
+  }
+
+  /**
+   * Get closed tabs for a window (for assertions).
+   */
+  getClosedTabs(windowId: string = 'main'): Array<{ id: string; filePath: string | null; title: string }> {
+    return this.closedTabs.get(windowId) ?? [];
   }
 
   // ============ Private Helpers ============
@@ -663,6 +744,28 @@ export class MockBridge implements Bridge {
         const rejectCount = window.suggestions.length;
         window.suggestions = [];
         return { success: true, data: { message: 'All suggestions rejected', count: rejectCount } };
+      }
+
+      // Workspace info tools
+      case 'workspace.listRecentFiles':
+        return { success: true, data: this.recentFiles };
+
+      case 'workspace.getInfo':
+        return { success: true, data: this.workspaceInfo };
+
+      // Tab reopen
+      case 'tabs.reopenClosed': {
+        const closedList = this.closedTabs.get(windowId) ?? [];
+        if (closedList.length === 0) {
+          return { success: true, data: null };
+        }
+        const reopened = closedList.shift()!;
+        const result: ReopenedTabResult = {
+          tabId: reopened.id,
+          filePath: reopened.filePath,
+          title: reopened.title,
+        };
+        return { success: true, data: result };
       }
 
       default:

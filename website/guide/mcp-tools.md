@@ -532,6 +532,28 @@ Close a window.
 |-----------|------|----------|-------------|
 | `windowId` | string | No | Window to close. Defaults to focused. |
 
+### workspace_list_recent_files
+
+List recently opened files.
+
+**Returns:** Array of `{ path, name, timestamp }` (up to 10 files, most recent first).
+
+Useful for quickly accessing previously edited documents without knowing their full paths.
+
+### workspace_get_info
+
+Get information about the current workspace state.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ isWorkspaceMode, rootPath, workspaceName }`
+
+- `isWorkspaceMode` - `true` if a folder was opened, `false` for single-file mode.
+- `rootPath` - The workspace root directory path (null if not in workspace mode).
+- `workspaceName` - The folder name (null if not in workspace mode).
+
 ---
 
 ## Tab Management Tools
@@ -596,6 +618,18 @@ Get detailed tab information.
 | `windowId` | string | No | Window identifier. |
 
 **Returns:** `{ id, title, filePath, isDirty, isActive }`
+
+### tabs_reopen_closed
+
+Reopen the most recently closed tab.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ tabId, filePath, title }` or `"No closed tabs to reopen"` if none available.
+
+VMark keeps track of the last 10 closed tabs per window. Use this to restore accidentally closed tabs.
 
 ---
 

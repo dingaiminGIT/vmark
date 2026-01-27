@@ -84,6 +84,8 @@ import {
   handleWorkspaceSaveDocumentAs,
   handleWorkspaceGetDocumentInfo,
   handleWorkspaceCloseWindow,
+  handleWorkspaceListRecentFiles,
+  handleWorkspaceGetInfo,
   handleAiNotImplemented,
 } from "./workspaceHandlers";
 
@@ -95,6 +97,7 @@ import {
   handleTabsClose,
   handleTabsCreate,
   handleTabsGetInfo,
+  handleTabsReopenClosed,
 } from "./tabHandlers";
 
 // VMark-specific handlers
@@ -297,6 +300,12 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
       case "workspace.closeWindow":
         await handleWorkspaceCloseWindow(id, args);
         break;
+      case "workspace.listRecentFiles":
+        await handleWorkspaceListRecentFiles(id);
+        break;
+      case "workspace.getInfo":
+        await handleWorkspaceGetInfo(id);
+        break;
 
       // Tab operations
       case "tabs.list":
@@ -316,6 +325,9 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
         break;
       case "tabs.getInfo":
         await handleTabsGetInfo(id, args);
+        break;
+      case "tabs.reopenClosed":
+        await handleTabsReopenClosed(id, args);
         break;
 
       // VMark-specific operations

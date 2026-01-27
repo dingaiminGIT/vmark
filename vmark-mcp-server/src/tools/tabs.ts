@@ -3,6 +3,7 @@
  */
 
 import { VMarkMcpServer, resolveWindowId } from '../server.js';
+import type { ReopenedTabResult } from '../bridge/types.js';
 
 /**
  * Tab information returned by tab tools.
@@ -248,6 +249,46 @@ export function registerTabTools(server: VMarkMcpServer): void {
       } catch (error) {
         return VMarkMcpServer.errorResult(
           `Failed to get tab info: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+  );
+
+  // tabs_reopen_closed - Reopen the most recently closed tab
+  server.registerTool(
+    {
+      name: 'tabs_reopen_closed',
+      description:
+        'Reopen the most recently closed tab. ' +
+        'VMark keeps track of the last 10 closed tabs per window. ' +
+        'Returns the reopened tab info or null if no closed tabs available.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          windowId: {
+            type: 'string',
+            description: 'Optional window identifier. Defaults to focused window.',
+          },
+        },
+      },
+    },
+    async (args) => {
+      const windowId = resolveWindowId(args.windowId as string | undefined);
+
+      try {
+        const result = await server.sendBridgeRequest<ReopenedTabResult | null>({
+          type: 'tabs.reopenClosed',
+          windowId,
+        });
+
+        if (!result) {
+          return VMarkMcpServer.successResult('No closed tabs to reopen');
+        }
+
+        return VMarkMcpServer.successJsonResult(result);
+      } catch (error) {
+        return VMarkMcpServer.errorResult(
+          `Failed to reopen closed tab: ${error instanceof Error ? error.message : String(error)}`
         );
       }
     }
