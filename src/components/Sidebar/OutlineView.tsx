@@ -140,6 +140,17 @@ export function OutlineView() {
   const content = useDocumentContent();
   const activeHeadingIndex = useUIStore((state) => state.activeHeadingLine);
 
+  // Skip outline for very large documents to prevent performance issues
+  const MAX_CONTENT_FOR_OUTLINE = 100000; // 100KB threshold
+  if (content.length > MAX_CONTENT_FOR_OUTLINE) {
+    return (
+      <div className="sidebar-view outline-view">
+        <div className="sidebar-empty">Document too large for outline</div>
+      </div>
+    );
+  }
+
+
   // Create a stable key based only on heading lines.
   // This prevents re-extraction when typing in non-heading content.
   const headingLinesKey = useMemo(() => getHeadingLinesKey(content), [content]);
@@ -160,7 +171,6 @@ export function OutlineView() {
   }, [headingLinesKey, content]);
 
   const tree = useMemo(() => buildHeadingTree(headings), [headings]);
-  // activeHeadingLine now stores the heading index directly
   const activeIndex = activeHeadingIndex ?? -1;
 
   // Track collapsed state locally
@@ -190,21 +200,33 @@ export function OutlineView() {
     useUIStore.getState().setActiveHeadingLine(headingIndex);
   };
 
+  // Limit outline items for performance (400+ items causes severe slowdown)
+  const MAX_OUTLINE_ITEMS = 100;
+  const limitedTree = tree.length > MAX_OUTLINE_ITEMS ? tree.slice(0, MAX_OUTLINE_ITEMS) : tree;
+  const isTruncated = tree.length > MAX_OUTLINE_ITEMS;
+
   return (
     <div className="sidebar-view outline-view">
       {headings.length > 0 ? (
-        <ul className="outline-tree">
-          {tree.map((node) => (
-            <OutlineItem
-              key={node.index}
-              node={node}
-              activeIndex={activeIndex}
-              collapsedSet={collapsedSet}
-              onToggle={handleToggle}
-              onClick={handleClick}
-            />
-          ))}
-        </ul>
+        <>
+          <ul className="outline-tree">
+            {limitedTree.map((node) => (
+              <OutlineItem
+                key={node.index}
+                node={node}
+                activeIndex={activeIndex}
+                collapsedSet={collapsedSet}
+                onToggle={handleToggle}
+                onClick={handleClick}
+              />
+            ))}
+          </ul>
+          {isTruncated && (
+            <div className="outline-truncated">
+              + {tree.length - MAX_OUTLINE_ITEMS} more headings
+            </div>
+          )}
+        </>
       ) : (
         <div className="sidebar-empty">No headings</div>
       )}

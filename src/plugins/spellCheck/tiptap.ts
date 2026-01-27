@@ -13,6 +13,8 @@ const spellCheckPluginKey = new PluginKey("spellCheck");
 const spellCheckPopupKey = new PluginKey("spellCheckPopup");
 
 const SPELL_CHECK_DEBOUNCE_MS = 300;
+// Skip spell check for large documents to prevent freeze
+const SPELL_CHECK_MAX_DOC_SIZE = 50000;
 
 async function checkWords(
   words: { word: string; from: number; to: number }[],
@@ -118,6 +120,13 @@ export const spellCheckExtension = Extension.create({
         const performSpellCheck = async () => {
           const settings = useSettingsStore.getState().markdown;
           if (!settings.spellCheckEnabled || isChecking) return;
+
+          // Skip spell check for large documents to prevent freeze
+          const docSize = editorView.state.doc.content.size;
+          if (docSize > SPELL_CHECK_MAX_DOC_SIZE) {
+            misspelledWords = [];
+            return;
+          }
 
           isChecking = true;
 

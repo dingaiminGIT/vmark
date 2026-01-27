@@ -82,6 +82,17 @@
   outline: none;
 }
 
+/* Performance optimization for large documents - DISABLED for testing
+   content-visibility: auto tells the browser to skip layout/paint for off-screen content
+   contain: layout style paint - enables optimization by isolating element's rendering
+   NOTE: This may cause issues during initial render, testing without it first.
+.tiptap-editor .ProseMirror > * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 3em;
+  contain: layout style paint;
+}
+*/
+
 .tiptap-editor .ProseMirror .pm-selection-persist {
   background-color: var(--selection-color, rgba(0, 102, 204, 0.2));
 }

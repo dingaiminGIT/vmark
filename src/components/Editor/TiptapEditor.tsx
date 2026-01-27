@@ -70,6 +70,8 @@ export function TiptapEditorInner() {
   const cursorTrackingEnabled = useRef(false);
   const trackingTimeoutId = useRef<number | null>(null);
   const cursorInfoRef = useRef(cursorInfo);
+  // Track whether onCreate has run to prevent external sync from running before editor is ready
+  const editorInitialized = useRef(false);
   const preserveLineBreaksRef = useRef(preserveLineBreaks);
   const hardBreakStyleOnSaveRef = useRef(hardBreakStyleOnSave);
   cursorInfoRef.current = cursorInfo;
@@ -133,18 +135,24 @@ export function TiptapEditorInner() {
     editorProps: {
       attributes: {
         class: "ProseMirror",
+        // Disable browser spellcheck - causes 2+ minute freeze on large documents (83K+ chars)
+        // as browser tries to spellcheck every word asynchronously blocking main thread
+        spellcheck: "false",
       },
     },
     onCreate: ({ editor }) => {
+      // Reset for this new editor instance (handles React Strict Mode double-mount)
+      editorInitialized.current = false;
+
       try {
         const doc = parseMarkdown(editor.schema, content, {
           preserveLineBreaks: preserveLineBreaksRef.current,
         });
         lastExternalContent.current = content;
         editor.commands.setContent(doc, { emitUpdate: false });
+        editorInitialized.current = true;
       } catch (error) {
         console.error("[TiptapEditor] Failed to parse initial markdown:", error);
-        // Don't update lastExternalContent on parse error - allows retry on next sync
       }
 
       cursorTrackingEnabled.current = false;
@@ -281,11 +289,14 @@ export function TiptapEditorInner() {
   }, [editor]);
 
   // Sync external content changes TO the editor.
-  // Uses async parsing for large documents to prevent UI blocking.
+  // Only runs for SUBSEQUENT content changes after onCreate has initialized the editor.
+  // This prevents double-loading on initial mount and React Strict Mode remounts.
   useEffect(() => {
     if (!editor) return;
     if (isInternalChange.current) return;
     if (content === lastExternalContent.current) return;
+    // Skip if onCreate hasn't run yet - let onCreate handle initial content loading
+    if (!editorInitialized.current) return;
 
     // Track content at the time of this effect to handle race conditions
     const contentToLoad = content;
@@ -297,16 +308,12 @@ export function TiptapEditorInner() {
           preserveLineBreaks: preserveLineBreaksRef.current,
         });
 
-        // Check if this load is still relevant (content may have changed)
         if (cancelled) return;
 
         editor.commands.setContent(doc, { emitUpdate: false });
-        // Only update lastExternalContent after successful parse to allow retry on failure
         lastExternalContent.current = contentToLoad;
 
         // For fresh document load (no saved cursor position), set cursor to start
-        // This handles the case where editor was created with empty content and
-        // actual content was loaded asynchronously via this effect
         if (!cursorInfoRef.current) {
           const view = getTiptapEditorView(editor);
           if (view) {
