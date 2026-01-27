@@ -23,12 +23,36 @@ function isInTaskList(editor: TiptapEditor): boolean {
 }
 
 /**
- * Remove list formatting from the current selection.
- * Lifts list items until no longer in a list.
+ * Clear the checked attribute from the current list item before lifting.
  */
-function removeTaskList(editor: TiptapEditor): void {
+function clearCheckedAttribute(editor: TiptapEditor): void {
   const { state, view } = editor;
   const listItemType = state.schema.nodes.listItem;
+  if (!listItemType) return;
+
+  const { $from } = state.selection;
+  for (let d = $from.depth; d > 0; d--) {
+    const node = $from.node(d);
+    if (node.type === listItemType) {
+      const checked = node.attrs.checked;
+      if (checked === true || checked === false) {
+        const pos = $from.before(d);
+        const tr = state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: null });
+        view.dispatch(tr);
+      }
+      break;
+    }
+  }
+}
+
+/**
+ * Remove list formatting from the current selection.
+ * Lifts list items until no longer in a list.
+ * Clears checked attribute before lifting to prevent stale task state.
+ */
+function removeTaskList(editor: TiptapEditor): void {
+  const { view } = editor;
+  const listItemType = editor.state.schema.nodes.listItem;
   if (!listItemType) return;
 
   const maxLifts = 10;
@@ -43,6 +67,10 @@ function removeTaskList(editor: TiptapEditor): void {
       }
     }
     if (!inList) break;
+
+    // Clear checked attribute before lifting
+    clearCheckedAttribute(editor);
+
     liftListItem(listItemType)(view.state, view.dispatch);
   }
   view.focus();

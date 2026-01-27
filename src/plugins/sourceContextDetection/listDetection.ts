@@ -5,8 +5,16 @@
  */
 
 import type { EditorView } from "@codemirror/view";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 export type ListType = "bullet" | "ordered" | "task";
+
+/**
+ * Get the tab size from settings.
+ */
+function getTabSize(): number {
+  return useSettingsStore.getState().general.tabSize;
+}
 
 export interface ListItemInfo {
   /** Type of list */
@@ -37,6 +45,8 @@ export function getListItemInfo(view: EditorView, pos?: number): ListItemInfo | 
   const line = doc.lineAt(from);
   const lineText = line.text;
 
+  const tabSize = getTabSize();
+
   // Match task list: - [ ] or - [x] or * [ ] etc.
   const taskMatch = lineText.match(/^(\s*)([-*+])\s*\[([ xX])\]\s/);
   if (taskMatch) {
@@ -47,7 +57,7 @@ export function getListItemInfo(view: EditorView, pos?: number): ListItemInfo | 
       type: "task",
       lineStart: line.from,
       lineEnd: line.to,
-      indent: Math.floor(indent / 2),
+      indent: Math.floor(indent / tabSize),
       number: null,
       checked,
       marker,
@@ -64,7 +74,7 @@ export function getListItemInfo(view: EditorView, pos?: number): ListItemInfo | 
       type: "bullet",
       lineStart: line.from,
       lineEnd: line.to,
-      indent: Math.floor(indent / 2),
+      indent: Math.floor(indent / tabSize),
       number: null,
       checked: null,
       marker,
@@ -82,7 +92,7 @@ export function getListItemInfo(view: EditorView, pos?: number): ListItemInfo | 
       type: "ordered",
       lineStart: line.from,
       lineEnd: line.to,
-      indent: Math.floor(indent / 2),
+      indent: Math.floor(indent / tabSize),
       number: num,
       checked: null,
       marker,
@@ -94,25 +104,28 @@ export function getListItemInfo(view: EditorView, pos?: number): ListItemInfo | 
 }
 
 /**
- * Indent a list item by adding 2 spaces.
+ * Indent a list item by adding spaces based on tab size setting.
  */
 export function indentListItem(view: EditorView, info: ListItemInfo): void {
   const { state, dispatch } = view;
-  const changes = { from: info.lineStart, insert: "  " };
+  const tabSize = getTabSize();
+  const indent = " ".repeat(tabSize);
+  const changes = { from: info.lineStart, insert: indent };
   dispatch(state.update({ changes, scrollIntoView: true }));
   view.focus();
 }
 
 /**
- * Outdent a list item by removing up to 2 spaces.
+ * Outdent a list item by removing up to tabSize spaces.
  */
 export function outdentListItem(view: EditorView, info: ListItemInfo): void {
   const { state, dispatch } = view;
   const line = state.doc.lineAt(info.lineStart);
   const lineText = line.text;
+  const tabSize = getTabSize();
 
-  // Find leading spaces (up to 2)
-  const match = lineText.match(/^(\s{1,2})/);
+  // Find leading spaces (up to tabSize)
+  const match = lineText.match(new RegExp(`^(\\s{1,${tabSize}})`));
   if (!match) return; // No indentation to remove
 
   const spacesToRemove = match[1].length;

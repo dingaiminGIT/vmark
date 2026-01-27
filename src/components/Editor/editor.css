@@ -420,8 +420,8 @@
   transform: rotate(45deg);
 }
 
-/* Dim completed task text */
-.tiptap-editor .task-list-item:has(input[type="checkbox"]:checked) .task-list-content {
+/* Dim completed task text - use direct child selectors to avoid affecting nested tasks */
+.tiptap-editor .task-list-item:has(> .task-list-checkbox input[type="checkbox"]:checked) > .task-list-content {
   color: var(--text-tertiary);
   text-decoration: line-through;
   text-decoration-color: var(--text-tertiary);

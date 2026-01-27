@@ -67,7 +67,11 @@ export const taskListItemExtension = Node.create({
       checked: {
         default: null,
         parseHTML: (element) => {
-          const checkbox = (element as HTMLElement).querySelector('input[type="checkbox"]');
+          // Use direct child selector to avoid picking checkbox from nested task lists
+          const el = element as HTMLElement;
+          const checkbox =
+            el.querySelector(':scope > .task-list-checkbox input[type="checkbox"]') ??
+            el.querySelector(':scope > input[type="checkbox"]');
           if (!checkbox) return null;
           return (checkbox as HTMLInputElement).checked;
         },
