@@ -135,16 +135,6 @@ export type CjkDirection = 'to-fullwidth' | 'to-halfwidth';
 export type CjkSpacingAction = 'add' | 'remove';
 
 /**
- * Writing style for AI improvements.
- */
-export type WritingStyle = 'formal' | 'casual' | 'concise' | 'elaborate' | 'academic';
-
-/**
- * Summary length.
- */
-export type SummaryLength = 'brief' | 'medium' | 'detailed';
-
-/**
  * Bridge request types - commands that can be sent to VMark.
  */
 export type BridgeRequest =
@@ -218,12 +208,12 @@ export type BridgeRequest =
   | { type: 'vmark.insertWikiLink'; target: string; displayText?: string; windowId?: WindowId }
   | { type: 'vmark.cjkPunctuationConvert'; direction: CjkDirection; windowId?: WindowId }
   | { type: 'vmark.cjkSpacingFix'; action: CjkSpacingAction; windowId?: WindowId }
-  // AI commands
-  | { type: 'ai.improveWriting'; style?: WritingStyle; instructions?: string; windowId?: WindowId }
-  | { type: 'ai.fixGrammar'; windowId?: WindowId }
-  | { type: 'ai.translate'; targetLanguage: string; windowId?: WindowId }
-  | { type: 'ai.summarize'; length?: SummaryLength; windowId?: WindowId }
-  | { type: 'ai.expand'; focus?: string; windowId?: WindowId };
+  // Suggestion commands
+  | { type: 'suggestion.list'; windowId?: WindowId }
+  | { type: 'suggestion.accept'; suggestionId: string; windowId?: WindowId }
+  | { type: 'suggestion.reject'; suggestionId: string; windowId?: WindowId }
+  | { type: 'suggestion.acceptAll'; windowId?: WindowId }
+  | { type: 'suggestion.rejectAll'; windowId?: WindowId };
 
 /**
  * Bridge response types - responses from VMark.
@@ -295,4 +285,64 @@ export interface SearchResult {
 export interface ReplaceResult {
   /** Number of replacements made */
   count: number;
+  /** Message describing the result */
+  message?: string;
+  /** Suggestion IDs if edits were staged (auto-approve disabled) */
+  suggestionIds?: string[];
+}
+
+/**
+ * Edit operation result (insert, replace at cursor, etc.).
+ * When auto-approve is disabled, includes suggestionId for the staged edit.
+ */
+export interface EditResult {
+  /** Human-readable message */
+  message: string;
+  /** Suggestion ID if edit was staged (auto-approve disabled) */
+  suggestionId?: string;
+  /** Position where content was inserted */
+  position?: number;
+  /** Range that was affected */
+  range?: Range;
+  /** Original content that was replaced/deleted */
+  originalContent?: string;
+  /** Content that was deleted */
+  content?: string;
+}
+
+/**
+ * Suggestion type for AI-generated edits.
+ */
+export type SuggestionType = 'insert' | 'replace' | 'delete';
+
+/**
+ * AI suggestion for user approval.
+ */
+export interface Suggestion {
+  /** Unique suggestion ID */
+  id: string;
+  /** Type of edit */
+  type: SuggestionType;
+  /** Start position in document */
+  from: number;
+  /** End position in document */
+  to: number;
+  /** New content to insert/replace (undefined for delete) */
+  newContent?: string;
+  /** Original content being replaced/deleted */
+  originalContent?: string;
+  /** When the suggestion was created */
+  createdAt: number;
+}
+
+/**
+ * Suggestion list response.
+ */
+export interface SuggestionListResult {
+  /** All pending suggestions */
+  suggestions: Suggestion[];
+  /** Total count */
+  count: number;
+  /** Currently focused suggestion ID */
+  focusedId: string | null;
 }

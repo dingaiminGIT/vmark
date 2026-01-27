@@ -138,65 +138,30 @@ const x = 1;
     it('should be registered as a tool', () => {
       const tool = client.getTool('document_set_content');
       expect(tool).toBeDefined();
-      expect(tool?.inputSchema.required).toContain('content');
+      expect(tool?.description).toContain('BLOCKED');
     });
 
-    it('should set document content', async () => {
+    it('should always return error for AI safety', async () => {
       const result = await client.callTool('document_set_content', {
         content: 'New content',
       });
 
-      expect(result.success).toBe(true);
-      expect(McpTestClient.getTextContent(result)).toContain('updated successfully');
-
-      // Verify content was set
-      const state = bridge.getWindowState();
-      expect(state?.content).toBe('New content');
-    });
-
-    it('should require content parameter', async () => {
-      const result = await client.callTool('document_set_content', {});
-
       expect(result.success).toBe(false);
-      expect(McpTestClient.getTextContent(result)).toContain('content must be a string');
+      expect(McpTestClient.getTextContent(result)).toContain('disabled for AI safety');
+
+      // Verify content was NOT changed
+      const state = bridge.getWindowState();
+      expect(state?.content).toBe('');
     });
 
-    it('should use specified windowId', async () => {
-      bridge.addWindow('secondary');
-
-      await client.callTool('document_set_content', {
-        content: 'Secondary content',
-        windowId: 'secondary',
-      });
-
-      expect(bridge.getWindowState('secondary')?.content).toBe('Secondary content');
-      expect(bridge.getWindowState('main')?.content).toBe(''); // Main unchanged
-    });
-
-    it('should handle empty string content', async () => {
-      bridge.setContent('Initial content');
-
-      const result = await client.callTool('document_set_content', {
-        content: '',
-      });
-
-      expect(result.success).toBe(true);
-      expect(bridge.getWindowState()?.content).toBe('');
-    });
-
-    it('should handle bridge errors', async () => {
-      bridge.setResponseHandler('document.setContent', () => ({
-        success: false,
-        error: 'Permission denied',
-        data: null,
-      }));
-
+    it('should suggest alternative tools in error message', async () => {
       const result = await client.callTool('document_set_content', {
         content: 'test',
       });
 
-      expect(result.success).toBe(false);
-      expect(McpTestClient.getTextContent(result)).toContain('Failed to set document content');
+      const errorMessage = McpTestClient.getTextContent(result);
+      expect(errorMessage).toContain('document_insert_at_cursor');
+      expect(errorMessage).toContain('selection_replace');
     });
   });
 
@@ -234,12 +199,16 @@ const x = 1;
       expect(McpTestClient.getTextContent(result)).toContain('text must be a string');
     });
 
-    it('should report number of inserted characters', async () => {
+    it('should return structured result with position', async () => {
       const result = await client.callTool('document_insert_at_cursor', {
         text: 'Hello',
       });
 
-      expect(McpTestClient.getTextContent(result)).toContain('5 characters');
+      expect(result.success).toBe(true);
+      const content = McpTestClient.getTextContent(result);
+      expect(content).toContain('"message"');
+      expect(content).toContain('"position"');
+      expect(content).toContain('"applied"');
     });
 
     it('should handle multiline insertion', async () => {
@@ -335,7 +304,7 @@ const x = 1;
       expect(McpTestClient.getTextContent(result)).toContain('non-negative');
     });
 
-    it('should report position in success message', async () => {
+    it('should return structured result with position', async () => {
       bridge.setContent('test');
 
       const result = await client.callTool('document_insert_at_position', {
@@ -343,7 +312,11 @@ const x = 1;
         position: 2,
       });
 
-      expect(McpTestClient.getTextContent(result)).toContain('position 2');
+      expect(result.success).toBe(true);
+      const content = McpTestClient.getTextContent(result);
+      expect(content).toContain('"position": 2');
+      expect(content).toContain('"message"');
+      expect(content).toContain('"applied"');
     });
   });
 

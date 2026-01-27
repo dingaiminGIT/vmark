@@ -8,7 +8,7 @@ import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { serializeMarkdown } from "@/utils/markdownPipeline";
 import { getFileName } from "@/utils/paths";
-import { respond, getEditor } from "./utils";
+import { respond, getEditor, resolveWindowId } from "./utils";
 
 /**
  * Handle windows.list request.
@@ -186,12 +186,12 @@ export async function handleWorkspaceCloseWindow(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const windowId = args.windowId as string | undefined;
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
-    const activeTabId = tabStore.activeTabId[windowId ?? "main"];
+    const activeTabId = tabStore.activeTabId[windowId];
 
     if (activeTabId) {
-      tabStore.closeTab(windowId ?? "main", activeTabId);
+      tabStore.closeTab(windowId, activeTabId);
     }
 
     await respond({ id, success: true, data: null });
@@ -257,7 +257,7 @@ export async function handleWorkspaceGetDocumentInfo(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
     const docStore = useDocumentStore.getState();
     const activeTabId = tabStore.activeTabId[windowId];

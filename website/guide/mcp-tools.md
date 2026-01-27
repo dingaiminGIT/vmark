@@ -33,6 +33,11 @@ Insert text at the current cursor position.
 | `text` | string | Yes | Text to insert. |
 | `windowId` | string | No | Window identifier. |
 
+**Returns:** `{ message, position, suggestionId?, applied }`
+
+- `suggestionId` - Present when edit is staged (auto-approve disabled). Use with `suggestion_accept` to apply.
+- `applied` - `true` if immediately applied, `false` if staged as suggestion.
+
 ::: tip Suggestion System
 By default, this tool creates a **suggestion** that requires user approval. The text appears as ghost text preview. Users can accept (Enter) or reject (Escape) the suggestion. This preserves undo/redo integrity.
 
@@ -48,6 +53,8 @@ Insert text at a specific character position.
 | `text` | string | Yes | Text to insert. |
 | `position` | number | Yes | Character position (0-indexed). |
 | `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ message, position, suggestionId?, applied }`
 
 ### document_search
 
@@ -72,7 +79,11 @@ Replace text occurrences in the document.
 | `all` | boolean | No | Replace all occurrences. Default: false. |
 | `windowId` | string | No | Window identifier. |
 
-**Returns:** Number of replacements made.
+**Returns:** `{ count, message, suggestionIds?, applied }`
+
+- `count` - Number of replacements made.
+- `suggestionIds` - Array of suggestion IDs when edits are staged (auto-approve disabled).
+- `applied` - `true` if immediately applied, `false` if staged as suggestions.
 
 ---
 
@@ -113,6 +124,8 @@ Replace selected text with new text.
 | `text` | string | Yes | Replacement text. |
 | `windowId` | string | No | Window identifier. |
 
+**Returns:** `{ message, range, originalContent, suggestionId?, applied }`
+
 ::: tip Suggestion System
 By default, this tool creates a **suggestion** that requires user approval. The original text appears with strikethrough, and the new text appears as ghost text. Users can accept (Enter) or reject (Escape) the suggestion.
 
@@ -126,6 +139,8 @@ Delete the selected text.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ message, range, content, suggestionId?, applied }`
 
 ::: tip Suggestion System
 By default, this tool creates a **suggestion** that requires user approval. The text to be deleted appears with strikethrough. Users can accept (Enter) or reject (Escape) the deletion.
@@ -600,6 +615,10 @@ If **Auto-approve edits** is enabled in Settings → Integrations, these tools a
 
 List all pending suggestions.
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
+
 **Returns:** `{ suggestions: [...], count, focusedId }`
 
 Each suggestion includes:
@@ -616,6 +635,7 @@ Accept a specific suggestion, applying its changes to the document.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `suggestionId` | string | Yes | ID of the suggestion to accept. |
+| `windowId` | string | No | Window identifier. |
 
 ### suggestion_reject
 
@@ -624,14 +644,23 @@ Reject a specific suggestion, discarding it without changes.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `suggestionId` | string | Yes | ID of the suggestion to reject. |
+| `windowId` | string | No | Window identifier. |
 
 ### suggestion_accept_all
 
 Accept all pending suggestions in document order.
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
+
 ### suggestion_reject_all
 
 Reject all pending suggestions.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `windowId` | string | No | Window identifier. |
 
 ---
 

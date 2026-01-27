@@ -4,7 +4,7 @@
 
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
-import { respond } from "./utils";
+import { respond, resolveWindowId } from "./utils";
 
 /**
  * Tab information for MCP responses.
@@ -26,7 +26,7 @@ export async function handleTabsList(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
     const docStore = useDocumentStore.getState();
 
@@ -63,7 +63,7 @@ export async function handleTabsGetActive(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
     const docStore = useDocumentStore.getState();
 
@@ -109,7 +109,7 @@ export async function handleTabsSwitch(
 ): Promise<void> {
   try {
     const tabId = args.tabId as string;
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
 
     if (!tabId) {
       throw new Error("tabId is required");
@@ -145,7 +145,7 @@ export async function handleTabsClose(
 ): Promise<void> {
   try {
     const tabId = args.tabId as string | undefined;
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
 
     const targetTabId = tabId ?? tabStore.activeTabId[windowId];
@@ -174,7 +174,7 @@ export async function handleTabsCreate(
   args: Record<string, unknown>
 ): Promise<void> {
   try {
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
     const docStore = useDocumentStore.getState();
 
@@ -201,7 +201,7 @@ export async function handleTabsGetInfo(
 ): Promise<void> {
   try {
     const tabId = args.tabId as string | undefined;
-    const windowId = (args.windowId as string) ?? "main";
+    const windowId = resolveWindowId(args.windowId as string | undefined);
     const tabStore = useTabStore.getState();
     const docStore = useDocumentStore.getState();
 

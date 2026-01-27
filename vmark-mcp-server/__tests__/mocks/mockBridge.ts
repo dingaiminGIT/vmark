@@ -14,6 +14,8 @@ import type {
   WindowInfo,
   SearchResult,
   ReplaceResult,
+  Suggestion,
+  SuggestionListResult,
 } from '../../src/bridge/types.js';
 
 /**
@@ -35,6 +37,7 @@ export interface MockWindowState extends MockDocumentState {
   title: string;
   isFocused: boolean;
   isAiExposed: boolean;
+  suggestions: Suggestion[];
 }
 
 /**
@@ -109,6 +112,7 @@ export class MockBridge implements Bridge {
         lastModified: null,
       },
       outline: [],
+      suggestions: [],
     };
   }
 
@@ -316,6 +320,32 @@ export class MockBridge implements Bridge {
     this.nextError = null;
   }
 
+  /**
+   * Add a suggestion to a window (for testing).
+   */
+  addSuggestion(suggestion: Suggestion, windowId: string = 'main'): void {
+    const window = this.getOrCreateWindow(windowId);
+    window.suggestions.push(suggestion);
+  }
+
+  /**
+   * Get suggestions for a window (for assertions).
+   */
+  getSuggestions(windowId: string = 'main'): Suggestion[] {
+    const window = this.windows.get(windowId);
+    return window?.suggestions ?? [];
+  }
+
+  /**
+   * Clear all suggestions for a window.
+   */
+  clearSuggestions(windowId: string = 'main'): void {
+    const window = this.windows.get(windowId);
+    if (window) {
+      window.suggestions = [];
+    }
+  }
+
   // ============ Private Helpers ============
 
   private getOrCreateWindow(windowId: string): MockWindowState {
@@ -379,7 +409,14 @@ export class MockBridge implements Bridge {
         const after = window.content.slice(pos);
         this.setContent(before + request.text + after, windowId);
         this.setCursorPosition(pos + request.text.length, windowId);
-        return { success: true, data: null };
+        // Return structured result (simulating auto-approve mode)
+        return {
+          success: true,
+          data: {
+            message: 'Content inserted (auto-approved).',
+            position: pos,
+          },
+        };
       }
 
       case 'document.insertAtPosition': {
@@ -387,11 +424,18 @@ export class MockBridge implements Bridge {
           return { success: false, error: `Window ${windowId} not found` };
         }
         // Bounds checking: clamp position to valid range
-        const pos = Math.max(0, Math.min(request.position, window.content.length));
-        const before = window.content.slice(0, pos);
-        const after = window.content.slice(pos);
+        const insertPos = Math.max(0, Math.min(request.position, window.content.length));
+        const before = window.content.slice(0, insertPos);
+        const after = window.content.slice(insertPos);
         this.setContent(before + request.text + after, windowId);
-        return { success: true, data: null };
+        // Return structured result (simulating auto-approve mode)
+        return {
+          success: true,
+          data: {
+            message: 'Content inserted (auto-approved).',
+            position: insertPos,
+          },
+        };
       }
 
       case 'document.search': {
@@ -437,24 +481,42 @@ export class MockBridge implements Bridge {
         if (!window) {
           return { success: false, error: `Window ${windowId} not found` };
         }
-        const { from, to } = window.selection.range;
-        const before = window.content.slice(0, from);
-        const after = window.content.slice(to);
+        const { from: replaceFrom, to: replaceTo } = window.selection.range;
+        const originalContent = window.content.slice(replaceFrom, replaceTo);
+        const before = window.content.slice(0, replaceFrom);
+        const after = window.content.slice(replaceTo);
         this.setContent(before + request.text + after, windowId);
-        this.setCursorPosition(from + request.text.length, windowId);
-        return { success: true, data: null };
+        this.setCursorPosition(replaceFrom + request.text.length, windowId);
+        // Return structured result (simulating auto-approve mode)
+        return {
+          success: true,
+          data: {
+            message: 'Selection replaced (auto-approved).',
+            range: { from: replaceFrom, to: replaceTo },
+            originalContent,
+          },
+        };
       }
 
       case 'selection.delete': {
         if (!window) {
           return { success: false, error: `Window ${windowId} not found` };
         }
-        const { from, to } = window.selection.range;
-        const before = window.content.slice(0, from);
-        const after = window.content.slice(to);
+        const { from: deleteFrom, to: deleteTo } = window.selection.range;
+        const deletedContent = window.content.slice(deleteFrom, deleteTo);
+        const before = window.content.slice(0, deleteFrom);
+        const after = window.content.slice(deleteTo);
         this.setContent(before + after, windowId);
-        this.setCursorPosition(from, windowId);
-        return { success: true, data: null };
+        this.setCursorPosition(deleteFrom, windowId);
+        // Return structured result (simulating auto-approve mode)
+        return {
+          success: true,
+          data: {
+            message: 'Selection deleted (auto-approved).',
+            range: { from: deleteFrom, to: deleteTo },
+            content: deletedContent,
+          },
+        };
       }
 
       case 'cursor.getContext': {
@@ -543,6 +605,65 @@ export class MockBridge implements Bridge {
         // These operations are acknowledged but don't change mock state
         // In real implementation, these would modify the editor
         return { success: true, data: null };
+
+      // Suggestion tools
+      case 'suggestion.list': {
+        if (!window) {
+          return { success: false, error: `Window ${windowId} not found` };
+        }
+        const result: SuggestionListResult = {
+          suggestions: window.suggestions,
+          count: window.suggestions.length,
+          focusedId: window.suggestions.length > 0 ? window.suggestions[0].id : null,
+        };
+        return { success: true, data: result };
+      }
+
+      case 'suggestion.accept': {
+        if (!window) {
+          return { success: false, error: `Window ${windowId} not found` };
+        }
+        const acceptId = (request as { suggestionId: string }).suggestionId;
+        const acceptIndex = window.suggestions.findIndex(s => s.id === acceptId);
+        if (acceptIndex === -1) {
+          return { success: false, error: `Suggestion ${acceptId} not found` };
+        }
+        // Remove accepted suggestion (simulating apply)
+        window.suggestions.splice(acceptIndex, 1);
+        return { success: true, data: { message: 'Suggestion accepted', suggestionId: acceptId } };
+      }
+
+      case 'suggestion.reject': {
+        if (!window) {
+          return { success: false, error: `Window ${windowId} not found` };
+        }
+        const rejectId = (request as { suggestionId: string }).suggestionId;
+        const rejectIndex = window.suggestions.findIndex(s => s.id === rejectId);
+        if (rejectIndex === -1) {
+          return { success: false, error: `Suggestion ${rejectId} not found` };
+        }
+        // Remove rejected suggestion
+        window.suggestions.splice(rejectIndex, 1);
+        return { success: true, data: { message: 'Suggestion rejected', suggestionId: rejectId } };
+      }
+
+      case 'suggestion.acceptAll': {
+        if (!window) {
+          return { success: false, error: `Window ${windowId} not found` };
+        }
+        const acceptCount = window.suggestions.length;
+        window.suggestions = [];
+        return { success: true, data: { message: 'All suggestions accepted', count: acceptCount } };
+      }
+
+      case 'suggestion.rejectAll': {
+        if (!window) {
+          return { success: false, error: `Window ${windowId} not found` };
+        }
+        const rejectCount = window.suggestions.length;
+        window.suggestions = [];
+        return { success: true, data: { message: 'All suggestions rejected', count: rejectCount } };
+      }
 
       default:
         return {
