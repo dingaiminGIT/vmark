@@ -78,6 +78,7 @@ export function useSourceEditorContentSync(
       if (wasFreshLoad && getCursorInfo && !getCursorInfo()) {
         view.dispatch({
           selection: { anchor: 0 },
+          scrollIntoView: true,
         });
       }
     });

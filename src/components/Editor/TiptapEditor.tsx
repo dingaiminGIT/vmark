@@ -321,7 +321,7 @@ export function TiptapEditorInner() {
           const view = getTiptapEditorView(editor);
           if (view) {
             try {
-              const tr = view.state.tr.setSelection(Selection.atStart(view.state.doc));
+              const tr = view.state.tr.setSelection(Selection.atStart(view.state.doc)).scrollIntoView();
               view.dispatch(tr);
             } catch {
               // Ignore selection errors
