@@ -137,24 +137,23 @@ function OutlineItem({
   );
 }
 
+// Size thresholds for performance
+const MAX_CONTENT_FOR_OUTLINE = 100000; // 100KB threshold
+const MAX_OUTLINE_ITEMS = 100; // Limit items (400+ causes severe slowdown)
+
 export function OutlineView() {
   const content = useDocumentContent();
   const activeHeadingIndex = useUIStore((state) => state.activeHeadingLine);
 
-  // Skip outline for very large documents to prevent performance issues
-  const MAX_CONTENT_FOR_OUTLINE = 100000; // 100KB threshold
-  if (content.length > MAX_CONTENT_FOR_OUTLINE) {
-    return (
-      <div className="sidebar-view outline-view">
-        <div className="sidebar-empty">Document too large for outline</div>
-      </div>
-    );
-  }
-
+  // Check if document is too large (used after hooks)
+  const isTooLarge = content.length > MAX_CONTENT_FOR_OUTLINE;
 
   // Create a stable key based only on heading lines.
   // This prevents re-extraction when typing in non-heading content.
-  const headingLinesKey = useMemo(() => getHeadingLinesKey(content), [content]);
+  const headingLinesKey = useMemo(
+    () => (isTooLarge ? "" : getHeadingLinesKey(content)),
+    [content, isTooLarge]
+  );
 
   // Cache previous headings to maintain referential stability
   const prevHeadingsRef = useRef<HeadingItem[]>([]);
@@ -162,6 +161,7 @@ export function OutlineView() {
 
   // Only re-extract headings when heading lines actually change
   const headings = useMemo(() => {
+    if (isTooLarge) return [];
     if (headingLinesKey === prevKeyRef.current) {
       return prevHeadingsRef.current;
     }
@@ -171,14 +171,16 @@ export function OutlineView() {
     prevHeadingsRef.current = newHeadings;
     prevKeyRef.current = headingLinesKey;
     return newHeadings;
-  }, [headingLinesKey, content]);
+  }, [headingLinesKey, content, isTooLarge]);
 
   const tree = useMemo(() => {
+    if (isTooLarge) return [];
     perfStart("OutlineView:buildHeadingTree");
     const result = buildHeadingTree(headings);
     perfEnd("OutlineView:buildHeadingTree", { rootNodes: result.length });
     return result;
-  }, [headings]);
+  }, [headings, isTooLarge]);
+
   const activeIndex = activeHeadingIndex ?? -1;
 
   // Track collapsed state locally
@@ -208,8 +210,15 @@ export function OutlineView() {
     useUIStore.getState().setActiveHeadingLine(headingIndex);
   };
 
-  // Limit outline items for performance (400+ items causes severe slowdown)
-  const MAX_OUTLINE_ITEMS = 100;
+  // Skip outline for very large documents to prevent performance issues
+  if (isTooLarge) {
+    return (
+      <div className="sidebar-view outline-view">
+        <div className="sidebar-empty">Document too large for outline</div>
+      </div>
+    );
+  }
+
   const limitedTree = tree.length > MAX_OUTLINE_ITEMS ? tree.slice(0, MAX_OUTLINE_ITEMS) : tree;
   const isTruncated = tree.length > MAX_OUTLINE_ITEMS;
 
