@@ -16,7 +16,8 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden; /* Prevent horizontal overflow */
-  padding: 0 2em 40px; /* top: 0, left/right: 2em, bottom: statusbar/findbar height */
+  padding-bottom: 40px; /* statusbar/findbar height */
+  /* No horizontal padding - applied per-element so tables can span full width */
   transition: padding-bottom 0.15s ease-out;
   /* Flexbox centering for narrow editor width settings */
   display: flex;
@@ -80,6 +81,33 @@
   padding: 0;
   min-height: 100%;
   outline: none;
+}
+
+/* Element-level horizontal margin - allows tables to span full width.
+   All block elements except tables get 2em horizontal margin. */
+.tiptap-editor .ProseMirror > p,
+.tiptap-editor .ProseMirror > h1,
+.tiptap-editor .ProseMirror > h2,
+.tiptap-editor .ProseMirror > h3,
+.tiptap-editor .ProseMirror > h4,
+.tiptap-editor .ProseMirror > h5,
+.tiptap-editor .ProseMirror > h6,
+.tiptap-editor .ProseMirror > ul,
+.tiptap-editor .ProseMirror > ol,
+.tiptap-editor .ProseMirror > blockquote,
+.tiptap-editor .ProseMirror > hr,
+.tiptap-editor .ProseMirror > .code-block-wrapper,
+.tiptap-editor .ProseMirror > pre,
+.tiptap-editor .ProseMirror > .alert-block,
+.tiptap-editor .ProseMirror > .details-block,
+.tiptap-editor .ProseMirror > .frontmatter-block,
+.tiptap-editor .ProseMirror > .html-block,
+.tiptap-editor .ProseMirror > .link-definition,
+.tiptap-editor .ProseMirror > .footnote-definition,
+.tiptap-editor .ProseMirror > .block-image,
+.tiptap-editor .ProseMirror > .math-display {
+  margin-left: 2em;
+  margin-right: 2em;
 }
 
 /* Performance optimization for large documents - DISABLED for testing
@@ -402,18 +430,19 @@
   margin-bottom: 0;
 }
 
-/* Table scroll container - enables horizontal scrolling for wide tables */
+/* Table scroll container - enables horizontal scrolling for wide tables.
+   Table aligns with other content (2em margins on both sides).
+   Horizontal scrollbar appears when table is wider than container. */
 .tiptap-editor .table-scroll-wrapper {
   overflow-x: auto;
-  max-width: 100%;
-  margin: 0.8em 0;
+  margin: 0.8em 2em; /* Same margins as other content */
   position: relative;
 }
 
 .tiptap-editor .table-scroll-wrapper table {
   width: max-content;
   min-width: 100%;
-  margin: 0; /* Wrapper handles margin */
+  margin: 0;
 }
 
 /* Task list items - use negative margin to align text with regular list items.

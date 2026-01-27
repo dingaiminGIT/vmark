@@ -9,9 +9,9 @@ import {
   BulletListWithSourceLine,
   OrderedListWithSourceLine,
   HorizontalRuleWithSourceLine,
-  TableWithSourceLine,
   TableRowWithSourceLine,
 } from "@/plugins/shared/sourceLineNodes";
+import { TableWithScrollWrapper } from "@/plugins/tableScroll";
 import { smartPasteExtension } from "@/plugins/smartPaste/tiptap";
 import { markdownPasteExtension } from "@/plugins/markdownPaste/tiptap";
 import { htmlPasteExtension } from "@/plugins/htmlPaste/tiptap";
@@ -119,7 +119,7 @@ export function createTiptapExtensions(): Extensions {
     wikiLinkPopupExtension,
     footnoteReferenceExtension,
     footnoteDefinitionExtension,
-    TableWithSourceLine.configure({ resizable: false }),
+    TableWithScrollWrapper.configure({ resizable: false }),
     TableRowWithSourceLine,
     AlignedTableHeader,
     AlignedTableCell,
