@@ -387,17 +387,26 @@ export function useMcpBridge(): void {
       // Parse args_json to avoid Tauri IPC double-encoding issues
       const raw = event.payload;
 
-      // Debug: log raw event to see actual field names
-      if (import.meta.env.DEV) {
-        console.log("[MCP Bridge DEBUG] Raw event payload:", JSON.stringify(raw));
-      }
-
       // Try both snake_case and camelCase (Tauri might convert)
       const argsJsonStr = raw.args_json ?? raw.argsJson ?? "{}";
+
+      let args: Record<string, unknown>;
+      try {
+        args = JSON.parse(argsJsonStr);
+      } catch {
+        // Malformed JSON - respond with error
+        respond({
+          id: raw.id,
+          success: false,
+          error: "Invalid JSON in request args",
+        });
+        return;
+      }
+
       const parsed: McpRequestEvent = {
         id: raw.id,
         type: raw.type,
-        args: JSON.parse(argsJsonStr),
+        args,
       };
       handleRequest(parsed);
     }).then((fn) => {

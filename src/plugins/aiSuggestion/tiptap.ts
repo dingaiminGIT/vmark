@@ -303,9 +303,10 @@ export const aiSuggestionExtension = Extension.create({
               switch (suggestion.type) {
                 case "insert": {
                   // Insert the new content at the stored position, parsing markdown
+                  // Use replaceRange to preserve slice open depth and block structure
                   if (suggestion.newContent) {
                     const slice = createMarkdownPasteSlice(state, suggestion.newContent);
-                    const tr = state.tr.insert(suggestion.from, slice.content);
+                    const tr = state.tr.replaceRange(suggestion.from, suggestion.from, slice);
                     editorView.dispatch(tr);
                   }
                   break;
@@ -356,9 +357,10 @@ export const aiSuggestionExtension = Extension.create({
               for (const suggestion of suggestions) {
                 switch (suggestion.type) {
                   case "insert": {
+                    // Use replaceRange to preserve slice open depth and block structure
                     if (suggestion.newContent) {
                       const slice = createMarkdownPasteSlice(state, suggestion.newContent);
-                      tr = tr.insert(suggestion.from, slice.content);
+                      tr = tr.replaceRange(suggestion.from, suggestion.from, slice);
                     }
                     break;
                   }

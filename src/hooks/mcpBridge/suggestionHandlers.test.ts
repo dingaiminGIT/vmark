@@ -245,8 +245,8 @@ describe("suggestionHandlers", () => {
 
       await handleInsertAtPositionWithSuggestion("req-2", { text: "new text", position: 10 });
 
-      // New implementation uses createMarkdownPasteSlice + tr.insert
-      expect(editor.mockTr.insert).toHaveBeenCalledWith(10, expect.anything());
+      // New implementation uses createMarkdownPasteSlice + tr.replaceRange
+      expect(editor.mockTr.replaceRange).toHaveBeenCalledWith(10, 10, expect.anything());
       expect(editor.view.dispatch).toHaveBeenCalled();
       expect(respond).toHaveBeenCalledWith({
         id: "req-2",

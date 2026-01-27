@@ -49,12 +49,6 @@ export async function handleInsertAtCursorWithSuggestion(
       throw new Error("text must be a string");
     }
 
-    // Debug: Log received text to trace markdown escaping issues
-    if (import.meta.env.DEV) {
-      console.log("[MCP Bridge DEBUG] insertAtCursor received text:", JSON.stringify(text));
-      console.log("[MCP Bridge DEBUG] text length:", text.length, "first 100 chars:", text.slice(0, 100));
-    }
-
     const insertPos = editor.state.selection.from;
 
     // Auto-approve: apply directly without suggestion preview
@@ -132,8 +126,9 @@ export async function handleInsertAtPositionWithSuggestion(
     // Auto-approve: apply directly without suggestion preview
     if (isAutoApproveEnabled()) {
       // Parse markdown and insert as rich content at position
+      // Use replaceRange to preserve slice open depth and block structure
       const slice = createMarkdownPasteSlice(editor.state, text);
-      const tr = editor.state.tr.insert(position, slice.content);
+      const tr = editor.state.tr.replaceRange(position, position, slice);
       editor.view.dispatch(tr);
       await respond({
         id,
