@@ -32,16 +32,16 @@
 }
 
 .editor-content::-webkit-scrollbar-track {
-  background: var(--scrollbar-track, rgba(128, 128, 128, 0.2));
+  background: transparent;
 }
 
 .editor-content::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb, rgba(128, 128, 128, 0.4));
+  background-color: var(--border-color);
   border-radius: 1px;
 }
 
 .editor-content::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-thumb-hover, rgba(128, 128, 128, 0.6));
+  background-color: var(--md-char-color);
 }
 
 /* Width constraint - works with parent flexbox centering */
@@ -142,14 +142,10 @@
 
 .tiptap-editor h1 {
   font-size: 1.75em;
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--border-color);
 }
 
 .tiptap-editor h2 {
   font-size: 1.5em;
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--border-color);
 }
 
 .tiptap-editor h3 {
@@ -210,11 +206,10 @@
 .tiptap-editor ul,
 .tiptap-editor ol {
   --list-indent: 1em;
-  --list-padding: calc(var(--list-indent) * 2);
-  --list-margin: calc(var(--list-indent) * 0.8);
+  --list-padding: calc(var(--list-indent, 1em) * 2);
+  --list-margin: calc(var(--list-indent, 1em) * 0.8);
   margin: 0 0 var(--list-margin) 0;
   padding-left: var(--list-padding);
-  font-size: var(--editor-font-size-sm);
   line-height: var(--editor-line-height-px);
 }
 
@@ -231,7 +226,7 @@
 /* Nested lists: 75% of top-level padding */
 .tiptap-editor li > ul,
 .tiptap-editor li > ol {
-  --list-padding: calc(var(--list-indent) * 1.5);
+  --list-padding: calc(var(--list-indent, 1em) * 1.5);
   margin: 0;
   padding-left: var(--list-padding);
 }
@@ -298,14 +293,21 @@
   padding: 0;
 }
 
+/* When wrapper exists (line numbers enabled), wrapper owns the frame */
+.tiptap-editor .code-block-wrapper pre {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  margin: 0;
+}
+
 /* Blockquotes - subtle border with radius like alert blocks */
 .tiptap-editor blockquote {
   border-left: 4px solid var(--border-color);
   border-radius: var(--radius-md);
-  margin: 0.8em 0;
+  margin: 1em 0;
   padding: 0 1em;
   color: var(--meta-content-color);
-  font-size: var(--editor-font-size-sm);
   line-height: var(--editor-line-height-px);
 }
 
@@ -319,7 +321,7 @@
 
 /* Paragraphs inside blockquotes - reduce margin for tighter spacing */
 .tiptap-editor blockquote > p {
-  margin-bottom: calc(var(--list-indent) * 0.5);
+  margin-bottom: calc(var(--list-indent, 1em) * 0.5);
 }
 
 .tiptap-editor blockquote > p:last-child {
@@ -330,8 +332,7 @@
    Padding must exceed task item offset for safe buffer */
 .tiptap-editor blockquote > ul,
 .tiptap-editor blockquote > ol {
-  font-size: inherit;
-  --list-padding: calc(var(--list-indent) * 2);
+  --list-padding: calc(var(--list-indent, 1em) * 2);
   padding-left: var(--list-padding);
 }
 
@@ -354,7 +355,6 @@
   width: 100%;
   margin: 0.8em 0;
   table-layout: auto;
-  font-size: var(--editor-font-size-sm);
   line-height: var(--editor-line-height-px);
 }
 
@@ -389,6 +389,20 @@
 .tiptap-editor th:last-child,
 .tiptap-editor td:last-child {
   margin-bottom: 0;
+}
+
+/* Table scroll container - enables horizontal scrolling for wide tables */
+.tiptap-editor .table-scroll-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+  margin: 0.8em 0;
+  position: relative;
+}
+
+.tiptap-editor .table-scroll-wrapper table {
+  width: max-content;
+  min-width: 100%;
+  margin: 0; /* Wrapper handles margin */
 }
 
 /* Task list items - use negative margin to align text with regular list items.
@@ -458,6 +472,12 @@
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
+/* Keyboard focus indicator for accessibility */
+.tiptap-editor .task-list-item input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 1px;
+}
+
 /* Completed task: dim color on content container */
 .tiptap-editor .task-list-item:has(> .task-list-checkbox input[type="checkbox"]:checked) > .task-list-content {
   color: var(--text-tertiary);
@@ -478,7 +498,7 @@
 .tiptap-editor img {
   max-width: 100%;
   height: auto;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   transition: border-color 0.15s ease;
   /* Prevent macOS Live Text from selecting text within images */
@@ -572,7 +592,6 @@
 .tiptap-editor dl[data-type="footnote_definition"] {
   margin: 0.5em 0;
   padding: 0;
-  font-size: var(--editor-font-size-sm);
   line-height: var(--editor-line-height-px);
   color: var(--text-secondary);
 }
@@ -605,7 +624,6 @@
 .tiptap-editor dl[data-type="footnote_definition"] dd::after {
   content: " ↩";
   color: var(--primary-color);
-  font-size: var(--editor-font-size-sm);
   cursor: pointer;
   opacity: 0.7;
 }
@@ -618,119 +636,8 @@
   display: inline;
 }
 
-/* Footnote Popup - Editable */
-.footnote-popup {
-  position: fixed;
-  display: none;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 1000;
-  width: 280px;
-  padding: 8px 10px;
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-size: 0.78em;
-  line-height: 1.5;
-  color: var(--text-color);
-  pointer-events: auto;
-}
-
-.footnote-popup-label {
-  font-size: 1em;
-  font-weight: 500;
-  color: var(--text-secondary);
-  opacity: 0.6;
-}
-
-.footnote-popup-textarea {
-  width: 100%;
-  min-height: 36px;
-  max-height: 120px;
-  padding: 6px 8px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-color);
-  font-family: inherit;
-  font-size: 0.93em;
-  line-height: 1.4;
-  resize: none;
-  outline: none !important;
-  -webkit-appearance: none;
-  cursor: default;
-  caret-color: transparent;
-  overflow: hidden;
-}
-
-/* Input focus: caret is the indicator (per design rules) */
-.footnote-popup-textarea:focus,
-.footnote-popup-textarea:focus-visible {
-  outline: none !important;
-  box-shadow: none;
-  /* Caret visibility indicates focus */
-}
-
-/* Edit mode */
-.footnote-popup.editing .footnote-popup-textarea {
-  background: var(--bg-secondary);
-  border: 1px solid color-mix(in srgb, var(--text-color) 15%, transparent);
-  cursor: text;
-  caret-color: var(--text-color);
-  overflow: auto;
-}
-
-.footnote-popup-textarea::placeholder {
-  color: var(--text-secondary);
-}
-
-.footnote-popup-buttons {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.footnote-popup-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.footnote-popup-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--text-color);
-}
-
-.footnote-popup-btn svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.footnote-popup-btn-save:hover {
-  background: var(--primary-color);
-  color: var(--contrast-text);
-}
-
-.footnote-popup-btn-goto:hover {
-  color: var(--primary-color);
-}
-
 /* Focus mode styles moved to src/plugins/focusMode/focus-mode.css */
+/* Footnote popup styles are in src/plugins/footnotePopup/footnote-popup.css */
 
 /* Source editor (CodeMirror) - matches WYSIWYG styling */
 .source-editor {
@@ -782,16 +689,16 @@
 }
 
 .source-editor .cm-scroller::-webkit-scrollbar-track {
-  background: var(--scrollbar-track, rgba(128, 128, 128, 0.2));
+  background: transparent;
 }
 
 .source-editor .cm-scroller::-webkit-scrollbar-thumb {
-  background-color: var(--scrollbar-thumb, rgba(128, 128, 128, 0.4));
+  background-color: var(--border-color);
   border-radius: 1px;
 }
 
 .source-editor .cm-scroller::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-thumb-hover, rgba(128, 128, 128, 0.6));
+  background-color: var(--md-char-color);
 }
 
 .source-editor .cm-content {
@@ -899,21 +806,7 @@
   color: #cb2431;
 }
 
-/* Dark theme scrollbar */
-.dark-theme .editor-content::-webkit-scrollbar-track,
-.dark-theme .source-editor .cm-scroller::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.dark-theme .editor-content::-webkit-scrollbar-thumb,
-.dark-theme .source-editor .cm-scroller::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.dark-theme .editor-content::-webkit-scrollbar-thumb:hover,
-.dark-theme .source-editor .cm-scroller::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.5);
-}
+/* Dark theme scrollbar - tokens handle color adaptation automatically */
 
 /* Dark theme syntax highlighting */
 .dark-theme .source-editor .cm-hl-keyword {

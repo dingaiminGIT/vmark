@@ -102,9 +102,33 @@
   --hover-bg: rgba(0, 0, 0, 0.04);
   --hover-bg-strong: rgba(0, 0, 0, 0.08);
 
+  /* Dark mode hover (use in .dark-theme selectors) */
+  --hover-bg-dark: rgba(255, 255, 255, 0.08);
+  --hover-bg-dark-strong: rgba(255, 255, 255, 0.12);
+
   /* Subtle backgrounds */
   --subtle-bg: rgba(0, 0, 0, 0.02);
   --subtle-bg-hover: rgba(0, 0, 0, 0.03);
+
+  /* Spacing scale (common values) */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+
+  /* Icon button sizes */
+  --icon-size-sm: 22px;   /* StatusBar buttons */
+  --icon-size-md: 26px;   /* Popup buttons */
+  --icon-size-lg: 28px;   /* Toolbar buttons */
+
+  /* Global list indent (inherited by nested contexts) */
+  --list-indent: 1em;
+
+  /* Alert tokens for dark mode (centralized) */
+  --alert-note-dark: #58a6ff;
+  --alert-tip-dark: #3fb950;
+  --alert-important-dark: #a371f7;
+  --alert-warning-dark: #d29922;
+  --alert-caution-dark: #f85149;
 }
 
 /* Base styles */
