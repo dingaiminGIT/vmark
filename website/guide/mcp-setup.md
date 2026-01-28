@@ -258,6 +258,7 @@ This setting is useful for:
 
 ## Next Steps
 
+- Install the [Claude Code Skill](/guide/claude-code-skill) for enhanced AI writing assistance
 - Explore all [MCP Tools](/guide/mcp-tools) available
 - Learn about [keyboard shortcuts](/guide/shortcuts)
 - Check out other [features](/guide/features)
