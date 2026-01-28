@@ -38,6 +38,15 @@ features:
     details: 165 keyboard shortcuts. WYSIWYG and source mode. Focus mode, typewriter mode, document history. All there when you need them. Invisible when you don't.
 ---
 
+<script setup>
+import CJKFormatDemo from './.vitepress/components/demos/CJKFormatDemo.vue'
+import CJKSpacingDemo from './.vitepress/components/demos/CJKSpacingDemo.vue'
+import ThemePicker from './.vitepress/components/demos/ThemePicker.vue'
+import TypographyDemo from './.vitepress/components/demos/TypographyDemo.vue'
+import AlertBlockDemo from './.vitepress/components/demos/AlertBlockDemo.vue'
+import FocusModeDemo from './.vitepress/components/demos/FocusModeDemo.vue'
+</script>
+
 <style>
 /* Page-specific styles (shared styles in style.css) */
 .home-content {
@@ -109,6 +118,28 @@ Let Claude write directly to your documents via MCP integration:
 </div>
 
 [Learn how to set up MCP →](/guide/mcp-setup)
+
+## Try It Yourself
+
+### CJK Formatting
+
+<CJKFormatDemo />
+
+### Typography Controls
+
+<TypographyDemo />
+
+### Five Themes
+
+<ThemePicker />
+
+### Focus Mode
+
+<FocusModeDemo />
+
+### Alert Blocks
+
+<AlertBlockDemo />
 
 ## Built With Modern Technology
 
