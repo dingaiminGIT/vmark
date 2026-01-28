@@ -52,10 +52,7 @@ const hasChanges = computed(() => inputText.value !== outputText.value)
 
 <template>
   <div class="vmark-demo">
-    <div class="vmark-demo__header">
-      <h3 class="vmark-demo__title">CJK Formatting Demo</h3>
-      <p class="vmark-demo__subtitle">See how VMark formats mixed CJK and Latin text</p>
-    </div>
+    <p class="vmark-demo__subtitle">See how VMark formats mixed CJK and Latin text</p>
 
     <div class="sample-pills">
       <button

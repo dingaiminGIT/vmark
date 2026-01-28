@@ -48,10 +48,7 @@ const icons: Record<string, string> = {
 
 <template>
   <div class="vmark-demo">
-    <div class="vmark-demo__header">
-      <h3 class="vmark-demo__title">Alert Blocks</h3>
-      <p class="vmark-demo__subtitle">GitHub-style callouts for notes, tips, warnings, and more</p>
-    </div>
+    <p class="vmark-demo__subtitle">GitHub-style callouts for notes, tips, warnings, and more</p>
 
     <div class="alerts">
       <div

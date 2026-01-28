@@ -25,10 +25,7 @@ function toggle(index: number) {
 
 <template>
   <div class="vmark-demo">
-    <div class="vmark-demo__header">
-      <h3 class="vmark-demo__title">Collapsible Blocks</h3>
-      <p class="vmark-demo__subtitle">Expandable sections for FAQs, spoilers, and optional content</p>
-    </div>
+    <p class="vmark-demo__subtitle">Expandable sections for FAQs, spoilers, and optional content</p>
 
     <div class="examples">
       <details

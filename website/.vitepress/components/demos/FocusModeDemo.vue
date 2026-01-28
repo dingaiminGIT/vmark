@@ -18,10 +18,7 @@ function handleClick(index: number) {
 
 <template>
   <div class="vmark-demo">
-    <div class="vmark-demo__header">
-      <h3 class="vmark-demo__title">Focus Mode</h3>
-      <p class="vmark-demo__subtitle">Click any paragraph to focus on it</p>
-    </div>
+    <p class="vmark-demo__subtitle">Click any paragraph to focus on it</p>
 
     <div class="controls">
       <label class="vmark-toggle">

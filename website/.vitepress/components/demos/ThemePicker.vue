@@ -76,10 +76,7 @@ const isDark = computed(() => selectedTheme.value === 'night')
 
 <template>
   <div class="vmark-demo">
-    <div class="vmark-demo__header">
-      <h3 class="vmark-demo__title">Theme Preview</h3>
-      <p class="vmark-demo__subtitle">Five hand-crafted themes for comfortable writing</p>
-    </div>
+    <p class="vmark-demo__subtitle">Five hand-crafted themes for comfortable writing</p>
 
     <div class="theme-picker">
       <button

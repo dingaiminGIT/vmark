@@ -84,10 +84,7 @@ const sampleText = {
 
 <template>
   <div class="vmark-demo">
-    <div class="vmark-demo__header">
-      <h3 class="vmark-demo__title">Typography Controls</h3>
-      <p class="vmark-demo__subtitle">Fine-tune fonts, sizes, and spacing for perfect readability</p>
-    </div>
+    <p class="vmark-demo__subtitle">Fine-tune fonts, sizes, and spacing for perfect readability</p>
 
     <div class="vmark-controls">
       <div class="vmark-control">

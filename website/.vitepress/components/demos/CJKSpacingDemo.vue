@@ -21,10 +21,7 @@ const sampleTexts = [
 
 <template>
   <div class="vmark-demo">
-    <div class="vmark-demo__header">
-      <h3 class="vmark-demo__title">CJK Letter Spacing</h3>
-      <p class="vmark-demo__subtitle">Fine-tune character spacing for CJK text</p>
-    </div>
+    <p class="vmark-demo__subtitle">Fine-tune character spacing for CJK text</p>
 
     <div class="options">
       <button
