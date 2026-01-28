@@ -43,6 +43,7 @@ export function Editor() {
   const documentId = useDocumentId();
   const mediaBorderStyle = useSettingsStore((s) => s.markdown.mediaBorderStyle);
   const mediaAlignment = useSettingsStore((s) => s.markdown.mediaAlignment);
+  const headingAlignment = useSettingsStore((s) => s.markdown.headingAlignment);
   const blockFontSize = useSettingsStore((s) => s.markdown.blockFontSize);
   const htmlRenderingMode = useSettingsStore((s) => s.markdown.htmlRenderingMode);
 
@@ -52,7 +53,7 @@ export function Editor() {
   // Include tabId in key to ensure editor remounts when switching tabs
   // documentId handles content reloads within the same tab
   const editorKey = `${tabId}-doc-${documentId}`;
-  const containerClass = `editor-container media-border-${mediaBorderStyle} media-align-${mediaAlignment}`;
+  const containerClass = `editor-container media-border-${mediaBorderStyle} media-align-${mediaAlignment} heading-align-${headingAlignment}`;
 
   return (
     <div

@@ -236,6 +236,16 @@
   font-size: inherit;
 }
 
+/* Center alignment for headings (when setting enabled) */
+.heading-align-center .tiptap-editor h1,
+.heading-align-center .tiptap-editor h2,
+.heading-align-center .tiptap-editor h3,
+.heading-align-center .tiptap-editor h4,
+.heading-align-center .tiptap-editor h5,
+.heading-align-center .tiptap-editor h6 {
+  text-align: center;
+}
+
 /* Paragraphs */
 .tiptap-editor p {
   margin: 0 0 var(--editor-paragraph-spacing, 1em) 0;

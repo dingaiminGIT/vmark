@@ -1,13 +1,14 @@
 /**
  * Markdown Settings Section
  *
- * Paste & input, media display, and HTML rendering configuration.
+ * Paste & input, layout, and HTML rendering configuration.
  */
 
 import {
   useSettingsStore,
   type MediaBorderStyle,
   type MediaAlignment,
+  type HeadingAlignment,
   type BlockFontSize,
   type HtmlRenderingMode,
   type MarkdownPasteMode,
@@ -46,19 +47,34 @@ export function MarkdownSettings() {
         </SettingRow>
       </SettingsGroup>
 
-      {/* Media Display */}
-      <SettingsGroup title="Media Display">
+      {/* Layout */}
+      <SettingsGroup title="Layout">
         <SettingRow
-          label="Image & table alignment"
-          description="Horizontal alignment for block images and tables"
+          label="Block element font size"
+          description="Font size for lists, blockquotes, tables, alerts, and details"
         >
-          <Select<MediaAlignment>
-            value={markdown.mediaAlignment}
+          <Select<BlockFontSize>
+            value={markdown.blockFontSize}
             options={[
-              { value: "center", label: "Center" },
-              { value: "left", label: "Left" },
+              { value: "1", label: "100% (default)" },
+              { value: "0.95", label: "95%" },
+              { value: "0.9", label: "90%" },
+              { value: "0.85", label: "85%" },
             ]}
-            onChange={(v) => updateSetting("mediaAlignment", v)}
+            onChange={(v) => updateSetting("blockFontSize", v)}
+          />
+        </SettingRow>
+        <SettingRow
+          label="Heading alignment"
+          description="Text alignment for headings"
+        >
+          <Select<HeadingAlignment>
+            value={markdown.headingAlignment}
+            options={[
+              { value: "left", label: "Left" },
+              { value: "center", label: "Center" },
+            ]}
+            onChange={(v) => updateSetting("headingAlignment", v)}
           />
         </SettingRow>
         <SettingRow
@@ -76,18 +92,16 @@ export function MarkdownSettings() {
           />
         </SettingRow>
         <SettingRow
-          label="Block element font size"
-          description="Font size for lists, blockquotes, tables, alerts, and details"
+          label="Image & table alignment"
+          description="Horizontal alignment for block images and tables"
         >
-          <Select<BlockFontSize>
-            value={markdown.blockFontSize}
+          <Select<MediaAlignment>
+            value={markdown.mediaAlignment}
             options={[
-              { value: "1", label: "100% (default)" },
-              { value: "0.95", label: "95%" },
-              { value: "0.9", label: "90%" },
-              { value: "0.85", label: "85%" },
+              { value: "center", label: "Center" },
+              { value: "left", label: "Left" },
             ]}
-            onChange={(v) => updateSetting("blockFontSize", v)}
+            onChange={(v) => updateSetting("mediaAlignment", v)}
           />
         </SettingRow>
       </SettingsGroup>
