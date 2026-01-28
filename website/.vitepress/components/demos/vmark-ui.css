@@ -224,7 +224,7 @@
   stroke-width: 1.5;
 }
 
-/* Pill button */
+/* Pill button - uses VitePress hover style (outside demo styling) */
 .vmark-btn--pill {
   width: auto;
   height: auto;
@@ -233,17 +233,18 @@
   font-size: 13px;
   font-weight: 500;
   gap: 6px;
-  color: var(--text-secondary);
+  color: var(--vp-c-text-2, var(--text-secondary));
+  background: transparent;
 }
 
 .vmark-btn--pill:hover:not(:disabled):not(.active) {
-  background: transparent;
-  color: var(--text-color);
+  background: var(--vp-c-bg-soft, rgba(0, 0, 0, 0.06));
+  color: var(--vp-c-text-1, var(--text-color));
 }
 
 .vmark-btn--pill.active {
-  background: var(--accent-primary);
-  color: var(--contrast-text);
+  background: var(--vp-c-brand-1, var(--accent-primary));
+  color: var(--vp-c-white, var(--contrast-text));
 }
 
 .vmark-btn--pill.active::before {
