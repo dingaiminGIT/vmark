@@ -86,7 +86,6 @@ import {
   handleWorkspaceCloseWindow,
   handleWorkspaceListRecentFiles,
   handleWorkspaceGetInfo,
-  handleAiNotImplemented,
 } from "./workspaceHandlers";
 
 // Tab handlers
@@ -383,15 +382,6 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
         break;
       case "vmark.cjkSpacingFix":
         await handleCjkSpacingFix(id, args);
-        break;
-
-      // AI operations (not implemented - require external AI service)
-      case "ai.improveWriting":
-      case "ai.fixGrammar":
-      case "ai.translate":
-      case "ai.summarize":
-      case "ai.expand":
-        await handleAiNotImplemented(id, type);
         break;
 
       // Protocol operations (AI-Oriented MCP Design)
