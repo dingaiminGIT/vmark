@@ -76,9 +76,10 @@ const blockMargin = computed(() => {
 })
 
 const sampleText = {
-  heading: 'Typography Settings',
-  english: 'Good typography makes reading effortless.',
-  chinese: '良好的排版让阅读变得轻松愉悦。',
+  heading: 'The Art of Typography',
+  p1: 'Good typography is **invisible** — it lets readers focus on *content*, not formatting. The right combination of font, size, and spacing creates a seamless reading experience.',
+  p2: '优秀的排版是**无形的**——它让读者专注于*内容*而非格式。字体、字号和间距的恰当组合，能够创造出流畅的阅读体验。',
+  p3: 'VMark supports **mixed CJK and Latin** text with automatic spacing. Whether you write in English, 中文, 日本語, or 한국어 — typography *just works*.',
 }
 </script>
 
@@ -161,7 +162,16 @@ const sampleText = {
         {{ sampleText.heading }}
       </h2>
       <p class="preview__p" :style="{ marginBottom: blockMargin }">
-        {{ sampleText.english }} Use <strong>bold</strong> and <em>italic</em> for emphasis.
+        Good typography is <strong>invisible</strong> — it lets readers focus on <em>content</em>, not formatting. The right combination of font, size, and spacing creates a seamless reading experience.
+      </p>
+      <p
+        class="preview__p"
+        :style="{
+          marginBottom: blockMargin,
+          letterSpacing: cjkLetterSpacing === '0' ? 'normal' : cjkLetterSpacing + 'em',
+        }"
+      >
+        优秀的排版是<strong>无形的</strong>——它让读者专注于<em>内容</em>而非格式。字体、字号和间距的恰当组合，能够创造出流畅的阅读体验。
       </p>
       <p
         class="preview__p"
@@ -169,7 +179,7 @@ const sampleText = {
           letterSpacing: cjkLetterSpacing === '0' ? 'normal' : cjkLetterSpacing + 'em',
         }"
       >
-        {{ sampleText.chinese }}<strong>粗体</strong>和<em>斜体</em>可以突出重点。
+        VMark supports <strong>mixed CJK and Latin</strong> text with automatic spacing. Whether you write in English, 中文, 日本語, or 한국어 — typography <em>just works</em>.
       </p>
     </div>
   </div>
