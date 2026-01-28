@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { applyRules, defaultCJKSettings, type CJKFormattingSettings, type QuoteStyle } from './cjkFormatter'
+import { applyRules, defaultCJKSettings } from './cjkFormatter'
 
 const sampleTexts = [
   {
@@ -32,19 +32,13 @@ const sampleTexts = [
 
 const selectedSample = ref(0)
 const customInput = ref('')
-const quoteStyle = ref<QuoteStyle>('curly')
-
-const settings = computed<CJKFormattingSettings>(() => ({
-  ...defaultCJKSettings,
-  quoteStyle: quoteStyle.value
-}))
 
 const inputText = computed(() => {
   return customInput.value || sampleTexts[selectedSample.value].input
 })
 
 const outputText = computed(() => {
-  return applyRules(inputText.value, settings.value)
+  return applyRules(inputText.value, defaultCJKSettings)
 })
 
 const hasChanges = computed(() => inputText.value !== outputText.value)
@@ -68,17 +62,6 @@ const hasChanges = computed(() => inputText.value !== outputText.value)
     <p class="description">
       {{ customInput ? 'Custom input' : sampleTexts[selectedSample].description }}
     </p>
-
-    <div class="vmark-controls">
-      <div class="vmark-control">
-        <label class="vmark-label">Quote Style</label>
-        <select v-model="quoteStyle" class="vmark-select">
-          <option value="curly">Curly "" ''</option>
-          <option value="corner">Corner 「」『』</option>
-          <option value="guillemets">Guillemets «» ‹›</option>
-        </select>
-      </div>
-    </div>
 
     <div class="vmark-comparison">
       <div class="panel">
