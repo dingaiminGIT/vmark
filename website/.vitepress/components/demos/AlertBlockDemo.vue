@@ -37,7 +37,6 @@ const alerts = [
   },
 ]
 
-// SVG icons for each alert type
 const icons: Record<string, string> = {
   note: `<svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/></svg>`,
   tip: `<svg viewBox="0 0 16 16" width="16" height="16"><path fill="currentColor" d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"/></svg>`,
@@ -48,33 +47,33 @@ const icons: Record<string, string> = {
 </script>
 
 <template>
-  <div class="alert-demo">
-    <div class="alert-demo__header">
-      <h3 class="alert-demo__title">Alert Blocks</h3>
-      <p class="alert-demo__subtitle">GitHub-style callouts for notes, tips, warnings, and more</p>
+  <div class="vmark-demo">
+    <div class="vmark-demo__header">
+      <h3 class="vmark-demo__title">Alert Blocks</h3>
+      <p class="vmark-demo__subtitle">GitHub-style callouts for notes, tips, warnings, and more</p>
     </div>
 
-    <div class="alert-demo__grid">
+    <div class="alerts">
       <div
         v-for="alert in alerts"
         :key="alert.type"
-        :class="['alert-demo__block', `alert-demo__block--${alert.type}`]"
+        class="alert"
         :style="{
           '--alert-color': alert.color,
           '--alert-color-dark': alert.darkColor,
         }"
       >
-        <div class="alert-demo__block-header">
-          <span class="alert-demo__icon" v-html="icons[alert.type]"></span>
-          <span class="alert-demo__block-title">{{ alert.title }}</span>
+        <div class="alert__header">
+          <span class="alert__icon" v-html="icons[alert.type]" />
+          <span class="alert__title">{{ alert.title }}</span>
         </div>
-        <p class="alert-demo__block-content">{{ alert.content }}</p>
+        <p class="alert__content">{{ alert.content }}</p>
       </div>
     </div>
 
-    <div class="alert-demo__syntax">
-      <div class="alert-demo__syntax-title">Markdown Syntax</div>
-      <pre class="alert-demo__code">&gt; [!NOTE]
+    <div class="syntax">
+      <div class="syntax__title">Markdown Syntax</div>
+      <pre class="vmark-code">&gt; [!NOTE]
 &gt; Your note content here.
 
 &gt; [!TIP]
@@ -92,123 +91,71 @@ const icons: Record<string, string> = {
   </div>
 </template>
 
+<style src="./vmark-ui.css"></style>
 <style scoped>
-.alert-demo {
-  --demo-bg: #f8f9fa;
-  --demo-border: #e1e4e8;
-  --demo-text: #24292e;
-  --demo-text-secondary: #586069;
-  --demo-radius: 8px;
-  --demo-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --demo-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-
-  font-family: var(--demo-font-sans);
-  background: var(--demo-bg);
-  border: 1px solid var(--demo-border);
-  border-radius: var(--demo-radius);
-  padding: 24px;
-  margin: 24px 0;
-  color: var(--demo-text);
-}
-
-.dark .alert-demo {
-  --demo-bg: #1e2024;
-  --demo-border: #3a3f46;
-  --demo-text: #d6d9de;
-  --demo-text-secondary: #9aa0a6;
-}
-
-.alert-demo__header {
-  margin-bottom: 20px;
-}
-
-.alert-demo__title {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.alert-demo__subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: var(--demo-text-secondary);
-}
-
-.alert-demo__grid {
+.alerts {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 24px;
 }
 
-.alert-demo__block {
+.alert {
   padding: 12px 16px;
   border-left: 4px solid var(--alert-color);
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
   background: color-mix(in srgb, var(--alert-color) 8%, transparent);
 }
 
-.dark .alert-demo__block {
+.dark .alert {
   --alert-color: var(--alert-color-dark);
   background: color-mix(in srgb, var(--alert-color-dark) 12%, transparent);
 }
 
-.alert-demo__block-header {
+.alert__header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-.alert-demo__icon {
+.alert__icon {
   color: var(--alert-color);
   display: flex;
   align-items: center;
 }
 
-.dark .alert-demo__icon {
+.dark .alert__icon {
   color: var(--alert-color-dark);
 }
 
-.alert-demo__block-title {
+.alert__title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--alert-color);
 }
 
-.dark .alert-demo__block-title {
+.dark .alert__title {
   color: var(--alert-color-dark);
 }
 
-.alert-demo__block-content {
+.alert__content {
   margin: 0;
   font-size: 14px;
   line-height: 1.5;
+  color: var(--text-color);
 }
 
-.alert-demo__syntax {
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: var(--demo-radius);
+.syntax {
+  background: var(--subtle-bg);
+  border-radius: var(--radius-md);
   padding: 16px;
 }
 
-.dark .alert-demo__syntax {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.alert-demo__syntax-title {
+.syntax__title {
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 12px;
-  color: var(--demo-text-secondary);
-}
-
-.alert-demo__code {
-  margin: 0;
-  font-family: var(--demo-font-mono);
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  color: var(--demo-text);
+  color: var(--text-secondary);
 }
 </style>

@@ -24,69 +24,69 @@ function toggle(index: number) {
 </script>
 
 <template>
-  <div class="details-demo">
-    <div class="details-demo__header">
-      <h3 class="details-demo__title">Collapsible Blocks</h3>
-      <p class="details-demo__subtitle">Expandable sections for FAQs, spoilers, and optional content</p>
+  <div class="vmark-demo">
+    <div class="vmark-demo__header">
+      <h3 class="vmark-demo__title">Collapsible Blocks</h3>
+      <p class="vmark-demo__subtitle">Expandable sections for FAQs, spoilers, and optional content</p>
     </div>
 
-    <div class="details-demo__examples">
+    <div class="examples">
       <details
         v-for="(example, index) in examples"
         :key="index"
-        class="details-demo__block"
+        class="details"
         :open="openStates[index]"
       >
-        <summary class="details-demo__summary" @click.prevent="toggle(index)">
-          <span class="details-demo__arrow">
+        <summary class="details__summary" @click.prevent="toggle(index)">
+          <span class="details__arrow">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M4 2L8 6L4 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="details-demo__summary-text">{{ example.summary }}</span>
+          <span class="details__text">{{ example.summary }}</span>
         </summary>
-        <div class="details-demo__content">
+        <div class="details__content">
           {{ example.content }}
         </div>
       </details>
     </div>
 
-    <div class="details-demo__nested">
-      <div class="details-demo__nested-title">Nested Example</div>
-      <details class="details-demo__block" open>
-        <summary class="details-demo__summary">
-          <span class="details-demo__arrow">
+    <div class="nested">
+      <div class="nested__title">Nested Example</div>
+      <details class="details" open>
+        <summary class="details__summary">
+          <span class="details__arrow">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M4 2L8 6L4 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </span>
-          <span class="details-demo__summary-text">Parent Section</span>
+          <span class="details__text">Parent Section</span>
         </summary>
-        <div class="details-demo__content">
+        <div class="details__content">
           <p>This section contains nested collapsible content:</p>
-          <details class="details-demo__block details-demo__block--nested">
-            <summary class="details-demo__summary">
-              <span class="details-demo__arrow">
+          <details class="details details--nested">
+            <summary class="details__summary">
+              <span class="details__arrow">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M4 2L8 6L4 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </span>
-              <span class="details-demo__summary-text">Child Section A</span>
+              <span class="details__text">Child Section A</span>
             </summary>
-            <div class="details-demo__content">
+            <div class="details__content">
               Content for the first nested section.
             </div>
           </details>
-          <details class="details-demo__block details-demo__block--nested">
-            <summary class="details-demo__summary">
-              <span class="details-demo__arrow">
+          <details class="details details--nested">
+            <summary class="details__summary">
+              <span class="details__arrow">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <path d="M4 2L8 6L4 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </span>
-              <span class="details-demo__summary-text">Child Section B</span>
+              <span class="details__text">Child Section B</span>
             </summary>
-            <div class="details-demo__content">
+            <div class="details__content">
               Content for the second nested section.
             </div>
           </details>
@@ -94,9 +94,9 @@ function toggle(index: number) {
       </details>
     </div>
 
-    <div class="details-demo__syntax">
-      <div class="details-demo__syntax-title">Markdown Syntax</div>
-      <pre class="details-demo__code">&lt;details&gt;
+    <div class="syntax">
+      <div class="syntax__title">Markdown Syntax</div>
+      <pre class="vmark-code">&lt;details&gt;
 &lt;summary&gt;Click to expand&lt;/summary&gt;
 
 Your hidden content here.
@@ -107,78 +107,28 @@ Supports **markdown** formatting.
   </div>
 </template>
 
+<style src="./vmark-ui.css"></style>
 <style scoped>
-.details-demo {
-  --demo-bg: #f8f9fa;
-  --demo-border: #e1e4e8;
-  --demo-text: #24292e;
-  --demo-text-secondary: #586069;
-  --demo-accent: #0066cc;
-  --demo-radius: 8px;
-  --demo-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --demo-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-
-  font-family: var(--demo-font-sans);
-  background: var(--demo-bg);
-  border: 1px solid var(--demo-border);
-  border-radius: var(--demo-radius);
-  padding: 24px;
-  margin: 24px 0;
-  color: var(--demo-text);
-}
-
-.dark .details-demo {
-  --demo-bg: #1e2024;
-  --demo-border: #3a3f46;
-  --demo-text: #d6d9de;
-  --demo-text-secondary: #9aa0a6;
-  --demo-accent: #5aa8ff;
-}
-
-.details-demo__header {
-  margin-bottom: 20px;
-}
-
-.details-demo__title {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.details-demo__subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: var(--demo-text-secondary);
-}
-
-.details-demo__examples {
+.examples {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-bottom: 24px;
 }
 
-.details-demo__block {
-  background: white;
-  border: 1px solid var(--demo-border);
-  border-radius: 6px;
+.details {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
-.dark .details-demo__block {
-  background: #23262b;
-}
-
-.details-demo__block--nested {
+.details--nested {
   margin-top: 12px;
-  background: rgba(0, 0, 0, 0.02);
+  background: var(--subtle-bg);
 }
 
-.dark .details-demo__block--nested {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.details-demo__summary {
+.details__summary {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -189,87 +139,71 @@ Supports **markdown** formatting.
   font-size: 14px;
   list-style: none;
   transition: background 0.15s;
+  color: var(--text-color);
 }
 
-.details-demo__summary::-webkit-details-marker {
+.details__summary::-webkit-details-marker {
   display: none;
 }
 
-.details-demo__summary:hover {
-  background: rgba(0, 0, 0, 0.02);
+.details__summary:hover {
+  background: var(--hover-bg);
 }
 
-.dark .details-demo__summary:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.details-demo__arrow {
+.details__arrow {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 16px;
   height: 16px;
-  color: var(--demo-text-secondary);
+  color: var(--text-secondary);
   transition: transform 0.2s ease;
 }
 
-.details-demo__block[open] > .details-demo__summary .details-demo__arrow {
+.details[open] > .details__summary .details__arrow {
   transform: rotate(90deg);
 }
 
-.details-demo__summary-text {
+.details__text {
   flex: 1;
 }
 
-.details-demo__content {
+.details__content {
   padding: 0 16px 16px 40px;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--demo-text-secondary);
+  color: var(--text-secondary);
 }
 
-.details-demo__content p {
+.details__content p {
   margin: 0 0 8px 0;
 }
 
-.details-demo__content p:last-child {
+.details__content p:last-child {
   margin-bottom: 0;
 }
 
-.details-demo__nested {
+.nested {
   margin-bottom: 24px;
 }
 
-.details-demo__nested-title {
-  font-size: 13px;
+.nested__title {
+  font-size: 12px;
   font-weight: 600;
-  color: var(--demo-text-secondary);
+  color: var(--text-secondary);
   margin-bottom: 12px;
 }
 
-.details-demo__syntax {
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: var(--demo-radius);
+.syntax {
+  background: var(--subtle-bg);
+  border-radius: var(--radius-md);
   padding: 16px;
 }
 
-.dark .details-demo__syntax {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.details-demo__syntax-title {
+.syntax__title {
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 12px;
-  color: var(--demo-text-secondary);
-}
-
-.details-demo__code {
-  margin: 0;
-  font-family: var(--demo-font-mono);
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  color: var(--demo-text);
+  color: var(--text-secondary);
 }
 </style>

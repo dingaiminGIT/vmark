@@ -49,35 +49,35 @@ const sampleText = {
 </script>
 
 <template>
-  <div class="typo-demo">
-    <div class="typo-demo__header">
-      <h3 class="typo-demo__title">Typography Controls</h3>
-      <p class="typo-demo__subtitle">Fine-tune fonts, sizes, and spacing for perfect readability</p>
+  <div class="vmark-demo">
+    <div class="vmark-demo__header">
+      <h3 class="vmark-demo__title">Typography Controls</h3>
+      <p class="vmark-demo__subtitle">Fine-tune fonts, sizes, and spacing for perfect readability</p>
     </div>
 
-    <div class="typo-demo__controls">
-      <div class="typo-demo__control">
-        <label class="typo-demo__label">Latin Font</label>
-        <select v-model="latinFont" class="typo-demo__select">
+    <div class="vmark-controls">
+      <div class="vmark-control">
+        <label class="vmark-label">Latin Font</label>
+        <select v-model="latinFont" class="vmark-select">
           <option v-for="font in latinFonts" :key="font.value" :value="font.value">
             {{ font.label }}
           </option>
         </select>
       </div>
 
-      <div class="typo-demo__control">
-        <label class="typo-demo__label">CJK Font</label>
-        <select v-model="cjkFont" class="typo-demo__select">
+      <div class="vmark-control">
+        <label class="vmark-label">CJK Font</label>
+        <select v-model="cjkFont" class="vmark-select">
           <option v-for="font in cjkFonts" :key="font.value" :value="font.value">
             {{ font.label }}
           </option>
         </select>
       </div>
 
-      <div class="typo-demo__control">
-        <label class="typo-demo__label">
+      <div class="vmark-control">
+        <label class="vmark-label">
           Font Size
-          <span class="typo-demo__value">{{ fontSize }}px</span>
+          <span class="vmark-value">{{ fontSize }}px</span>
         </label>
         <input
           type="range"
@@ -85,14 +85,14 @@ const sampleText = {
           min="14"
           max="24"
           step="1"
-          class="typo-demo__slider"
+          class="vmark-slider"
         />
       </div>
 
-      <div class="typo-demo__control">
-        <label class="typo-demo__label">
+      <div class="vmark-control">
+        <label class="vmark-label">
           Line Height
-          <span class="typo-demo__value">{{ lineHeight.toFixed(1) }}</span>
+          <span class="vmark-value">{{ lineHeight.toFixed(1) }}</span>
         </label>
         <input
           type="range"
@@ -100,14 +100,14 @@ const sampleText = {
           min="1.4"
           max="2.2"
           step="0.1"
-          class="typo-demo__slider"
+          class="vmark-slider"
         />
       </div>
 
-      <div class="typo-demo__control">
-        <label class="typo-demo__label">
+      <div class="vmark-control">
+        <label class="vmark-label">
           Block Spacing
-          <span class="typo-demo__value">{{ blockSpacing }} line{{ blockSpacing > 1 ? 's' : '' }}</span>
+          <span class="vmark-value">{{ blockSpacing }} line{{ blockSpacing > 1 ? 's' : '' }}</span>
         </label>
         <input
           type="range"
@@ -115,16 +115,16 @@ const sampleText = {
           min="1"
           max="3"
           step="0.5"
-          class="typo-demo__slider"
+          class="vmark-slider"
         />
       </div>
 
-      <div class="typo-demo__control">
-        <label class="typo-demo__label">
+      <div class="vmark-control">
+        <label class="vmark-label">
           CJK Letter Spacing
-          <span class="typo-demo__value">{{ cjkLetterSpacing === '0' ? 'Off' : cjkLetterSpacing + 'em' }}</span>
+          <span class="vmark-value">{{ cjkLetterSpacing === '0' ? 'Off' : cjkLetterSpacing + 'em' }}</span>
         </label>
-        <select v-model="cjkLetterSpacing" class="typo-demo__select">
+        <select v-model="cjkLetterSpacing" class="vmark-select">
           <option value="0">Off</option>
           <option value="0.02">0.02em (Tight)</option>
           <option value="0.03">0.03em (Normal)</option>
@@ -135,27 +135,21 @@ const sampleText = {
     </div>
 
     <div
-      class="typo-demo__preview"
+      class="preview"
       :style="{
         fontFamily: fontFamily,
         fontSize: fontSize + 'px',
         lineHeight: lineHeight,
       }"
     >
-      <h2
-        class="typo-demo__preview-heading"
-        :style="{ marginBottom: blockMargin }"
-      >
+      <h2 class="preview__heading" :style="{ marginBottom: blockMargin }">
         {{ sampleText.heading }}
       </h2>
-      <p
-        class="typo-demo__preview-p"
-        :style="{ marginBottom: blockMargin }"
-      >
+      <p class="preview__p" :style="{ marginBottom: blockMargin }">
         {{ sampleText.english }}
       </p>
       <p
-        class="typo-demo__preview-p typo-demo__preview-p--cjk"
+        class="preview__p preview__p--cjk"
         :style="{
           marginBottom: blockMargin,
           letterSpacing: cjkLetterSpacing === '0' ? 'normal' : cjkLetterSpacing + 'em',
@@ -164,7 +158,7 @@ const sampleText = {
         {{ sampleText.chinese }}
       </p>
       <p
-        class="typo-demo__preview-p"
+        class="preview__p"
         :style="{ letterSpacing: cjkLetterSpacing === '0' ? 'normal' : cjkLetterSpacing + 'em' }"
       >
         {{ sampleText.mixed }}
@@ -173,150 +167,28 @@ const sampleText = {
   </div>
 </template>
 
+<style src="./vmark-ui.css"></style>
 <style scoped>
-.typo-demo {
-  --demo-bg: #f8f9fa;
-  --demo-border: #e1e4e8;
-  --demo-text: #24292e;
-  --demo-text-secondary: #586069;
-  --demo-accent: #0066cc;
-  --demo-radius: 8px;
-  --demo-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-
-  font-family: var(--demo-font-sans);
-  background: var(--demo-bg);
-  border: 1px solid var(--demo-border);
-  border-radius: var(--demo-radius);
+.preview {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 24px;
-  margin: 24px 0;
-  color: var(--demo-text);
 }
 
-.dark .typo-demo {
-  --demo-bg: #1e2024;
-  --demo-border: #3a3f46;
-  --demo-text: #d6d9de;
-  --demo-text-secondary: #9aa0a6;
-}
-
-.typo-demo__header {
-  margin-bottom: 20px;
-}
-
-.typo-demo__title {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.typo-demo__subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: var(--demo-text-secondary);
-}
-
-.typo-demo__controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.typo-demo__control {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.typo-demo__label {
-  font-size: 13px;
-  font-weight: 500;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.typo-demo__value {
-  font-weight: 400;
-  color: var(--demo-text-secondary);
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-}
-
-.typo-demo__select {
-  padding: 8px 12px;
-  font-size: 14px;
-  font-family: var(--demo-font-sans);
-  border: 1px solid var(--demo-border);
-  border-radius: 6px;
-  background: white;
-  color: var(--demo-text);
-  cursor: pointer;
-}
-
-.dark .typo-demo__select {
-  background: #2a2e34;
-}
-
-.typo-demo__select:focus {
-  outline: none;
-  border-color: var(--demo-accent);
-}
-
-.typo-demo__slider {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--demo-border);
-  appearance: none;
-  cursor: pointer;
-}
-
-.typo-demo__slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--demo-accent);
-  cursor: pointer;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.typo-demo__slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--demo-accent);
-  cursor: pointer;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.typo-demo__preview {
-  background: white;
-  border: 1px solid var(--demo-border);
-  border-radius: var(--demo-radius);
-  padding: 24px;
-  color: #1a1a1a;
-}
-
-.dark .typo-demo__preview {
-  background: #23262b;
-  color: #d6d9de;
-}
-
-.typo-demo__preview-heading {
-  font-size: 1.5em;
+.preview__heading {
+  font-size: 1.4em;
   font-weight: 600;
   margin-top: 0;
+  color: var(--text-color);
 }
 
-.typo-demo__preview-p {
+.preview__p {
   margin-top: 0;
+  color: var(--text-color);
 }
 
-.typo-demo__preview-p:last-child {
+.preview__p:last-child {
   margin-bottom: 0;
 }
 </style>

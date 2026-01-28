@@ -20,45 +20,45 @@ const sampleTexts = [
 </script>
 
 <template>
-  <div class="spacing-demo">
-    <div class="spacing-demo__header">
-      <h3 class="spacing-demo__title">CJK Letter Spacing</h3>
-      <p class="spacing-demo__subtitle">Fine-tune character spacing for CJK text</p>
+  <div class="vmark-demo">
+    <div class="vmark-demo__header">
+      <h3 class="vmark-demo__title">CJK Letter Spacing</h3>
+      <p class="vmark-demo__subtitle">Fine-tune character spacing for CJK text</p>
     </div>
 
-    <div class="spacing-demo__options">
+    <div class="options">
       <button
         v-for="option in spacingOptions"
         :key="option.value"
-        :class="['spacing-demo__btn', { 'spacing-demo__btn--active': spacing === option.value }]"
+        :class="['option-btn', { 'active': spacing === option.value }]"
         @click="spacing = option.value"
       >
-        <span class="spacing-demo__btn-label">{{ option.label }}</span>
-        <span class="spacing-demo__btn-desc">{{ option.description }}</span>
+        <span class="option-btn__label">{{ option.label }}</span>
+        <span class="option-btn__desc">{{ option.description }}</span>
       </button>
     </div>
 
-    <div class="spacing-demo__preview">
+    <div class="preview">
       <p
         v-for="(text, index) in sampleTexts"
         :key="index"
-        class="spacing-demo__text"
+        class="preview__text"
         :style="{ letterSpacing: spacing === '0' ? 'normal' : spacing + 'em' }"
       >
         {{ text }}
       </p>
     </div>
 
-    <div class="spacing-demo__comparison">
-      <div class="spacing-demo__compare-item">
-        <div class="spacing-demo__compare-label">Without spacing</div>
-        <div class="spacing-demo__compare-text" style="letter-spacing: normal">
+    <div class="vmark-grid vmark-grid--2">
+      <div class="compare">
+        <div class="compare__label">Without spacing</div>
+        <div class="compare__text" style="letter-spacing: normal">
           中文排版的艺术在于细节。
         </div>
       </div>
-      <div class="spacing-demo__compare-item">
-        <div class="spacing-demo__compare-label">With 0.05em spacing</div>
-        <div class="spacing-demo__compare-text" style="letter-spacing: 0.05em">
+      <div class="compare">
+        <div class="compare__label">With 0.05em spacing</div>
+        <div class="compare__text" style="letter-spacing: 0.05em">
           中文排版的艺术在于细节。
         </div>
       </div>
@@ -66,160 +66,94 @@ const sampleTexts = [
   </div>
 </template>
 
+<style src="./vmark-ui.css"></style>
 <style scoped>
-.spacing-demo {
-  --demo-bg: #f8f9fa;
-  --demo-border: #e1e4e8;
-  --demo-text: #24292e;
-  --demo-text-secondary: #586069;
-  --demo-accent: #0066cc;
-  --demo-accent-bg: rgba(0, 102, 204, 0.1);
-  --demo-radius: 8px;
-  --demo-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-
-  font-family: var(--demo-font-sans);
-  background: var(--demo-bg);
-  border: 1px solid var(--demo-border);
-  border-radius: var(--demo-radius);
-  padding: 24px;
-  margin: 24px 0;
-  color: var(--demo-text);
-}
-
-.dark .spacing-demo {
-  --demo-bg: #1e2024;
-  --demo-border: #3a3f46;
-  --demo-text: #d6d9de;
-  --demo-text-secondary: #9aa0a6;
-  --demo-accent: #5aa8ff;
-  --demo-accent-bg: rgba(90, 168, 255, 0.15);
-}
-
-.spacing-demo__header {
-  margin-bottom: 20px;
-}
-
-.spacing-demo__title {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.spacing-demo__subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: var(--demo-text-secondary);
-}
-
-.spacing-demo__options {
+.options {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 20px;
 }
 
-.spacing-demo__btn {
+.option-btn {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
   padding: 8px 14px;
-  font-family: var(--demo-font-sans);
-  border: 1px solid var(--demo-border);
-  border-radius: 6px;
+  font-family: var(--font-sans);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
   background: transparent;
   cursor: pointer;
   transition: all 0.15s;
   text-align: left;
 }
 
-.spacing-demo__btn:hover {
-  border-color: var(--demo-accent);
+.option-btn:hover {
+  border-color: var(--accent-primary);
 }
 
-.spacing-demo__btn--active {
-  background: var(--demo-accent);
-  border-color: var(--demo-accent);
-  color: white;
+.option-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--contrast-text);
 }
 
-.spacing-demo__btn-label {
-  font-size: 14px;
+.option-btn__label {
+  font-size: 13px;
   font-weight: 600;
-  color: var(--demo-text);
+  color: var(--text-color);
 }
 
-.spacing-demo__btn--active .spacing-demo__btn-label {
-  color: white;
+.option-btn.active .option-btn__label {
+  color: var(--contrast-text);
 }
 
-.spacing-demo__btn-desc {
+.option-btn__desc {
   font-size: 11px;
-  color: var(--demo-text-secondary);
+  color: var(--text-secondary);
 }
 
-.spacing-demo__btn--active .spacing-demo__btn-desc {
+.option-btn.active .option-btn__desc {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.spacing-demo__preview {
-  background: white;
-  border: 1px solid var(--demo-border);
-  border-radius: var(--demo-radius);
+.preview {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 24px;
   margin-bottom: 20px;
 }
 
-.dark .spacing-demo__preview {
-  background: #23262b;
-}
-
-.spacing-demo__text {
+.preview__text {
   margin: 0 0 12px 0;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.8;
-  color: #1a1a1a;
+  color: var(--text-color);
 }
 
-.dark .spacing-demo__text {
-  color: #d6d9de;
-}
-
-.spacing-demo__text:last-child {
+.preview__text:last-child {
   margin-bottom: 0;
 }
 
-.spacing-demo__comparison {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-@media (max-width: 540px) {
-  .spacing-demo__comparison {
-    grid-template-columns: 1fr;
-  }
-}
-
-.spacing-demo__compare-item {
+.compare {
   padding: 16px;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: var(--demo-radius);
+  background: var(--subtle-bg);
+  border-radius: var(--radius-md);
 }
 
-.dark .spacing-demo__compare-item {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.spacing-demo__compare-label {
+.compare__label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--demo-text-secondary);
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
-.spacing-demo__compare-text {
-  font-size: 18px;
+.compare__text {
+  font-size: 16px;
   line-height: 1.6;
+  color: var(--text-color);
 }
 </style>

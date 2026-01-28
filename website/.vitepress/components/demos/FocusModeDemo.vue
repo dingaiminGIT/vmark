@@ -17,179 +17,81 @@ function handleClick(index: number) {
 </script>
 
 <template>
-  <div class="focus-demo">
-    <div class="focus-demo__header">
-      <h3 class="focus-demo__title">Focus Mode</h3>
-      <p class="focus-demo__subtitle">Click any paragraph to focus on it</p>
+  <div class="vmark-demo">
+    <div class="vmark-demo__header">
+      <h3 class="vmark-demo__title">Focus Mode</h3>
+      <p class="vmark-demo__subtitle">Click any paragraph to focus on it</p>
     </div>
 
-    <div class="focus-demo__controls">
-      <label class="focus-demo__toggle">
-        <input type="checkbox" v-model="focusEnabled" class="focus-demo__checkbox" />
-        <span class="focus-demo__toggle-label">Enable Focus Mode</span>
+    <div class="controls">
+      <label class="vmark-toggle">
+        <input type="checkbox" v-model="focusEnabled" class="vmark-toggle__input" />
+        <span>Enable Focus Mode</span>
       </label>
     </div>
 
-    <div :class="['focus-demo__content', { 'focus-demo__content--enabled': focusEnabled }]">
+    <div :class="['content', { 'content--focus': focusEnabled }]">
       <p
         v-for="(text, index) in paragraphs"
         :key="index"
-        :class="[
-          'focus-demo__paragraph',
-          { 'focus-demo__paragraph--focused': focusedIndex === index }
-        ]"
+        :class="['paragraph', { 'paragraph--focused': focusedIndex === index }]"
         @click="handleClick(index)"
       >
         {{ text }}
       </p>
     </div>
 
-    <div class="focus-demo__hint">
-      <span class="focus-demo__hint-icon">💡</span>
+    <div class="vmark-hint">
+      <span class="vmark-hint__icon">💡</span>
       <span>In VMark, focus automatically follows your cursor as you type.</span>
     </div>
   </div>
 </template>
 
+<style src="./vmark-ui.css"></style>
 <style scoped>
-.focus-demo {
-  --demo-bg: #f8f9fa;
-  --demo-border: #e1e4e8;
-  --demo-text: #24292e;
-  --demo-text-secondary: #586069;
-  --demo-text-blur: #c8c8c8;
-  --demo-accent: #0066cc;
-  --demo-radius: 8px;
-  --demo-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-
-  font-family: var(--demo-font-sans);
-  background: var(--demo-bg);
-  border: 1px solid var(--demo-border);
-  border-radius: var(--demo-radius);
-  padding: 24px;
-  margin: 24px 0;
-  color: var(--demo-text);
-}
-
-.dark .focus-demo {
-  --demo-bg: #1e2024;
-  --demo-border: #3a3f46;
-  --demo-text: #d6d9de;
-  --demo-text-secondary: #9aa0a6;
-  --demo-text-blur: #4a4f56;
-}
-
-.focus-demo__header {
+.controls {
   margin-bottom: 16px;
 }
 
-.focus-demo__title {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.focus-demo__subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: var(--demo-text-secondary);
-}
-
-.focus-demo__controls {
+.content {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
   margin-bottom: 16px;
 }
 
-.focus-demo__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.focus-demo__checkbox {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--demo-accent);
-  cursor: pointer;
-}
-
-.focus-demo__toggle-label {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.focus-demo__content {
-  background: white;
-  border: 1px solid var(--demo-border);
-  border-radius: var(--demo-radius);
-  padding: 24px;
-  color: #1a1a1a;
-}
-
-.dark .focus-demo__content {
-  background: #23262b;
-  color: #d6d9de;
-}
-
-.focus-demo__paragraph {
+.paragraph {
   margin: 0 0 16px 0;
   padding: 8px 12px;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.7;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s ease;
+  color: var(--text-color);
 }
 
-.focus-demo__paragraph:last-child {
+.paragraph:last-child {
   margin-bottom: 0;
 }
 
-.focus-demo__paragraph:hover {
-  background: rgba(0, 0, 0, 0.02);
+.paragraph:hover {
+  background: var(--hover-bg);
 }
 
-.dark .focus-demo__paragraph:hover {
-  background: rgba(255, 255, 255, 0.02);
+/* Focus mode styles - match VMark exactly */
+.content--focus .paragraph {
+  color: #c8c8c8;
 }
 
-/* Focus mode enabled */
-.focus-demo__content--enabled .focus-demo__paragraph {
-  color: var(--demo-text-blur);
-}
-
-.dark .focus-demo__content--enabled .focus-demo__paragraph {
+.dark .content--focus .paragraph {
   color: #4a4f56;
 }
 
-.focus-demo__content--enabled .focus-demo__paragraph--focused {
-  color: #1a1a1a;
-  background: rgba(0, 102, 204, 0.05);
-}
-
-.dark .focus-demo__content--enabled .focus-demo__paragraph--focused {
-  color: #d6d9de;
-  background: rgba(90, 168, 255, 0.08);
-}
-
-.focus-demo__hint {
-  margin-top: 16px;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: var(--demo-radius);
-  font-size: 13px;
-  color: var(--demo-text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dark .focus-demo__hint {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.focus-demo__hint-icon {
-  font-size: 16px;
+.content--focus .paragraph--focused {
+  color: var(--text-color);
+  background: var(--accent-bg);
 }
 </style>
