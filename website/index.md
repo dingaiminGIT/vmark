@@ -103,24 +103,28 @@ import DetailsBlockDemo from './.vitepress/components/demos/DetailsBlockDemo.vue
 
 ## AI-Powered Writing
 
-Let Claude write directly to your documents via MCP integration:
+Claude Code, Claude Desktop, Codex CLI, Gemini CLI... can write directly to your documents via MCP integration:
 
 <div class="screenshots-section">
 <div class="screenshots-grid">
   <div class="screenshot-card">
-    <img src="/screenshots/mcp-claude.png" alt="Claude Desktop writing to VMark" loading="lazy" />
-    <div class="caption">Claude Desktop writes to VMark</div>
+    <img src="/screenshots/sending-from-claude-code.png" alt="Sending content from Claude Code CLI" loading="lazy" />
+    <div class="caption">Ask Claude Code to create a document directly in VMark</div>
   </div>
   <div class="screenshot-card">
-    <img src="/screenshots/mcp-result.png" alt="AI content in VMark" loading="lazy" />
-    <div class="caption">Content rendered instantly</div>
+    <img src="/screenshots/sending-from-claude-desktop.png" alt="Sending content from Claude Desktop" loading="lazy" />
+    <div class="caption">Or use Claude Desktop with the same prompt</div>
+  </div>
+  <div class="screenshot-card">
+    <img src="/screenshots/content-received-by-vmark.png" alt="Content received by VMark" loading="lazy" />
+    <div class="caption">Content appears in VMark with full formatting</div>
   </div>
 </div>
 </div>
 
 [Learn how to set up MCP →](/guide/mcp-setup)
 
-## Try It Yourself
+## Part of Features:
 
 ### CJK Formatting
 
