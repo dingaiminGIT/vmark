@@ -221,7 +221,7 @@ const isDark = computed(() => selectedTheme.value === 'night')
   padding: 12px 16px;
   border-left: 4px solid var(--preview-border);
   background: var(--preview-secondary);
-  border-radius: 0 4px 4px 0;
+  border-radius: var(--radius-md);
   font-style: italic;
   opacity: 0.9;
 }
