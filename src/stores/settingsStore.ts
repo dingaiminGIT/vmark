@@ -114,7 +114,7 @@ export interface AppearanceSettings {
   monoFont: string;
   fontSize: number;
   lineHeight: number;
-  paragraphSpacing: number;
+  blockSpacing: number; // Visual gap between blocks in "lines" (1 = one line-height)
   editorWidth: number; // Max content width in em (0 = unlimited)
   showFilenameInTitlebar: boolean; // Show filename in window titlebar
   autoHideStatusBar: boolean; // Auto-hide status bar when not interacting
@@ -305,7 +305,7 @@ const initialState: SettingsState = {
     monoFont: "system",
     fontSize: 18,
     lineHeight: 1.8,
-    paragraphSpacing: 1,
+    blockSpacing: 1, // 1 = one line-height of visual gap between blocks
     editorWidth: 50, // em units, 0 = unlimited (50em ≈ 900px at 18px font)
     showFilenameInTitlebar: false,
     autoHideStatusBar: false,
@@ -418,11 +418,19 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
         }
       ),
       // Deep merge to preserve new default properties when loading old localStorage
-      merge: (persistedState, currentState) =>
-        deepMerge(
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState ?? {}) as Record<string, unknown>;
+        // Migration: paragraphSpacing -> blockSpacing
+        const appearance = persisted.appearance as Record<string, unknown> | undefined;
+        if (appearance && "paragraphSpacing" in appearance && !("blockSpacing" in appearance)) {
+          appearance.blockSpacing = appearance.paragraphSpacing;
+          delete appearance.paragraphSpacing;
+        }
+        return deepMerge(
           currentState as unknown as Record<string, unknown>,
-          (persistedState ?? {}) as Record<string, unknown>
-        ) as unknown as typeof currentState,
+          persisted
+        ) as unknown as typeof currentState;
+      },
     }
   )
 );

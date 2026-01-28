@@ -248,7 +248,7 @@
 
 /* Paragraphs */
 .tiptap-editor p {
-  margin: 0 0 var(--editor-paragraph-spacing, 1em) 0;
+  margin: 0 0 var(--editor-block-spacing, 1em) 0;
 }
 
 .tiptap-editor p:last-child {
@@ -278,8 +278,7 @@
 .tiptap-editor ol {
   --list-indent: 1em;
   --list-padding: calc(var(--list-indent, 1em) * 2);
-  --list-margin: calc(var(--list-indent, 1em) * 0.8);
-  margin: 0 0 var(--list-margin) 0;
+  margin: 0 0 var(--editor-block-spacing, 1em) 0;
   padding-left: var(--list-padding);
   line-height: var(--editor-line-height-px);
 }
@@ -351,7 +350,7 @@
   padding: 16px;
   border-radius: var(--radius-md);
   overflow-x: auto;
-  margin: 16px 0;
+  margin: 0 0 var(--editor-block-spacing, 1em) 0;
   max-width: 100%;
   white-space: pre;
   line-height: 1.45;
@@ -376,7 +375,7 @@
 .tiptap-editor blockquote {
   border-left: 4px solid var(--border-color);
   border-radius: var(--radius-md);
-  margin: 1em 0;
+  margin: 0 0 var(--editor-block-spacing, 1em) 0;
   padding: 0 1em;
   color: var(--meta-content-color);
   line-height: var(--editor-line-height-px);
@@ -411,7 +410,7 @@
 .tiptap-editor hr {
   height: 2px;
   padding: 0;
-  margin: 16px 0;
+  margin: 0 0 var(--editor-block-spacing, 1em) 0;
   background-color: var(--border-color);
   border: 0 none;
   overflow: hidden;
@@ -424,7 +423,7 @@
   word-break: initial;
   border-collapse: collapse;
   width: 100%;
-  margin: 0.8em 0;
+  margin: 0 0 var(--editor-block-spacing, 1em) 0;
   table-layout: auto;
   line-height: var(--editor-line-height-px);
 }
@@ -467,7 +466,7 @@
    Horizontal scrollbar appears when table is wider than container. */
 .tiptap-editor .table-scroll-wrapper {
   overflow-x: auto;
-  margin: 0.8em 2em; /* Same margins as other content */
+  margin: 0 2em var(--editor-block-spacing, 1em) 2em;
   position: relative;
 }
 
@@ -667,7 +666,7 @@
 }
 
 .tiptap-editor dl[data-type="footnote_definition"] {
-  margin: 0.5em 0;
+  margin: 0 0 var(--editor-block-spacing, 1em) 0;
   padding: 0;
   line-height: var(--editor-line-height-px);
   color: var(--text-secondary);
