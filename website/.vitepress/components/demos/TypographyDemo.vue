@@ -75,12 +75,10 @@ const blockMargin = computed(() => {
   return `${lh * (bs - 1) + 1}em`
 })
 
-const sampleText = {
-  heading: 'The Art of Typography',
-  p1: 'Good typography is **invisible** — it lets readers focus on *content*, not formatting. The right combination of font, size, and spacing creates a seamless reading experience.',
-  p2: '优秀的排版是**无形的**——它让读者专注于*内容*而非格式。字体、字号和间距的恰当组合，能够创造出流畅的阅读体验。',
-  p3: 'VMark supports **mixed CJK and Latin** text with automatic spacing. Whether you write in English, 中文, 日本語, or 한국어 — typography *just works*.',
-}
+// CJK letter-spacing CSS variable (matches VMark's algorithm)
+const cjkSpacingStyle = computed(() => {
+  return cjkLetterSpacing.value === '0' ? '0' : `${cjkLetterSpacing.value}em`
+})
 </script>
 
 <template>
@@ -150,36 +148,29 @@ const sampleText = {
       </div>
     </div>
 
+    <!-- CSS variable controls CJK-only spacing (matches VMark's algorithm) -->
     <div
       :class="['preview', { 'preview--colored': coloredEmphasis }]"
       :style="{
         fontFamily: fontFamily,
         fontSize: fontSize + 'px',
         lineHeight: parseFloat(lineHeight),
+        '--cjk-spacing': cjkSpacingStyle,
       }"
     >
       <h2 class="preview__heading" :style="{ marginBottom: blockMargin }">
-        {{ sampleText.heading }}
+        The Art of Typography
       </h2>
       <p class="preview__p" :style="{ marginBottom: blockMargin }">
         Good typography is <strong>invisible</strong> — it lets readers focus on <em>content</em>, not formatting. The right combination of font, size, and spacing creates a seamless reading experience.
       </p>
-      <p
-        class="preview__p"
-        :style="{
-          marginBottom: blockMargin,
-          letterSpacing: cjkLetterSpacing === '0' ? 'normal' : cjkLetterSpacing + 'em',
-        }"
-      >
-        优秀的排版是<strong>无形的</strong> —— 它让读者专注于<mark>内容</mark>而非格式。字体、字号和间距的恰当组合，能够创造出流畅的阅读体验。
+      <!-- Pure CJK paragraph: all characters get spacing -->
+      <p class="preview__p" :style="{ marginBottom: blockMargin }">
+        <span class="cjk">优秀的排版是</span><strong class="cjk">无形的</strong><span class="cjk">——</span><span class="cjk">它让读者专注于</span><mark class="cjk">内容</mark><span class="cjk">而非格式。字体、字号和间距的恰当组合，能够创造出流畅的阅读体验。</span>
       </p>
-      <p
-        class="preview__p"
-        :style="{
-          letterSpacing: cjkLetterSpacing === '0' ? 'normal' : cjkLetterSpacing + 'em',
-        }"
-      >
-        VMark supports <strong>mixed CJK and Latin</strong> text with automatic spacing. Whether you write in English, 中文, 日本語, or 한국어 — typography <em>just works</em>.
+      <!-- Mixed paragraph: only CJK runs get spacing, Latin stays normal -->
+      <p class="preview__p">
+        VMark supports <strong>mixed CJK and Latin</strong> text with automatic spacing. Whether you write in English, <span class="cjk">中文</span>, <span class="cjk">日本語</span>, or <span class="cjk">한국어</span> — typography <em>just works</em>.
       </p>
     </div>
   </div>
@@ -208,6 +199,11 @@ const sampleText = {
 
 .preview__p:last-child {
   margin-bottom: 0;
+}
+
+/* CJK letter-spacing: only CJK characters, not Latin (matches VMark's algorithm) */
+.preview .cjk {
+  letter-spacing: var(--cjk-spacing, 0);
 }
 
 /* Colored emphasis */
