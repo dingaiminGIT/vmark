@@ -36,7 +36,7 @@ async function waitForFonts(): Promise<boolean> {
     await document.fonts.ready;
     return true;
   } catch {
-    // Font API not available
+    // Font API not available in some environments
     return true;
   }
 }

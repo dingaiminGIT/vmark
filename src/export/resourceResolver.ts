@@ -101,7 +101,8 @@ export async function resolveRelativePath(
     try {
       const url = new URL(src);
       return decodeURIComponent(url.pathname);
-    } catch {
+    } catch (error) {
+      console.warn("[ResourceResolver] Failed to parse asset URL:", src, error);
       return src;
     }
   }
@@ -120,7 +121,8 @@ export async function fileToDataUri(filePath: string): Promise<string | null> {
     const mimeType = getMimeType(ext);
     const base64 = btoa(String.fromCharCode(...data));
     return `data:${mimeType};base64,${base64}`;
-  } catch {
+  } catch (error) {
+    console.warn("[ResourceResolver] Failed to read file for data URI:", filePath, error);
     return null;
   }
 }
@@ -243,13 +245,13 @@ export async function resolveResources(
         }
       }
 
-      // Try to get file size
+      // Try to get file size (may fail if file was just copied/moved)
       try {
         const data = await readFile(resolvedPath);
         info.size = data.length;
         totalSize += data.length;
       } catch {
-        // Size unknown
+        // Size unknown - not critical, continue without it
       }
 
       resources.push(info);

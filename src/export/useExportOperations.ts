@@ -212,12 +212,10 @@ export async function exportToHtml(
  * Print document via native print dialog.
  * Uses Typora-style direct printing - no re-rendering needed.
  * The current editor view IS the print source, with @media print CSS hiding UI.
+ *
+ * @param markdown - The markdown content (used only for empty check)
  */
-export async function exportToPdf(
-  markdown: string,
-  _title: string = "Document",
-  _sourceFilePath?: string | null
-): Promise<void> {
+export async function exportToPdf(markdown: string): Promise<void> {
   // Check for empty content
   const trimmedContent = markdown.trim();
   if (!trimmedContent) {

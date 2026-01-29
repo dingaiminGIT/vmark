@@ -138,7 +138,8 @@ async function fetchFontAsDataUri(url: string): Promise<string | null> {
             : "font/otf";
 
     return `data:${mimeType};base64,${base64}`;
-  } catch {
+  } catch (error) {
+    console.warn("[FontEmbedder] Failed to fetch font:", url, error);
     return null;
   }
 }

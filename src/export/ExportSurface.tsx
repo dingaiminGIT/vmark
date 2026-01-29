@@ -104,7 +104,7 @@ export const ExportSurface = forwardRef<ExportSurfaceRef, ExportSurfaceProps>(
       try {
         await document.fonts.ready;
       } catch {
-        // Font API not available, continue
+        // Font API not available in some environments, continue
       }
 
       return true;

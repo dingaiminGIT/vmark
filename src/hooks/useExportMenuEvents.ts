@@ -75,11 +75,8 @@ export function useExportMenuEvents(): void {
         await withReentryGuard(windowLabel, "export", async () => {
           const doc = getActiveDocument(windowLabel);
           if (!doc) return;
-          const title = doc.filePath
-            ? getFileNameWithoutExtension(doc.filePath) || "Document"
-            : "Document";
           try {
-            await exportToPdf(doc.content, title, doc.filePath);
+            await exportToPdf(doc.content);
           } catch (error) {
             console.error("[Menu] Failed to export PDF:", error);
           }
