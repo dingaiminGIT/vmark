@@ -215,7 +215,8 @@ function applyTypography(
   lineHeight: number,
   blockSpacing: number,
   cjkLetterSpacing: string,
-  editorWidth: number
+  editorWidth: number,
+  blockFontSize: string
 ) {
   const latinStack =
     fontStacks.latin[latinFont as keyof typeof fontStacks.latin] ||
@@ -238,12 +239,17 @@ function applyTypography(
   // This ensures "1 line" setting produces exactly 1 line-height of visual space.
   const blockSpacingMargin = lineHeight * (blockSpacing - 1) + 1;
 
+  // Calculate block font size as absolute pixel value to prevent compounding
+  // when block elements are nested (e.g., list inside blockquote)
+  const blockFontSizePx = fontSize * parseFloat(blockFontSize);
+
   applyVars(root, {
     "--font-sans": `${latinStack}, ${cjkStack}`,
     "--font-mono": monoStack,
     "--editor-font-size": `${fontSize}px`,
     "--editor-font-size-sm": `${fontSize * 0.9}px`,
     "--editor-font-size-mono": `${fontSize * 0.85}px`,
+    "--editor-font-size-block": `${blockFontSizePx}px`, // Absolute to prevent compounding in nested blocks
     "--editor-line-height": String(lineHeight),
     "--editor-line-height-px": `${lineHeightPx}px`,
     "--editor-block-spacing": `${blockSpacingMargin}em`,
@@ -256,6 +262,7 @@ function applyTypography(
 
 export function useTheme() {
   const appearance = useSettingsStore((state) => state.appearance);
+  const blockFontSize = useSettingsStore((state) => state.markdown.blockFontSize);
   const prevFontSizeRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -275,7 +282,8 @@ export function useTheme() {
       appearance.lineHeight,
       appearance.blockSpacing ?? 1,
       appearance.cjkLetterSpacing ?? "0",
-      appearance.editorWidth ?? 50
+      appearance.editorWidth ?? 50,
+      blockFontSize
     );
 
     // Update Mermaid font size when editor font size changes
@@ -285,5 +293,5 @@ export function useTheme() {
       refreshPreviews();
     }
     prevFontSizeRef.current = appearance.fontSize;
-  }, [appearance]);
+  }, [appearance, blockFontSize]);
 }
