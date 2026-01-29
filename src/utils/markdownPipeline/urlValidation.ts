@@ -14,8 +14,10 @@
  * - tel: Phone number links
  * - data: Data URIs (for inline images)
  * - asset/tauri: Tauri asset protocol (for local files)
- * - file: Local file URLs
  * - Relative URLs are allowed (no scheme)
+ *
+ * Note: file: URLs are intentionally blocked for security.
+ * Use asset: or tauri: protocols for local file access.
  */
 const ALLOWED_SCHEMES = new Set([
   "http:",
@@ -25,7 +27,6 @@ const ALLOWED_SCHEMES = new Set([
   "data:",
   "asset:",
   "tauri:",
-  "file:",
 ]);
 
 /**
