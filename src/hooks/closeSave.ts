@@ -44,6 +44,28 @@ const MULTI_SAVE_BUTTONS = {
   cancel: "Cancel",
 } as const;
 
+const MARKDOWN_FILTERS = [{ name: "Markdown", extensions: ["md"] }];
+
+/**
+ * Sanitize a title for use as a filename.
+ * Removes/replaces characters that are invalid in filenames.
+ */
+function toSafeFilename(title: string): string {
+  // Replace characters invalid on Windows/macOS/Linux
+  // Invalid: / \ : * ? " < > |
+  return title
+    .replace(/[/\\:*?"<>|]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim() || "Untitled";
+}
+
+/**
+ * Ensure filename ends with .md extension.
+ */
+function ensureMarkdownExtension(filename: string): string {
+  return filename.endsWith(".md") ? filename : `${filename}.md`;
+}
+
 /**
  * Prompt user to save a dirty document before closing.
  * Returns a tri-state result for callers to decide close behavior.
@@ -69,8 +91,7 @@ export async function promptSaveForDirtyDocument(
     }
   );
 
-  // With custom buttons, plugin-dialog returns the clicked button label string.
-  // With default buttons, it returns 'Yes' | 'No' | 'Cancel' | 'Ok'.
+  // Explicitly handle each expected result to avoid falling through on unexpected values
   if (result === "Cancel" || result === CLOSE_SAVE_BUTTONS.cancel) {
     return { action: "cancelled" };
   }
@@ -79,15 +100,21 @@ export async function promptSaveForDirtyDocument(
     return { action: "discarded" };
   }
 
+  // Only proceed with save if user explicitly chose Save
+  if (result !== "Yes" && result !== CLOSE_SAVE_BUTTONS.save) {
+    // Unexpected dialog result - treat as cancelled for safety
+    return { action: "cancelled" };
+  }
+
   let path = filePath;
-  if (!path) {
-    // Pre-fill with title as filename (e.g., "Untitled-1.md")
+  if (path == null) {
+    // Pre-fill with sanitized title as filename
     const defaultFolder = await getDefaultSaveFolderWithFallback(windowLabel);
-    const filename = title.endsWith(".md") ? title : `${title}.md`;
+    const filename = ensureMarkdownExtension(toSafeFilename(title));
     const defaultPath = joinPath(defaultFolder, filename);
     const newPath = await save({
       defaultPath,
-      filters: [{ name: "Markdown", extensions: ["md"] }],
+      filters: MARKDOWN_FILTERS,
     });
     if (!newPath) {
       return { action: "cancelled" };
@@ -173,6 +200,11 @@ export async function promptSaveForMultipleDocuments(
     return { action: "discarded-all" };
   }
 
+  // Only proceed with save if user explicitly chose Save All
+  if (result !== "Yes" && result !== MULTI_SAVE_BUTTONS.saveAll) {
+    return { action: "cancelled" };
+  }
+
   // Save All: first save docs with existing paths
   let current = 0;
   const total = contexts.length;
@@ -205,11 +237,11 @@ export async function promptSaveForMultipleDocuments(
       current++;
       onProgress?.(current, total, doc.title);
 
-      const filename = doc.title.endsWith(".md") ? doc.title : `${doc.title}.md`;
+      const filename = ensureMarkdownExtension(toSafeFilename(doc.title));
       const defaultPath = joinPath(defaultFolder, filename);
       const newPath = await save({
         defaultPath,
-        filters: [{ name: "Markdown", extensions: ["md"] }],
+        filters: MARKDOWN_FILTERS,
       });
       if (!newPath) {
         return { action: "cancelled" };
@@ -237,7 +269,7 @@ export async function promptSaveForMultipleDocuments(
         current++;
         onProgress?.(current, total, doc.title);
 
-        const filename = doc.title.endsWith(".md") ? doc.title : `${doc.title}.md`;
+        const filename = ensureMarkdownExtension(toSafeFilename(doc.title));
         const path = joinPath(folderPath, filename);
 
         const saved = await saveToPath(doc.tabId, path, doc.content, "manual");
@@ -300,11 +332,11 @@ export async function saveAllDocuments(
       current++;
       onProgress?.(current, total, doc.title);
 
-      const filename = doc.title.endsWith(".md") ? doc.title : `${doc.title}.md`;
+      const filename = ensureMarkdownExtension(toSafeFilename(doc.title));
       const defaultPath = joinPath(defaultFolder, filename);
       const newPath = await save({
         defaultPath,
-        filters: [{ name: "Markdown", extensions: ["md"] }],
+        filters: MARKDOWN_FILTERS,
       });
       if (!newPath) {
         return { action: "cancelled" };
@@ -330,7 +362,7 @@ export async function saveAllDocuments(
         current++;
         onProgress?.(current, total, doc.title);
 
-        const filename = doc.title.endsWith(".md") ? doc.title : `${doc.title}.md`;
+        const filename = ensureMarkdownExtension(toSafeFilename(doc.title));
         const path = joinPath(folderPath, filename);
 
         const saved = await saveToPath(doc.tabId, path, doc.content, "manual");

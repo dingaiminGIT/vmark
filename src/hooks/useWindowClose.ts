@@ -34,7 +34,6 @@ export function useWindowClose() {
   const windowLabel = useWindowLabel();
   // Prevent re-entry during close handling (avoids duplicate dialogs)
   const isClosingRef = useRef(false);
-  const isQuitRequestRef = useRef(false);
 
   const handleCloseRequest = useCallback(async (): Promise<boolean> => {
     closeLog(windowLabel, "handleCloseRequest called");
@@ -166,7 +165,6 @@ export function useWindowClose() {
             return;
           }
 
-          isQuitRequestRef.current = true;
           const closed = await handleCloseRequest();
           if (!closed) {
             invoke("cancel_quit").catch((e) => {
@@ -175,7 +173,6 @@ export function useWindowClose() {
               }
             });
           }
-          isQuitRequestRef.current = false;
         }
       );
       unlisteners.push(unlistenQuit);
