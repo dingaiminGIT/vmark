@@ -151,6 +151,13 @@ export async function exportToHtml(
     sourceFilePath,
   } = options;
 
+  // Check for empty content
+  const trimmedContent = markdown.trim();
+  if (!trimmedContent) {
+    toast.error("No content to export!");
+    return false;
+  }
+
   try {
     // Get save path
     const filename = `${defaultName}.html`;
@@ -215,6 +222,13 @@ export async function exportToPdf(
   title: string = "Document",
   sourceFilePath?: string | null
 ): Promise<void> {
+  // Check for empty content
+  const trimmedContent = markdown.trim();
+  if (!trimmedContent) {
+    toast.error("No content to print!");
+    return;
+  }
+
   try {
     // Check if preview window already exists
     const existing = await WebviewWindow.getByLabel("print-preview");
@@ -259,7 +273,7 @@ export async function exportToPdf(
 }
 
 /**
- * Resolve relative image paths in markdown to absolute file:// URLs.
+ * Resolve relative image paths in markdown to absolute asset:// URLs.
  */
 function resolveImagePaths(markdown: string, sourceFilePath: string): string {
   // Get directory of source file

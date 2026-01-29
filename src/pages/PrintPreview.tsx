@@ -226,7 +226,7 @@ export function PrintPreviewPage() {
         ×
       </button>
 
-      {markdown !== null ? (
+      {markdown !== null && (
         <ExportSurface
           ref={surfaceRef}
           markdown={markdown}
@@ -236,8 +236,6 @@ export function PrintPreviewPage() {
             setStatus({ stage: "error", message: error.message });
           }}
         />
-      ) : (
-        renderStatus()
       )}
 
       {/* Status overlay (hidden when printing) */}
