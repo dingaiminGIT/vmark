@@ -203,6 +203,7 @@ function MainLayout() {
         height: "100vh",
         overflow: "clip",
         position: "relative",
+        backgroundColor: "var(--bg-color)",
         ["--sidebar-offset" as string]: sidebarOffset,
       }}
     >
