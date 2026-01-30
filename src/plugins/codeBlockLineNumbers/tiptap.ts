@@ -10,6 +10,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { NodeView, ViewMutationRecord } from "@tiptap/pm/view";
 import type { Editor } from "@tiptap/core";
 import { getPopupHostForDom, toHostCoordsForDom } from "@/plugins/sourcePopup";
+import { getCodeBlockBounds } from "@/plugins/multiCursor/codeBlockBounds";
 
 const lowlight = createLowlight(common);
 
@@ -440,5 +441,30 @@ class CodeBlockNodeView implements NodeView {
 export const CodeBlockWithLineNumbers = CodeBlockLowlight.extend({
   addNodeView() {
     return ({ node, editor, getPos }) => new CodeBlockNodeView(node, editor, getPos as () => number | undefined);
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      "Mod-a": ({ editor }) => {
+        const { state } = editor;
+        const { $from, from, to } = state.selection;
+
+        // Check if cursor is inside a code block
+        const bounds = getCodeBlockBounds(state, $from.pos);
+        if (!bounds) {
+          // Not in a code block, let default behavior handle it
+          return false;
+        }
+
+        // If already selecting entire code block content, let default selectAll take over
+        if (from === bounds.from && to === bounds.to) {
+          return false;
+        }
+
+        // Select all content within the code block
+        editor.commands.setTextSelection({ from: bounds.from, to: bounds.to });
+        return true;
+      },
+    };
   },
 }).configure({ lowlight });
