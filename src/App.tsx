@@ -82,7 +82,6 @@ import { useUniversalToolbar } from "@/hooks/useUniversalToolbar";
 import { useMcpAutoStart } from "@/hooks/useMcpAutoStart";
 import { useMcpBridge } from "@/hooks/useMcpBridge";
 import { useMcpStatusMenuEvent } from "@/hooks/useMcpStatusMenuEvent";
-import { McpStatusDialog } from "@/components/Dialogs/McpStatusDialog";
 import { useFileExplorerShortcuts } from "@/hooks/useFileExplorerShortcuts";
 import { useImagePasteToast } from "@/hooks/useImagePasteToast";
 import { useUpdateChecker } from "@/hooks/useUpdateChecker";
@@ -280,7 +279,6 @@ function App() {
             loading: <Loader2 size={16} className="animate-spin" />,
           }}
         />
-        <McpStatusDialog />
       </WindowProvider>
     </ErrorBoundary>
   );

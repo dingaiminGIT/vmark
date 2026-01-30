@@ -2,19 +2,20 @@
  * MCP Status Menu Event Hook
  *
  * Handles the Help → MCP Server Status menu event.
+ * Opens Settings window and navigates to the Integrations section.
  */
 
 import { useEffect, useRef } from "react";
 import { type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { useMcpHealthStore } from "@/stores/mcpHealthStore";
+import { openSettingsWindow } from "@/utils/settingsWindow";
 
 /**
  * Hook to handle the MCP Server Status menu event.
+ * Opens Settings → Integrations section.
  */
 export function useMcpStatusMenuEvent() {
   const unlistenRef = useRef<UnlistenFn | null>(null);
-  const openDialog = useMcpHealthStore((state) => state.openDialog);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,9 +35,9 @@ export function useMcpStatusMenuEvent() {
       // Listen for MCP status menu event
       unlistenRef.current = await currentWindow.listen<string>(
         "menu:mcp-status",
-        (event) => {
+        async (event) => {
           if (event.payload !== windowLabel) return;
-          openDialog();
+          await openSettingsWindow("integrations");
         }
       );
     };
@@ -50,5 +51,5 @@ export function useMcpStatusMenuEvent() {
         unlistenRef.current = null;
       }
     };
-  }, [openDialog]);
+  }, []);
 }
