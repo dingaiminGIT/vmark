@@ -359,7 +359,7 @@ const initialState: SettingsState = {
     hardBreakStyleOnSave: "preserve",
     autoPairEnabled: true,
     autoPairCJKStyle: "auto",
-    autoPairCurlyQuotes: false, // OFF by default (may conflict with IME smart quotes)
+    autoPairCurlyQuotes: true,
   },
   image: {
     autoResizeMax: 0, // Off by default
