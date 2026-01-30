@@ -50,11 +50,54 @@ async function loadMermaid(): Promise<typeof import("mermaid")> {
 }
 
 /**
+ * Theme-specific fill and styling variables.
+ * These ensure nodes and subgraphs have proper fills in both light and dark modes.
+ */
+const lightThemeVariables = {
+  fontSize: `${currentFontSize}px`,
+  // Node fills
+  primaryColor: "#f0f4f8",
+  secondaryColor: "#e8f0fe",
+  tertiaryColor: "#fff",
+  // Subgraph fills
+  clusterBkg: "#f5f5f5",
+  clusterBorder: "#d5d5d5",
+  // Node borders
+  nodeBorder: "#9ca3af",
+  // Text
+  primaryTextColor: "#1a1a1a",
+  secondaryTextColor: "#4b5563",
+  lineColor: "#6b7280",
+};
+
+const darkThemeVariables = {
+  fontSize: `${currentFontSize}px`,
+  // Node fills for dark mode
+  primaryColor: "#374151",
+  secondaryColor: "#1f2937",
+  tertiaryColor: "#111827",
+  // Subgraph fills
+  clusterBkg: "#1f2937",
+  clusterBorder: "#4b5563",
+  // Node borders
+  nodeBorder: "#6b7280",
+  // Text
+  primaryTextColor: "#f3f4f6",
+  secondaryTextColor: "#d1d5db",
+  lineColor: "#9ca3af",
+};
+
+/**
  * Initialize Mermaid with current settings.
  * Used internally to apply theme and font size.
  */
 function applyMermaidConfig(): void {
   if (!mermaidModule) return;
+
+  const themeVariables = currentTheme === "dark"
+    ? { ...darkThemeVariables, fontSize: `${currentFontSize}px` }
+    : { ...lightThemeVariables, fontSize: `${currentFontSize}px` };
+
   mermaidModule.default.initialize({
     startOnLoad: false,
     theme: currentTheme,
@@ -63,9 +106,7 @@ function applyMermaidConfig(): void {
     securityLevel: "antiscript",
     fontFamily: "inherit",
     fontSize: currentFontSize,
-    themeVariables: {
-      fontSize: `${currentFontSize}px`,
-    },
+    themeVariables,
   });
 }
 

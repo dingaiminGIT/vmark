@@ -205,11 +205,14 @@ function isSafeStyleValue(value: string): boolean {
 /**
  * Sanitize SVG content for safe rendering (e.g., Mermaid diagrams).
  * Allows SVG elements but removes scripts and event handlers.
+ * Preserves style attributes and all SVG-specific attributes for proper rendering.
  */
 export function sanitizeSvg(svg: string): string {
   return DOMPurify.sanitize(svg, {
     USE_PROFILES: { svg: true, svgFilters: true },
     ADD_TAGS: ["foreignObject"],
+    // Explicitly add style and common SVG attributes that might be needed
+    ADD_ATTR: ["style", "fill", "stroke", "class", "transform", "d", "cx", "cy", "r", "rx", "ry", "x", "y", "width", "height", "viewBox", "xmlns", "marker-end", "marker-start"],
     FORBID_TAGS: ["script"],
     FORBID_ATTR: [
       "onerror",
