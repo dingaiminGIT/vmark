@@ -666,7 +666,6 @@ pub async fn is_client_connected() -> bool {
 }
 
 /// Get count of connected clients.
-#[allow(dead_code)]
 pub async fn client_count() -> usize {
     let state = get_bridge_state();
     let guard = state.lock().await;
