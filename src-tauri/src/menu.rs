@@ -552,13 +552,7 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         "View",
         true,
         &[
-            &MenuItem::with_id(
-                app,
-                "source-mode",
-                "Source Code Mode",
-                true,
-                Some("CmdOrCtrl+/"),
-            )?,
+            &MenuItem::with_id(app, "source-mode", "Source Code Mode", true, Some("F6"))?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "focus-mode", "Focus Mode", true, Some("F8"))?,
             &MenuItem::with_id(app, "typewriter-mode", "Typewriter Mode", true, Some("F9"))?,
@@ -1210,7 +1204,7 @@ fn create_menu_with_shortcuts(
         "View",
         true,
         &[
-            &MenuItem::with_id(app, "source-mode", "Source Code Mode", true, get_accel("source-mode", "CmdOrCtrl+/"))?,
+            &MenuItem::with_id(app, "source-mode", "Source Code Mode", true, get_accel("source-mode", "F6"))?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "focus-mode", "Focus Mode", true, get_accel("focus-mode", "F8"))?,
             &MenuItem::with_id(app, "typewriter-mode", "Typewriter Mode", true, get_accel("typewriter-mode", "F9"))?,

@@ -109,7 +109,7 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 
 | Action | Shortcut |
 |--------|----------|
-| Toggle Source Mode | `Mod + /` |
+| Toggle Source Mode | `F6` |
 | Toggle Status Bar | `F7` |
 | Focus Mode | `F8` |
 | Typewriter Mode | `F9` |
@@ -164,6 +164,12 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 ::: tip Windows/Linux Note
 Toggle Hidden Files uses `Ctrl + H` on Windows and Linux.
 :::
+
+## Help
+
+| Action | Shortcut |
+|--------|----------|
+| Search Help | `Mod + /` |
 
 ## Smart Tab Navigation
 
