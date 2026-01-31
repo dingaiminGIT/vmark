@@ -44,14 +44,16 @@ function createView(contentWithCursor: string): EditorView {
 
 describe("Source Mode Tab Escape - Link Navigation Edge Cases", () => {
   describe("Link with special characters in text", () => {
-    it("handles escaped brackets in link text (known limitation)", () => {
-      // The current regex doesn't handle escaped brackets properly
-      // This is a known limitation - would need more sophisticated parser
-      const view = createView("[text \\[with\\] ^brackets](url)");
+    it("handles escaped brackets in link text", () => {
+      // Now supported with balanced bracket parsing
+      // Escaped brackets are treated as literal characters
+      const view = createView("[text \\[^with\\] brackets](url)");
       const handled = tabNavigateLink(view);
-      // Current implementation doesn't handle escaped brackets
-      // This test documents the limitation
-      expect(handled).toBe(false); // Known limitation
+      // Should successfully navigate - escaped brackets don't count as nesting
+      expect(handled).toBe(true);
+      // Cursor should move to URL portion (after the opening paren)
+      const expectedPos = "[text \\[with\\] brackets](".length;
+      expect(view.state.selection.main.anchor).toBe(expectedPos);
     });
 
     it("handles backticks in link text", () => {

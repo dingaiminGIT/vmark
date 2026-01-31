@@ -22,8 +22,67 @@ export interface LinkBoundaries {
 }
 
 /**
+ * Check if a character at position is escaped (preceded by odd number of backslashes).
+ */
+function isEscaped(text: string, pos: number): boolean {
+  let backslashCount = 0;
+  let i = pos - 1;
+  while (i >= 0 && text[i] === "\\") {
+    backslashCount++;
+    i--;
+  }
+  return backslashCount % 2 === 1;
+}
+
+/**
+ * Find matching closing bracket with balanced bracket counting.
+ * Handles nested brackets and escaped brackets.
+ *
+ * @param text - Text to search
+ * @param start - Position after opening bracket
+ * @param openChar - Opening bracket character
+ * @param closeChar - Closing bracket character
+ * @returns Position of matching closing bracket, or -1 if not found
+ */
+function findMatchingBracket(
+  text: string,
+  start: number,
+  openChar: string,
+  closeChar: string
+): number {
+  let depth = 1;
+  let i = start;
+
+  while (i < text.length && depth > 0) {
+    // Skip escaped characters
+    if (isEscaped(text, i)) {
+      i++;
+      continue;
+    }
+
+    if (text[i] === openChar) {
+      depth++;
+    } else if (text[i] === closeChar) {
+      depth--;
+      if (depth === 0) {
+        return i;
+      }
+    }
+
+    i++;
+  }
+
+  return -1; // No matching bracket found
+}
+
+/**
  * Find the boundaries of a markdown link at or around the given position.
- * Searches both backwards and forwards to find the enclosing link.
+ * Uses balanced bracket parsing to handle nested brackets and escaped characters.
+ *
+ * Supports:
+ * - Nested brackets: `[text [nested]](url)`
+ * - Escaped brackets: `[text \[bracket\]](url)`
+ * - Nested parentheses in URL: `[text](url(params))`
  *
  * @param text - The line text to search in
  * @param posInLine - Cursor position within the line (0-indexed)
@@ -33,27 +92,52 @@ export function getLinkBoundaries(
   text: string,
   posInLine: number
 ): LinkBoundaries | null {
-  // Find potential link patterns in the text
-  // Link format: [text](url) or [text](url "title")
-  const linkRegex = /\[([^\]]*)\]\(([^)]*)\)/g;
+  // Find all potential link starts by looking for '[' characters
+  for (let i = 0; i < text.length; i++) {
+    // Skip escaped brackets
+    if (isEscaped(text, i)) {
+      continue;
+    }
 
-  let match;
-  while ((match = linkRegex.exec(text)) !== null) {
-    const linkStart = match.index;
-    const linkEnd = match.index + match[0].length;
+    if (text[i] !== "[") {
+      continue;
+    }
+
+    const linkStart = i;
+
+    // Find matching closing bracket for link text
+    const textEnd = findMatchingBracket(text, i + 1, "[", "]");
+    if (textEnd === -1) {
+      continue; // No matching ], not a valid link
+    }
+
+    // Check if followed by (
+    if (textEnd + 1 >= text.length || text[textEnd + 1] !== "(") {
+      continue; // Not followed by (, not a valid link
+    }
+
+    // Find matching closing paren for URL
+    const urlEnd = findMatchingBracket(text, textEnd + 2, "(", ")");
+    if (urlEnd === -1) {
+      continue; // No matching ), not a valid link
+    }
+
+    const linkEnd = urlEnd + 1;
 
     // Check if cursor is within this link
     if (posInLine >= linkStart && posInLine <= linkEnd) {
-      const bracketEnd = linkStart + 1 + match[1].length; // Position of ]
-      const parenStart = bracketEnd + 2; // Position after (
-
       return {
         textStart: linkStart + 1, // After [
-        textEnd: bracketEnd, // Before ]
-        urlStart: parenStart, // After (
-        urlEnd: linkEnd - 1, // Before )
+        textEnd: textEnd, // Position of ]
+        urlStart: textEnd + 2, // After (
+        urlEnd: urlEnd, // Position of )
         linkEnd: linkEnd, // After )
       };
+    }
+
+    // If cursor is before this link, no point searching further
+    if (posInLine < linkStart) {
+      break;
     }
   }
 

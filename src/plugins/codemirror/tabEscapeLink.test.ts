@@ -76,12 +76,63 @@ describe("getLinkBoundaries", () => {
     expect(boundaries?.linkEnd).toBe(19);
   });
 
-  it.skip("handles nested brackets in text (known limitation)", () => {
-    // Note: Nested brackets require a more sophisticated parser.
-    // This is a rare edge case - skipping for now.
+  it("handles nested brackets in text", () => {
+    // Now supported with balanced bracket parsing
     const text = "[text [nested]](url)";
-    const boundaries = getLinkBoundaries(text, 8);
+    const boundaries = getLinkBoundaries(text, 8); // Inside "nested"
     expect(boundaries).not.toBeNull();
+    expect(boundaries?.textStart).toBe(1);
+    expect(boundaries?.textEnd).toBe(14); // Position of final ]
+    expect(boundaries?.urlStart).toBe(16); // After (
+    expect(boundaries?.linkEnd).toBe(20); // After )
+  });
+
+  it("handles escaped brackets in text", () => {
+    // Escaped brackets should be treated as literal characters
+    const text = "[text \\[bracket\\]](url)";
+    const boundaries = getLinkBoundaries(text, 8); // Inside "bracket"
+    expect(boundaries).not.toBeNull();
+    expect(boundaries?.textStart).toBe(1);
+    expect(boundaries?.textEnd).toBe(17); // Position of ]
+    expect(boundaries?.linkEnd).toBe(23);
+  });
+
+  it("handles nested parentheses in URL", () => {
+    // URLs can contain balanced parentheses
+    const text = "[link](https://example.com/page(params))";
+    const boundaries = getLinkBoundaries(text, 3);
+    expect(boundaries).not.toBeNull();
+    expect(boundaries?.urlStart).toBe(7);
+    expect(boundaries?.urlEnd).toBe(39); // Position of final )
+    expect(boundaries?.linkEnd).toBe(40);
+  });
+
+  it("handles multiple levels of nesting", () => {
+    // Deep nesting: [a [b [c]]]
+    const text = "[outer [middle [inner]]](url)";
+    const boundaries = getLinkBoundaries(text, 18); // Inside "inner"
+    expect(boundaries).not.toBeNull();
+    expect(boundaries?.textStart).toBe(1);
+    expect(boundaries?.textEnd).toBe(23); // Position of final ]
+    expect(boundaries?.linkEnd).toBe(29);
+  });
+
+  it("handles escaped brackets with nested real brackets", () => {
+    // Mix of escaped and real brackets: [text \[esc\] [real]]
+    const text = "[text \\[esc\\] [real]](url)";
+    const boundaries = getLinkBoundaries(text, 15); // Inside "real"
+    expect(boundaries).not.toBeNull();
+    expect(boundaries?.textStart).toBe(1);
+    expect(boundaries?.textEnd).toBe(20);
+  });
+
+  it("handles link not at start of line", () => {
+    // Link in middle of text
+    const text = "Some text [link [nested]](url) more text";
+    const boundaries = getLinkBoundaries(text, 18); // Inside "nested"
+    expect(boundaries).not.toBeNull();
+    expect(boundaries?.textStart).toBe(11);
+    expect(boundaries?.textEnd).toBe(24);
   });
 });
 
