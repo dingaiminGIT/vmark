@@ -14,6 +14,13 @@ import { describe, it, expect } from "vitest";
 import { Schema, Node as PMNode } from "@tiptap/pm/model";
 import { EditorState, Selection, SelectionRange, TextSelection, Transaction } from "@tiptap/pm/state";
 import { MultiSelection } from "../MultiSelection";
+import {
+  handleMultiCursorInput,
+  handleMultiCursorBackspace,
+  handleMultiCursorDelete,
+  handleMultiCursorArrow,
+} from "../inputHandling";
+import { handleMultiCursorHorizontal } from "../horizontalMovement";
 
 // ============================================================================
 // TEST CONFIGURATION
@@ -194,85 +201,87 @@ function applyTransaction(state: EditorState, tr: Transaction): EditorState {
   return state.apply(tr);
 }
 
+/**
+ * Insert text at all cursor positions using production code.
+ * Now calls handleMultiCursorInput() to ensure full production logic coverage.
+ */
 function insertTextAtCursors(
   state: EditorState,
   multiSel: MultiSelection,
   text: string
 ): EditorState {
-  let tr = state.tr.setSelection(multiSel);
+  // Set selection first
+  const stateWithSel = state.apply(state.tr.setSelection(multiSel));
 
-  // Sort descending to preserve positions
-  const sortedRanges = [...multiSel.ranges].sort((a, b) => b.$from.pos - a.$from.pos);
-
-  for (const range of sortedRanges) {
-    tr = tr.insertText(text, range.$from.pos, range.$to.pos);
+  // Call production function
+  const tr = handleMultiCursorInput(stateWithSel, text);
+  if (!tr) {
+    throw new Error("handleMultiCursorInput returned null - not a MultiSelection");
   }
 
-  return applyTransaction(state, tr);
+  return stateWithSel.apply(tr);
 }
 
+/**
+ * Delete at all cursor positions using production code.
+ * Now calls handleMultiCursorBackspace() or handleMultiCursorDelete() for full coverage.
+ */
 function deleteAtCursors(
   state: EditorState,
   multiSel: MultiSelection,
   direction: "before" | "after"
 ): EditorState {
-  let tr = state.tr.setSelection(multiSel);
+  // Set selection first
+  const stateWithSel = state.apply(state.tr.setSelection(multiSel));
 
-  const sortedRanges = [...multiSel.ranges].sort((a, b) => b.$from.pos - a.$from.pos);
+  // Call production function based on direction
+  const tr = direction === "before"
+    ? handleMultiCursorBackspace(stateWithSel)
+    : handleMultiCursorDelete(stateWithSel);
 
-  for (const range of sortedRanges) {
-    const isEmpty = range.$from.pos === range.$to.pos;
-    if (isEmpty) {
-      // Empty cursor - delete one char
-      if (direction === "before" && range.$from.pos > 1) {
-        tr = tr.delete(range.$from.pos - 1, range.$from.pos);
-      } else if (direction === "after" && range.$from.pos < state.doc.content.size - 1) {
-        tr = tr.delete(range.$from.pos, range.$from.pos + 1);
-      }
-    } else {
-      // Selection - delete range
-      tr = tr.delete(range.$from.pos, range.$to.pos);
-    }
+  if (!tr) {
+    throw new Error(`handleMultiCursor${direction === "before" ? "Backspace" : "Delete"} returned null`);
   }
 
-  return applyTransaction(state, tr);
+  return stateWithSel.apply(tr);
 }
 
+/**
+ * Move cursors using production code.
+ * Now calls handleMultiCursorHorizontal() or handleMultiCursorArrow() for full coverage.
+ * Note: Only left/right are used in tests; up/down were no-ops in old implementation.
+ */
 function moveCursors(
   state: EditorState,
   multiSel: MultiSelection,
   direction: "left" | "right" | "up" | "down",
   extend = false
 ): MultiSelection {
-  const newRanges = multiSel.ranges.map((range) => {
-    let newPos = range.$to.pos;
+  // Set selection first
+  const stateWithSel = state.apply(state.tr.setSelection(multiSel));
 
-    switch (direction) {
-      case "left":
-        newPos = Math.max(range.$to.pos - 1, 1);
-        break;
-      case "right":
-        newPos = Math.min(range.$to.pos + 1, state.doc.content.size - 1);
-        break;
-      case "up":
-      case "down":
-        // Simplified: just move by arbitrary amount for testing
-        newPos = range.$to.pos;
-        break;
-    }
+  let tr: Transaction | null;
 
-    const $newPos = state.doc.resolve(newPos);
+  if (direction === "left" || direction === "right") {
+    // Use horizontal movement (char unit) for left/right
+    const arrowKey = direction === "left" ? "ArrowLeft" : "ArrowRight";
+    tr = handleMultiCursorHorizontal(stateWithSel, arrowKey, extend, "char");
+  } else {
+    // Use arrow movement for up/down
+    const arrowKey = direction === "up" ? "ArrowUp" : "ArrowDown";
+    tr = handleMultiCursorArrow(stateWithSel, arrowKey, extend);
+  }
 
-    if (extend) {
-      // Extend selection from anchor
-      return new SelectionRange(range.$from, $newPos);
-    } else {
-      // Move cursor (or collapse selection)
-      return new SelectionRange($newPos, $newPos);
-    }
-  });
+  if (!tr) {
+    throw new Error(`handleMultiCursor movement returned null for ${direction}`);
+  }
 
-  return new MultiSelection(newRanges, multiSel.primaryIndex);
+  const newState = stateWithSel.apply(tr);
+  if (!(newState.selection instanceof MultiSelection)) {
+    throw new Error("Movement didn't preserve MultiSelection");
+  }
+
+  return newState.selection;
 }
 
 function getDocText(state: EditorState): string {
@@ -698,18 +707,220 @@ describe("Core Features (MUST Have) - P0 Priority", () => {
       });
 
       it("should skip atom nodes when moving with arrow keys", () => {
-        const testDoc = doc(p(txt("a"), img(), txt("b")));
+        // Use varied text lengths to prevent +1 from accidentally being correct
+        const testDoc = doc(p(txt("short"), img(), txt("verylongword")));
         const state = createState(testDoc);
 
-        const beforeImg = 2; // After "a"
-        const afterImg = 3; // After image
+        const beforeImg = 6; // After "short" (5 chars + 1)
+        const afterImg = 7; // After image
 
-        // Arrow right from "a" should jump over image
+        // Arrow right from end of "short" should jump over image
         const cursor = createMultiSelection(state, [beforeImg]);
         const moved = moveCursors(state, cursor, "right");
 
-        // Should jump to after image (implementation-dependent)
-        expect(moved.ranges[0].$to.pos).toBeGreaterThan(beforeImg);
+        // Should jump to after image (requires Selection.findFrom() to skip atom)
+        expect(moved.ranges[0].$to.pos).toBe(afterImg);
+      });
+
+      it("should handle multiple cursors around atom nodes", () => {
+        // Use varied word lengths: "hi"(2), "medium"(6), "verylongword"(12)
+        const testDoc = doc(
+          p(txt("hi"), img(), txt("medium"), img(), txt("verylongword"))
+        );
+        const state = createState(testDoc);
+
+        // Cursors before each image
+        const multiSel = createMultiSelection(state, [3, 11]); // After "hi" and "medium"
+        const moved = moveCursors(state, multiSel, "right");
+
+        // Both should jump over their respective images (requires Selection.findFrom())
+        expect(moved.ranges).toHaveLength(2);
+        expect(moved.ranges[0].$to.pos).toBe(4); // After first image
+        expect(moved.ranges[1].$to.pos).toBe(12); // After second image
+      });
+
+      it("should not get stuck when moving left through atom", () => {
+        // Asymmetric lengths to prevent -1 from being accidentally correct
+        const testDoc = doc(p(txt("longer"), img(), txt("x")));
+        const state = createState(testDoc);
+
+        const afterImg = 8; // After image (6 chars "longer" + 1 para + 1 img)
+        const cursor = createMultiSelection(state, [afterImg]);
+        const moved = moveCursors(state, cursor, "left");
+
+        // Should jump to before image (requires Selection.findFrom() to skip atom)
+        expect(moved.ranges[0].$to.pos).toBe(7); // Before image (after "longer")
+      });
+    });
+
+    describe("Word Movement (Alt+Arrow)", () => {
+      it("should move cursors by word with Alt+Right", () => {
+        // Use varied word lengths to prevent +N from accidentally being correct
+        const testDoc = doc(p(txt("hi longword test")));
+        const state = createState(testDoc);
+        const multiSel = createMultiSelection(state, [1, 4]); // Start of "hi" and "longword"
+
+        // Need to use handleMultiCursorHorizontal directly for word movement
+        const stateWithSel = state.apply(state.tr.setSelection(multiSel));
+        const tr = handleMultiCursorHorizontal(stateWithSel, "ArrowRight", false, "word");
+
+        expect(tr).not.toBeNull();
+        if (tr) {
+          const newState = stateWithSel.apply(tr);
+          const newSel = newState.selection as MultiSelection;
+
+          // Should jump to end of words
+          expect(newSel.ranges).toHaveLength(2);
+          expect(newSel.ranges[0].$to.pos).toBe(3); // End of "hi" (2 chars)
+          expect(newSel.ranges[1].$to.pos).toBe(12); // End of "longword" (8 chars)
+          // Verify not just simple arithmetic
+          expect(newSel.ranges[0].$to.pos).not.toBe(1 + 5); // Not +5
+          expect(newSel.ranges[1].$to.pos).not.toBe(4 + 5); // Not +5
+        }
+      });
+
+      it("should move cursors by word with Alt+Left", () => {
+        // Use varied word lengths to prevent -N from accidentally being correct
+        const testDoc = doc(p(txt("hi longword test")));
+        const state = createState(testDoc);
+        const multiSel = createMultiSelection(state, [3, 12]); // End of "hi" and "longword"
+
+        const stateWithSel = state.apply(state.tr.setSelection(multiSel));
+        const tr = handleMultiCursorHorizontal(stateWithSel, "ArrowLeft", false, "word");
+
+        expect(tr).not.toBeNull();
+        if (tr) {
+          const newState = stateWithSel.apply(tr);
+          const newSel = newState.selection as MultiSelection;
+
+          // Should jump to start of words
+          expect(newSel.ranges).toHaveLength(2);
+          expect(newSel.ranges[0].$to.pos).toBe(1); // Start of "hi" (2 chars back)
+          expect(newSel.ranges[1].$to.pos).toBe(4); // Start of "longword" (8 chars back)
+          // Verify not just simple arithmetic
+          expect(newSel.ranges[0].$to.pos).not.toBe(3 - 5); // Not -5 (would be negative!)
+          expect(newSel.ranges[1].$to.pos).not.toBe(12 - 5); // Not -5
+        }
+      });
+
+      it("should handle CJK word boundaries", () => {
+        const testDoc = doc(p(txt("你好世界测试")));
+        const state = createState(testDoc);
+        const multiSel = createMultiSelection(state, [1]); // Start
+
+        const stateWithSel = state.apply(state.tr.setSelection(multiSel));
+        const tr = handleMultiCursorHorizontal(stateWithSel, "ArrowRight", false, "word");
+
+        expect(tr).not.toBeNull();
+        if (tr) {
+          const newState = stateWithSel.apply(tr);
+          // Should move by CJK-aware word boundaries
+          expect(newState.selection).toBeInstanceOf(MultiSelection);
+        }
+      });
+
+      it("should extend selection when moving by word with Shift", () => {
+        const testDoc = doc(p(txt("hello world")));
+        const state = createState(testDoc);
+        const multiSel = createMultiSelection(state, [1]);
+
+        const stateWithSel = state.apply(state.tr.setSelection(multiSel));
+        const tr = handleMultiCursorHorizontal(stateWithSel, "ArrowRight", true, "word");
+
+        expect(tr).not.toBeNull();
+        if (tr) {
+          const newState = stateWithSel.apply(tr);
+          const newSel = newState.selection as MultiSelection;
+
+          // Should select the word
+          expect(newSel.ranges[0].$from.pos).toBe(1);
+          expect(newSel.ranges[0].$to.pos).toBeGreaterThan(1);
+        }
+      });
+    });
+
+    describe("Line Movement (Cmd+Arrow)", () => {
+      it("should move cursors to line end with Cmd+Right", () => {
+        const testDoc = doc(p(txt("hello world")));
+        const state = createState(testDoc);
+        const multiSel = createMultiSelection(state, [1, 7]); // Middle positions
+
+        const stateWithSel = state.apply(state.tr.setSelection(multiSel));
+        const tr = handleMultiCursorHorizontal(stateWithSel, "ArrowRight", false, "line");
+
+        expect(tr).not.toBeNull();
+        if (tr) {
+          const newState = stateWithSel.apply(tr);
+          const newSel = newState.selection as MultiSelection;
+
+          // Should merge to single cursor at line end
+          expect(newSel.ranges).toHaveLength(1);
+          expect(newSel.ranges[0].$to.pos).toBe(12); // End of paragraph
+        }
+      });
+
+      it("should move cursors to line start with Cmd+Left", () => {
+        const testDoc = doc(p(txt("hello world")));
+        const state = createState(testDoc);
+        const multiSel = createMultiSelection(state, [7, 12]); // Middle/end positions
+
+        const stateWithSel = state.apply(state.tr.setSelection(multiSel));
+        const tr = handleMultiCursorHorizontal(stateWithSel, "ArrowLeft", false, "line");
+
+        expect(tr).not.toBeNull();
+        if (tr) {
+          const newState = stateWithSel.apply(tr);
+          const newSel = newState.selection as MultiSelection;
+
+          // Should merge to single cursor at line start
+          expect(newSel.ranges).toHaveLength(1);
+          expect(newSel.ranges[0].$to.pos).toBe(1); // Start of paragraph
+        }
+      });
+
+      it("should handle line movement across multiple paragraphs", () => {
+        // Use varied line lengths to prevent +N from accidentally being correct
+        const testDoc = doc(p(txt("x")), p(txt("medium")), p(txt("verylongline")));
+        const state = createState(testDoc);
+        // Cursors in middle of each line
+        const multiSel = createMultiSelection(state, [1, 5, 13]);
+
+        const stateWithSel = state.apply(state.tr.setSelection(multiSel));
+        const tr = handleMultiCursorHorizontal(stateWithSel, "ArrowRight", false, "line");
+
+        expect(tr).not.toBeNull();
+        if (tr) {
+          const newState = stateWithSel.apply(tr);
+          const newSel = newState.selection as MultiSelection;
+
+          // Should move to end of each respective line
+          expect(newSel.ranges).toHaveLength(3);
+          expect(newSel.ranges[0].$to.pos).toBe(2); // End of "x" (1 char)
+          expect(newSel.ranges[1].$to.pos).toBe(10); // End of "medium" (6 chars)
+          expect(newSel.ranges[2].$to.pos).toBe(24); // End of "verylongline" (12 chars)
+          // Verify not uniform offset - varied lengths mean different movements
+          expect(newSel.ranges[0].$to.pos).not.toBe(1 + 5); // "x" is 1 char, not 5
+          expect(newSel.ranges[2].$to.pos).not.toBe(13 + 5); // "verylongline" from middle takes more than +5
+        }
+      });
+
+      it("should extend selection to line end with Shift+Cmd+Right", () => {
+        const testDoc = doc(p(txt("hello world")));
+        const state = createState(testDoc);
+        const multiSel = createMultiSelection(state, [1]);
+
+        const stateWithSel = state.apply(state.tr.setSelection(multiSel));
+        const tr = handleMultiCursorHorizontal(stateWithSel, "ArrowRight", true, "line");
+
+        expect(tr).not.toBeNull();
+        if (tr) {
+          const newState = stateWithSel.apply(tr);
+          const newSel = newState.selection as MultiSelection;
+
+          // Should select to end of line
+          expect(newSel.ranges[0].$from.pos).toBe(1);
+          expect(newSel.ranges[0].$to.pos).toBe(12);
+        }
       });
     });
   });
