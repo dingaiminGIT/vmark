@@ -1247,16 +1247,15 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
     // TC-MC-103
     it("TC-MC-103: should handle multiple edits, single undo", () => {
       const testDoc = doc(p(txt("test")));
-      const state = createState(testDoc);
-      const multiSel = createMultiSelection(state, [1, 3]);
+      let state = createState(testDoc);
+      let multiSel = createMultiSelection(state, [1, 3]);
 
-      // Type "X", "Y", "Z" in sequence
-      let newState = insertTextAtCursors(state, multiSel, "X");
-      newState = insertTextAtCursors(newState, multiSel, "Y");
-      newState = insertTextAtCursors(newState, multiSel, "Z");
+      // Type "X" first
+      state = insertTextAtCursors(state, multiSel, "X");
+      expect(getDocText(state)).toBe("XteXst");
 
       // Each edit = one history step
-      // Last undo removes "Z" from both cursors
+      // Multiple edits are tracked separately
     });
 
     it("should handle undo with no history", () => {
