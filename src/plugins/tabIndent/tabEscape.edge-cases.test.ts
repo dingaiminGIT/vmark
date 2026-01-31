@@ -12,7 +12,7 @@
 import { describe, it, expect } from "vitest";
 import { Schema, Node } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
-import { canTabEscape, getMarkEndPos, getLinkEndPos } from "./tabEscape";
+import { canTabEscape, getMarkEndPos, getLinkEndPos, type TabEscapeResult } from "./tabEscape";
 
 // Minimal schema for testing
 const testSchema = new Schema({
@@ -63,7 +63,8 @@ function codeText(text: string): Node {
   return testSchema.text(text, [testSchema.mark("code")]);
 }
 
-function strikeText(text: string): Node {
+// @ts-expect-error Helper function kept for potential future use in strikethrough tests
+function _strikeText(text: string): Node {
   return testSchema.text(text, [testSchema.mark("strike")]);
 }
 
@@ -84,7 +85,7 @@ describe("Tab Escape Edge Cases", () => {
       );
       const state = createState(document, 10); // Inside "multi"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("mark");
       expect(result?.targetPos).toBe(12); // Jump to end of marked text
@@ -104,7 +105,7 @@ describe("Tab Escape Edge Cases", () => {
       );
       const state = createState(document, 10);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("mark");
     });
@@ -122,7 +123,7 @@ describe("Tab Escape Edge Cases", () => {
       );
       const state = createState(document, 9);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("link"); // Link has priority
     });
@@ -134,7 +135,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("bold"), italicText("italic"), " world"));
       const state = createState(document, 10); // At end of "bold"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.targetPos).toBe(11); // Jump to after "bold", before "italic"
     });
@@ -145,7 +146,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p(boldText("bold1"), boldText("bold2")));
       const state = createState(document, 3); // Inside "bold1"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       // Should jump to end of first bold node
     });
@@ -156,7 +157,7 @@ describe("Tab Escape Edge Cases", () => {
       );
       const state = createState(document, 2); // In "bold"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("mark");
     });
@@ -167,7 +168,8 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("bold"), " world"));
       const state = createState(document, 7); // Right at start of "bold"
 
-      const result = canTabEscape(state);
+      // Note: Documents boundary behavior but doesn't assert on result
+      canTabEscape(state);
       // At exact mark start, marks might not be active yet
       // This is a known edge case in ProseMirror
       // The behavior depends on storedMarks
@@ -178,7 +180,8 @@ describe("Tab Escape Edge Cases", () => {
       const state = createState(document, 11); // Right after "bold"
 
       // At the exact end position, marks should still be active
-      const result = canTabEscape(state);
+      // Note: Documents boundary behavior but doesn't assert on result
+      canTabEscape(state);
       // This is a boundary case - behavior depends on mark storedMarks
       // In ProseMirror, marks can persist at boundaries
     });
@@ -187,7 +190,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p(boldText("bold"), " rest"));
       const state = createState(document, 2); // Inside "bold"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.targetPos).toBe(5); // After "bold"
     });
@@ -196,7 +199,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("start ", boldText("bold")));
       const state = createState(document, 9); // Inside "bold" at end
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.targetPos).toBe(11); // After "bold"
     });
@@ -207,7 +210,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello", boldText("   "), "world"));
       const state = createState(document, 7); // Inside spaces
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
 
@@ -215,7 +218,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello", boldText("  bold  "), "world"));
       const state = createState(document, 10); // Inside "bold"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
 
@@ -224,7 +227,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("bold"), " world"));
       const state = createState(document, 9);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
 
@@ -232,7 +235,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("bold 🎉 text"), " world"));
       const state = createState(document, 12); // Inside emoji
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
 
@@ -240,7 +243,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("粗体文字"), " world"));
       const state = createState(document, 9); // Inside CJK text
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
   });
@@ -251,7 +254,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", linkedText("link", longUrl), " world"));
       const state = createState(document, 9);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("link");
     });
@@ -262,7 +265,7 @@ describe("Tab Escape Edge Cases", () => {
       );
       const state = createState(document, 9);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("link");
     });
@@ -273,7 +276,7 @@ describe("Tab Escape Edge Cases", () => {
       );
       const state = createState(document, 9);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
 
@@ -286,7 +289,7 @@ describe("Tab Escape Edge Cases", () => {
       );
       const state = createState(document, 3); // Inside "first"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("link");
       expect(result?.targetPos).toBe(6); // After "first", not after "second"
@@ -300,7 +303,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", testSchema.text("link", [linkMark]), " world"));
       const state = createState(document, 9);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("link");
     });
@@ -319,7 +322,8 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("x"), " world"));
       const state = createState(document, 8); // Inside "x", not at boundary
 
-      const result = canTabEscape(state);
+      // Note: Documents edge case behavior but doesn't assert on result
+      canTabEscape(state);
       // Single char marks are tricky - cursor position matters
       // At position 7 (start), marks might not be active
       // At position 8 (after x), we're already past the mark
@@ -329,7 +333,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("!!!"), " world"));
       const state = createState(document, 8);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
   });
@@ -339,7 +343,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("first ", boldText("bold")), p("second paragraph"));
       const state = createState(document, 9);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.targetPos).toBe(11);
     });
@@ -349,7 +353,7 @@ describe("Tab Escape Edge Cases", () => {
       // Need to calculate position accounting for paragraph breaks
       const state = createState(document, 18); // Approximate, inside "bold" in second para
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
   });
@@ -359,7 +363,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("bold"), " world"));
       const state = createState(document, 7, 11); // Select all of "bold"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).toBeNull(); // Should not escape with selection
     });
 
@@ -367,7 +371,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("bold"), " world"));
       const state = createState(document, 9, 13); // Select from "ld" to " wo"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).toBeNull();
     });
 
@@ -375,7 +379,7 @@ describe("Tab Escape Edge Cases", () => {
       const document = doc(p("hello ", boldText("bold"), " world"));
       const state = createState(document, 5, 9); // Select from "o " to "bo"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).toBeNull();
     });
   });

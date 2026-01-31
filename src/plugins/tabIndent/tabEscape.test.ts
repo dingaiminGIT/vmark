@@ -14,6 +14,7 @@ import {
   getMarkEndPos,
   getLinkEndPos,
   canTabEscape,
+  type TabEscapeResult,
 } from "./tabEscape";
 
 // Minimal schema for testing
@@ -243,7 +244,7 @@ describe("canTabEscape", () => {
     const document = doc(p("hello ", boldText("bold"), " world"));
     const state = createState(document, 9); // Inside "bold"
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).not.toBeNull();
     expect(result?.type).toBe("mark");
     expect(result?.targetPos).toBe(11); // Jump to position after mark
@@ -253,7 +254,7 @@ describe("canTabEscape", () => {
     const document = doc(p("hello ", linkedText("link", "https://example.com"), " world"));
     const state = createState(document, 9); // Inside "link"
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).not.toBeNull();
     expect(result?.type).toBe("link");
     expect(result?.targetPos).toBe(11); // Jump after link
@@ -263,7 +264,7 @@ describe("canTabEscape", () => {
     const document = doc(p("hello world"));
     const state = createState(document, 5);
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).toBeNull();
   });
 
@@ -271,7 +272,7 @@ describe("canTabEscape", () => {
     const document = doc(p("hello ", boldText("bold"), " world"));
     const state = createState(document, 9); // Middle of "bold"
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     // Tab should jump to end of mark from anywhere inside
     expect(result).not.toBeNull();
     expect(result?.type).toBe("mark");
@@ -282,7 +283,7 @@ describe("canTabEscape", () => {
     const document = doc(p("hello ", boldText("bold"), " world"));
     const state = createState(document, 7, 11);
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).toBeNull();
   });
 
@@ -300,7 +301,7 @@ describe("canTabEscape", () => {
     );
     const state = createState(document, 12); // Inside "bold link"
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).not.toBeNull();
     expect(result?.type).toBe("link"); // Link takes priority
   });
@@ -309,7 +310,7 @@ describe("canTabEscape", () => {
     const document = doc(p(""));
     const state = createState(document, 1);
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).toBeNull();
   });
 
@@ -317,7 +318,7 @@ describe("canTabEscape", () => {
     const document = doc(p(boldText("bold"), " world"));
     const state = createState(document, 3); // Inside "bold"
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).not.toBeNull();
     expect(result?.targetPos).toBe(5); // After "bold"
   });
@@ -326,7 +327,7 @@ describe("canTabEscape", () => {
     const document = doc(p("hello ", boldText("bold")));
     const state = createState(document, 9); // Inside "bold" (near end of paragraph)
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).not.toBeNull();
     expect(result?.targetPos).toBe(11); // After "bold"
   });

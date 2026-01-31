@@ -12,7 +12,7 @@
 import { describe, it, expect } from "vitest";
 import { Schema, Node } from "@tiptap/pm/model";
 import { EditorState, TextSelection, AllSelection } from "@tiptap/pm/state";
-import { canTabEscape } from "./tabEscape";
+import { canTabEscape, type TabEscapeResult } from "./tabEscape";
 
 // Extended schema with tables and lists
 const integrationSchema = new Schema({
@@ -86,9 +86,10 @@ function italicText(text: string): Node {
   return integrationSchema.text(text, [integrationSchema.mark("italic")]);
 }
 
-function codeText(text: string): Node {
-  return integrationSchema.text(text, [integrationSchema.mark("code")]);
-}
+// Helper function kept for potential future use in code block tests
+// function _codeText(text: string): Node {
+//   return integrationSchema.text(text, [integrationSchema.mark("code")]);
+// }
 
 function linkedText(text: string, href: string): Node {
   return integrationSchema.text(text, [integrationSchema.mark("link", { href })]);
@@ -114,7 +115,7 @@ describe("Tab Escape Integration Tests", () => {
       pos += 2; // middle of "bold"
 
       const stateWithCursor = state.apply(state.tr.setSelection(TextSelection.create(state.doc, pos)));
-      const result = canTabEscape(stateWithCursor);
+      const result = canTabEscape(stateWithCursor) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("mark");
       // Tab should escape from mark, not indent list
@@ -129,10 +130,10 @@ describe("Tab Escape Integration Tests", () => {
 
       // Find correct position
       const state = EditorState.create({ doc: document, schema: integrationSchema });
-      let pos = 1 + 1 + 1 + "quote text ".length + 2; // doc + blockquote + p + text + inside "link"
+      const pos = 1 + 1 + 1 + "quote text ".length + 2; // doc + blockquote + p + text + inside "link"
 
       const stateWithCursor = state.apply(state.tr.setSelection(TextSelection.create(state.doc, pos)));
-      const result = canTabEscape(stateWithCursor);
+      const result = canTabEscape(stateWithCursor) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("link");
     });
@@ -157,7 +158,7 @@ describe("Tab Escape Integration Tests", () => {
       // doc(1) + blockquote(1) + bulletList(1) + listItem(1) + p(1) + "text "(5) = 10
       const state = createState(document, 15); // Inside "bold link"
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("link"); // Link takes priority over mark
     });
@@ -178,7 +179,7 @@ describe("Tab Escape Integration Tests", () => {
       pos += 2; // middle of "bold"
 
       const stateWithCursor = state.apply(state.tr.setSelection(TextSelection.create(state.doc, pos)));
-      const result = canTabEscape(stateWithCursor);
+      const result = canTabEscape(stateWithCursor) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       if (result) {
         expect(result.targetPos).toBeGreaterThan(pos); // Should jump forward
@@ -196,7 +197,7 @@ describe("Tab Escape Integration Tests", () => {
       // Position inside "italic"
       const state = createState(document, 13);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("mark");
     });
@@ -215,7 +216,7 @@ describe("Tab Escape Integration Tests", () => {
       // doc(1) + bulletList(1) + listItem1(~15) + listItem2(1) + p(1) + "second "(7) = ~26
       const state = createState(document, 28);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
 
@@ -229,7 +230,7 @@ describe("Tab Escape Integration Tests", () => {
       // Position in first paragraph's bold
       const state = createState(document, 10);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
   });
@@ -243,7 +244,7 @@ describe("Tab Escape Integration Tests", () => {
       );
       const state = createState(document, 6);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
 
@@ -254,7 +255,7 @@ describe("Tab Escape Integration Tests", () => {
         )
       );
       const state = EditorState.create({ doc: document, schema: integrationSchema });
-      let pos = 1 + 1 + 1 + 1 + "start ".length + 2; // Inside "bold"
+      const pos = 1 + 1 + 1 + 1 + "start ".length + 2; // Inside "bold"
       const stateWithCursor = state.apply(state.tr.setSelection(TextSelection.create(state.doc, pos)));
 
       const result = canTabEscape(stateWithCursor);
@@ -267,7 +268,7 @@ describe("Tab Escape Integration Tests", () => {
       );
       const state = createState(document, 4);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
 
@@ -277,7 +278,7 @@ describe("Tab Escape Integration Tests", () => {
       );
       const state = createState(document, 11);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
   });
@@ -290,13 +291,13 @@ describe("Tab Escape Integration Tests", () => {
         )
       );
       const state = EditorState.create({ doc: document, schema: integrationSchema });
-      let pos = 1 + 1 + 1 + 1 + 1; // doc + bulletList + listItem + paragraph + inside "x"
+      const pos = 1 + 1 + 1 + 1 + 1; // doc + bulletList + listItem + paragraph + inside "x"
       // Try to create valid selection
       try {
         const stateWithCursor = state.apply(state.tr.setSelection(TextSelection.create(state.doc, pos)));
         const result = canTabEscape(stateWithCursor);
         expect(result).not.toBeNull();
-      } catch (e) {
+      } catch {
         // Position might be invalid - single char marks are tricky
         // This test documents the edge case
       }
@@ -310,7 +311,7 @@ describe("Tab Escape Integration Tests", () => {
       );
       const state = createState(document, 3);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
   });
@@ -353,7 +354,7 @@ describe("Tab Escape Integration Tests", () => {
       const state = createState(document, 5000); // Middle of long text
 
       const startTime = performance.now();
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       const endTime = performance.now();
 
       expect(result).not.toBeNull();
@@ -377,7 +378,8 @@ describe("Tab Escape Integration Tests", () => {
       // Position exactly between plain text and bold
       const state = createState(document, 7);
 
-      const result = canTabEscape(state);
+      // Note: Documents boundary behavior but doesn't assert on result
+      canTabEscape(state);
       // At exact boundary, mark might not be active yet
       // This is a known ProseMirror edge case
       // The result depends on whether storedMarks includes the mark
@@ -391,7 +393,7 @@ describe("Tab Escape Integration Tests", () => {
       const document = doc(p("hello ", boldText("bold"), " world"));
       const state = createState(document, 9);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
       expect(result?.type).toBe("mark");
     });
@@ -401,7 +403,7 @@ describe("Tab Escape Integration Tests", () => {
       // Third paragraph: doc(1) + p1(1) + p2(1) + p3(1) + bold start = 5
       const state = createState(document, 5);
 
-      const result = canTabEscape(state);
+      const result = canTabEscape(state) as TabEscapeResult | null;
       expect(result).not.toBeNull();
     });
   });
@@ -419,7 +421,7 @@ describe("Tab Escape Priority and Fallback", () => {
     );
     const state = createState(document, 3);
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).not.toBeNull();
     expect(result?.type).toBe("link");
   });
@@ -428,7 +430,7 @@ describe("Tab Escape Priority and Fallback", () => {
     const document = doc(p("plain text without marks"));
     const state = createState(document, 10);
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).toBeNull();
   });
 
@@ -436,7 +438,7 @@ describe("Tab Escape Priority and Fallback", () => {
     const document = doc(p(""));
     const state = createState(document, 1);
 
-    const result = canTabEscape(state);
+    const result = canTabEscape(state) as TabEscapeResult | null;
     expect(result).toBeNull();
   });
 });

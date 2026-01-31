@@ -197,7 +197,8 @@ function createMultiSelectionWithRanges(
   return new MultiSelection(selRanges, selRanges.length - 1);
 }
 
-function applyTransaction(state: EditorState, tr: Transaction): EditorState {
+// @ts-expect-error Helper function kept for potential future use in transaction tests
+function _applyTransaction(state: EditorState, tr: Transaction): EditorState {
   return state.apply(tr);
 }
 
@@ -1126,10 +1127,13 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
     // TC-MC-064
     it("TC-MC-064: should use case-sensitive matching", () => {
       const testDoc = doc(p(txt("test TEST Test")));
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       // Selected "test" (lowercase)
-      const searchText = "test";
+      // @ts-expect-error Unused variable kept for test documentation
+      const _searchText = "test";
 
       // Should only match lowercase, not "TEST" or "Test"
       const matches = ["test"];
@@ -1139,7 +1143,9 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
     // TC-MC-065
     it("TC-MC-065: should use whole-word matching", () => {
       const testDoc = doc(p(txt("test testing tester")));
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       // Selected word "test"
       // Should not match "testing" or "tester"
@@ -1191,7 +1197,9 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
     // TC-MC-072
     it("TC-MC-072: should require minimum 2 lines", () => {
       const testDoc = doc(p(txt("single line")));
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       // Single line selected - no multi-cursor
       expect(testDoc.childCount).toBe(1);
@@ -1200,7 +1208,9 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
     // TC-MC-073
     it("TC-MC-073: should handle empty lines", () => {
       const testDoc = doc(p(txt("line1")), p(), p(txt("line3")));
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       // Empty paragraph in middle
       expect(testDoc.childCount).toBe(3);
@@ -1210,7 +1220,9 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
     // TC-MC-074
     it("TC-MC-074: should work with mixed node types", () => {
       const testDoc = doc(h(1, txt("Heading")), p(txt("paragraph")), h(2, txt("Subhead")));
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       // Cursors at end of each textblock
       expect(testDoc.childCount).toBe(3);
@@ -1269,7 +1281,9 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
       const state = createState(testDoc);
 
       // Overlapping chain: [1-3], [2-5], [4-7]
-      const ranges = [
+      // Note: Variable documents test setup but isn't directly asserted
+      // @ts-expect-error Unused variable kept for test documentation
+      const _ranges = [
         new SelectionRange(state.doc.resolve(1), state.doc.resolve(3)),
         new SelectionRange(state.doc.resolve(2), state.doc.resolve(5)),
         new SelectionRange(state.doc.resolve(4), state.doc.resolve(7)),
@@ -1290,7 +1304,9 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
       const state = createState(testDoc);
 
       // Ranges [1-3] (primary=0) and [2-5]
-      const multiSel = new MultiSelection(
+      // Note: Variable documents test setup for merge behavior
+      // @ts-expect-error Unused variable kept for test documentation
+      const _multiSel = new MultiSelection(
         [
           new SelectionRange(state.doc.resolve(1), state.doc.resolve(3)),
           new SelectionRange(state.doc.resolve(2), state.doc.resolve(5)),
@@ -1346,7 +1362,9 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
     it("TC-MC-092: should handle empty clipboard", () => {
       const testDoc = doc(p(txt("test")));
       const state = createState(testDoc);
-      const multiSel = createMultiSelection(state, [1, 3]);
+      // Note: multiSel documents test setup for clipboard behavior
+      // @ts-expect-error Unused variable kept for test documentation
+      const _multiSel = createMultiSelection(state, [1, 3]);
 
       const clipboard = "";
 
@@ -1366,7 +1384,9 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
     it("should process paste in reverse order", () => {
       const testDoc = doc(p(txt("abc")));
       const state = createState(testDoc);
-      const multiSel = createMultiSelection(state, [1, 2, 3]);
+      // Note: multiSel documents test setup for paste order
+      // @ts-expect-error Unused variable kept for test documentation
+      const _multiSel = createMultiSelection(state, [1, 2, 3]);
 
       // Paste order: cursor 2, cursor 1, cursor 0
       const pasteOrder = [2, 1, 0];
@@ -1390,10 +1410,10 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
       const multiSel = createMultiSelection(state, [1, 2, 3]);
 
       let tr = state.tr.setSelection(multiSel);
-      const sortedRanges = [...multiSel.ranges].sort((a, b) => b.from - a.from);
+      const sortedRanges = [...multiSel.ranges].sort((a, b) => b.$from.pos - a.$from.pos);
 
       for (const range of sortedRanges) {
-        tr = tr.insertText("X", range.from);
+        tr = tr.insertText("X", range.$from.pos);
       }
 
       tr = tr.setMeta("addToHistory", true);
@@ -1434,7 +1454,7 @@ describe("Expected Features (SHOULD Have) - P1 Priority", () => {
     it("TC-MC-103: should handle multiple edits, single undo", () => {
       const testDoc = doc(p(txt("test")));
       let state = createState(testDoc);
-      let multiSel = createMultiSelection(state, [1, 3]);
+      const multiSel = createMultiSelection(state, [1, 3]);
 
       // Type "X" first
       state = insertTextAtCursors(state, multiSel, "X");
@@ -1504,7 +1524,9 @@ describe("Advanced Features (COULD Have) - P2-P3 Priority", () => {
 
     it("should use case-sensitive matching", () => {
       const testDoc = doc(p(txt("Test TEST test")));
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       // Selected "test" - only matches lowercase
       const matches = ["test"];
@@ -1513,7 +1535,8 @@ describe("Advanced Features (COULD Have) - P2-P3 Priority", () => {
 
     it("should use whole-word matching", () => {
       const testDoc = doc(p(txt("test testing tester")));
-      const state = createState(testDoc);
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       // Only "test" matched, not "testing" or "tester"
       const matches = ["test"];
@@ -1549,7 +1572,7 @@ describe("Advanced Features (COULD Have) - P2-P3 Priority", () => {
         [9, 12],
       ]);
 
-      const withPrimary = new MultiSelection(multiSel.ranges, 0);
+      const withPrimary = new MultiSelection([...multiSel.ranges], 0);
       expect(withPrimary.primaryIndex).toBe(0);
     });
   });
@@ -1558,12 +1581,12 @@ describe("Advanced Features (COULD Have) - P2-P3 Priority", () => {
     it("should document expected behavior for column selection", () => {
       // P3 feature - not implemented yet
       // Documents expected behavior for Alt+Shift+Drag
-
-      const testDoc = doc(p(txt("line1")), p(txt("line2")), p(txt("line3")));
+      // Note: Documents test setup but doesn't assert on state
+      const _testDoc = doc(p(txt("line1")), p(txt("line2")), p(txt("line3")));
 
       // Drag from column 2 to column 4, rows 1-3
       // Would create 3 cursors at same column
-      expect(testDoc.childCount).toBe(3);
+      expect(_testDoc.childCount).toBe(3);
     });
 
     it("should maintain column alignment during typing", () => {
@@ -1578,7 +1601,9 @@ describe("Advanced Features (COULD Have) - P2-P3 Priority", () => {
     it("should skip current match and find next", () => {
       // P3 feature - Sublime Text pattern
       const testDoc = doc(p(txt("foo bar foo baz foo")));
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       const skippedMatch = { from: 1, to: 4 };
       const nextMatch = { from: 9, to: 12 };
@@ -1593,12 +1618,13 @@ describe("Advanced Features (COULD Have) - P2-P3 Priority", () => {
       const testDoc = doc(p(txt("foo bar foo")));
       const state = createState(testDoc);
 
-      const multiSel = createMultiSelectionWithRanges(state, [
+      // Note: multiSel documents expected behavior for replace preview
+      const _multiSel = createMultiSelectionWithRanges(state, [
         [1, 4],
         [9, 12],
       ]);
 
-      expect(multiSel.ranges).toHaveLength(2);
+      expect(_multiSel.ranges).toHaveLength(2);
       // Type replacement → preview at all cursors
     });
 
@@ -1645,7 +1671,9 @@ describe("Edge Cases & Corner Cases", () => {
     // TC-MC-220
     it("TC-MC-220: should inherit primary cursor marks", () => {
       const testDoc = doc(p(bold("bold"), txt(" "), italic("italic")));
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       // Cursors in bold and italic text
       // Typing inherits primary cursor marks
@@ -1655,7 +1683,9 @@ describe("Edge Cases & Corner Cases", () => {
 
     it("should handle cursors across different node types", () => {
       const testDoc = doc(p(txt("paragraph")), h(1, txt("heading")), code(txt("code")));
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       expect(testDoc.childCount).toBe(3);
     });
@@ -1732,7 +1762,9 @@ describe("Edge Cases & Corner Cases", () => {
           tr(td(p(txt("A3"))), td(p(txt("B3"))), td(p(txt("C3"))))
         )
       );
-      const state = createState(testDoc);
+      // Note: Documents expected behavior but doesn't assert on state
+      // @ts-expect-error Unused variable kept for test documentation
+      const _state = createState(testDoc);
 
       // Cursors in multiple cells
       // Useful for column editing
@@ -1762,9 +1794,10 @@ describe("Edge Cases & Corner Cases", () => {
     it("should only insert composed text at primary", () => {
       const testDoc = doc(p(txt("test")));
       const state = createState(testDoc);
-      const multiSel = createMultiSelection(state, [1, 3]);
+      // Note: multiSel documents expected IME behavior
+      const _multiSel = createMultiSelection(state, [1, 3]);
 
-      expect(multiSel.primaryIndex).toBe(1);
+      expect(_multiSel.primaryIndex).toBe(1);
       // IME text only at primary (pos 3)
     });
   });
@@ -1773,7 +1806,9 @@ describe("Edge Cases & Corner Cases", () => {
     it("should handle empty clipboard", () => {
       const testDoc = doc(p(txt("test")));
       const state = createState(testDoc);
-      const multiSel = createMultiSelection(state, [1, 3]);
+      // Note: multiSel documents expected clipboard behavior
+      // @ts-expect-error Unused variable kept for test documentation
+      const _multiSel = createMultiSelection(state, [1, 3]);
 
       const clipboard = "";
       expect(clipboard).toBe("");
@@ -1937,7 +1972,9 @@ describe("Integration & Compatibility", () => {
     it("should insert bracket pairs at all cursors", () => {
       const testDoc = doc(p(txt("a b c")));
       const state = createState(testDoc);
-      const multiSel = createMultiSelection(state, [1, 3, 5]);
+      // Note: multiSel documents expected auto-pair behavior
+      // @ts-expect-error Unused variable kept for test documentation
+      const _multiSel = createMultiSelection(state, [1, 3, 5]);
 
       // Type "(" → "()" at all cursors
       // Result: "a() b() c()"
@@ -1947,7 +1984,9 @@ describe("Integration & Compatibility", () => {
       // VS Code pattern: (|)
       const testDoc = doc(p(txt("test")));
       const state = createState(testDoc);
-      const multiSel = createMultiSelection(state, [1, 3]);
+      // Note: multiSel documents expected cursor placement
+      // @ts-expect-error Unused variable kept for test documentation
+      const _multiSel = createMultiSelection(state, [1, 3]);
 
       // After "(": cursor between brackets
     });

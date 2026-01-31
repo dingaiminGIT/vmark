@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, afterEach } from "vitest";
-import { EditorState, EditorSelection, SelectionRange } from "@codemirror/state";
+import { EditorState, EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { tabEscapeKeymap } from "./tabEscape";
 
@@ -45,7 +45,6 @@ describe("CodeMirror Multi-Cursor Tab Escape", () => {
       // EditorSelection.create() merges cursors at same position
       // and may drop some ranges - actual behavior varies
       // Just document what we observe
-      const initialRanges = view.state.selection.ranges.length;
 
       const handled = tabEscapeKeymap.run!(view);
 
@@ -61,7 +60,7 @@ describe("CodeMirror Multi-Cursor Tab Escape", () => {
         { anchor: 20 }, // In "plain text"
       ]);
 
-      const handled = tabEscapeKeymap.run!(view);
+      tabEscapeKeymap.run!(view);
 
       // Current implementation only checks primary selection (first range)
       // from !== to for first range → single cursor
@@ -75,7 +74,7 @@ describe("CodeMirror Multi-Cursor Tab Escape", () => {
         { anchor: 21 }, // In "second"
       ]);
 
-      const handled = tabEscapeKeymap.run!(view);
+      tabEscapeKeymap.run!(view);
 
       // Expected: Both should navigate within their respective links
       // Actual: Undefined behavior
@@ -88,7 +87,7 @@ describe("CodeMirror Multi-Cursor Tab Escape", () => {
         { anchor: 7 }, // "link"
       ]);
 
-      const handled = tabEscapeKeymap.run!(view);
+      tabEscapeKeymap.run!(view);
 
       // Both in same link - should both jump to URL?
       // Or merge into single cursor?
@@ -121,7 +120,7 @@ describe("CodeMirror Multi-Cursor Tab Escape", () => {
         { anchor: 14 }, // Before second )
       ]);
 
-      const handled = tabEscapeKeymap.run!(view);
+      tabEscapeKeymap.run!(view);
 
       // Expected: Both cursors jump over their respective )
       // Actual: Only first cursor handled? Or undefined?
@@ -133,7 +132,7 @@ describe("CodeMirror Multi-Cursor Tab Escape", () => {
         { anchor: 8 }, // In "plain"
       ]);
 
-      const handled = tabEscapeKeymap.run!(view);
+      tabEscapeKeymap.run!(view);
 
       // Expected: First cursor jumps, second stays
       // Actual: Undefined
@@ -145,7 +144,7 @@ describe("CodeMirror Multi-Cursor Tab Escape", () => {
         { anchor: 14 }, // Before ]
       ]);
 
-      const handled = tabEscapeKeymap.run!(view);
+      tabEscapeKeymap.run!(view);
 
       // Both should jump over their respective closing chars
     });

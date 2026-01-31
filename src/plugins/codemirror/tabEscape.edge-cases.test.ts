@@ -210,7 +210,7 @@ describe("Source Mode Tab Escape - Link Navigation Edge Cases", () => {
 
     it("handles link followed by image", () => {
       const view = createView("[link](url1)![^image](img.png)");
-      const handled = tabNavigateLink(view);
+      tabNavigateLink(view);
       // Cursor is in image syntax, which is different from link
       // Current implementation might not handle images
     });
@@ -485,7 +485,7 @@ describe("Source Mode Tab Escape - Closing Characters Edge Cases", () => {
 describe("Source Mode Tab Escape - Complex Scenarios", () => {
   it("handles link inside inline code (should not navigate)", () => {
     // `[text](url)` - this is code, not a link
-    const view = createView("`[text^](url)`");
+    createView("`[text^](url)`");
     // getLinkBoundaries works on raw text, so might incorrectly detect
     // This is a known limitation
   });
