@@ -451,12 +451,12 @@ describe("Core Features (MUST Have) - P0 Priority", () => {
       const multiSel = createMultiSelection(state, [1, 2, 3]);
 
       let tr = state.tr.setSelection(multiSel);
-      const sortedRanges = [...multiSel.ranges].sort((a, b) => b.from - a.from);
+      const sortedRanges = [...multiSel.ranges].sort((a, b) => b.$from.pos - a.$from.pos);
 
       const insertionOrder: number[] = [];
       for (const range of sortedRanges) {
-        insertionOrder.push(range.from);
-        tr = tr.insertText("X", range.from);
+        insertionOrder.push(range.$from.pos);
+        tr = tr.insertText("X", range.$from.pos);
       }
 
       expect(insertionOrder).toEqual([3, 2, 1]); // Descending order
@@ -530,13 +530,13 @@ describe("Core Features (MUST Have) - P0 Priority", () => {
         const multiSel = createMultiSelection(state, [2, 3, 4]);
 
         let tr = state.tr;
-        const sortedRanges = [...multiSel.ranges].sort((a, b) => b.from - a.from);
+        const sortedRanges = [...multiSel.ranges].sort((a, b) => b.$from.pos - a.$from.pos);
         const deletionOrder: number[] = [];
 
         for (const range of sortedRanges) {
-          deletionOrder.push(range.from);
-          if (range.from > 1) {
-            tr = tr.delete(range.from - 1, range.from);
+          deletionOrder.push(range.$from.pos);
+          if (range.$from.pos > 1) {
+            tr = tr.delete(range.$from.pos - 1, range.$from.pos);
           }
         }
 
@@ -692,8 +692,8 @@ describe("Core Features (MUST Have) - P0 Priority", () => {
           state.doc.resolve(4)
         );
 
-        expect(range.from).toBe(1);
-        expect(range.to).toBe(4);
+        expect(range.$from.pos).toBe(1);
+        expect(range.$to.pos).toBe(4);
 
         // Can reverse by moving head past anchor
         range = new SelectionRange(range.$from, state.doc.resolve(1));
