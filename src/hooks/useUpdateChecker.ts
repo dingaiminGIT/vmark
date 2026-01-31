@@ -13,12 +13,12 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { ask } from "@tauri-apps/plugin-dialog";
-import { relaunch } from "@tauri-apps/plugin-process";
 import { toast } from "sonner";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useUpdateStore, type UpdateStatus } from "@/stores/updateStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useUpdateOperationHandler, clearPendingUpdate } from "./useUpdateOperations";
+import { restartWithHotExit } from "@/utils/hotExit/restartWithHotExit";
 
 // Time constants in milliseconds
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -278,30 +278,31 @@ export function useUpdateChecker() {
     };
   }, [EVENTS.REQUEST_CHECK]);
 
-  // Listen for restart request (from Settings page) - check dirty files first
+  // Listen for restart request (from Settings page) - capture session and restart
   useEffect(() => {
     const unlistenPromise = listen(EVENTS.REQUEST_RESTART, async () => {
       const dirtyTabs = useDocumentStore.getState().getAllDirtyDocuments();
 
       if (dirtyTabs.length === 0) {
-        // No unsaved documents - restart immediately
-        await relaunch();
+        // No unsaved documents - capture session and restart
+        await restartWithHotExit();
         return;
       }
 
       // Ask user for confirmation
       const confirmed = await ask(
-        `You have ${dirtyTabs.length} unsaved document(s). Restart without saving?`,
+        `You have ${dirtyTabs.length} unsaved document(s). Restart and restore on relaunch?`,
         {
           title: "Unsaved Changes",
-          kind: "warning",
+          kind: "info",
           okLabel: "Restart",
           cancelLabel: "Cancel",
         }
       );
 
       if (confirmed) {
-        await relaunch();
+        // Capture session (including unsaved documents) and restart
+        await restartWithHotExit();
       } else {
         // User cancelled - emit event so UI can reset
         await emit("update:restart-cancelled");

@@ -88,6 +88,7 @@ import { useUpdateBroadcast } from "@/hooks/useUpdateSync";
 import { useFinderFileOpen } from "@/hooks/useFinderFileOpen";
 import { useHotExitCapture } from "@/utils/hotExit/useHotExitCapture";
 import { useHotExitRestore } from "@/utils/hotExit/useHotExitRestore";
+import { useHotExitStartup } from "@/utils/hotExit/useHotExitStartup";
 
 /** Height of the title bar area in pixels */
 const TITLEBAR_HEIGHT = 40;
@@ -149,6 +150,7 @@ function MainWindowHooks() {
   useUpdateChecker(); // Check for updates on startup
   useUpdateBroadcast(); // Broadcast update state to other windows
   useFinderFileOpen(); // Handle files opened from Finder
+  useHotExitStartup(); // Check for saved session and restore if present
   return null;
 }
 
