@@ -70,8 +70,8 @@ export function parseTableRow(line: string): string[] {
     content = content.slice(1);
   }
 
-  // Trim trailing pipe
-  if (content.endsWith("|")) {
+  // Trim trailing pipe (but not if escaped)
+  if (content.endsWith("|") && !content.endsWith("\\|")) {
     content = content.slice(0, -1);
   }
 

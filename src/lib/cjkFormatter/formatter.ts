@@ -11,6 +11,7 @@ import {
   type TextSegment,
 } from "./markdownParser";
 import { applyRules } from "./rules";
+import { splitTableCells } from "@/utils/tableParser";
 
 interface TableBlock {
   start: number;
@@ -57,7 +58,7 @@ function isTableDelimiterRow(content: string): boolean {
 }
 
 function hasPipeOutsideCode(content: string): boolean {
-  return splitTableRowCells(content).cells.length > 1;
+  return splitTableCells(content).length > 1;
 }
 
 function detectTableBlocks(text: string, protectedRegions: Array<{ start: number; end: number }>): TableBlock[] {
@@ -129,53 +130,6 @@ function detectTableBlocks(text: string, protectedRegions: Array<{ start: number
   return blocks;
 }
 
-function splitTableRowCells(content: string): { cells: string[] } {
-  const cells: string[] = [];
-  let cellStart = 0;
-  let escaped = false;
-  let inCode = false;
-  let codeFenceLen = 0;
-
-  for (let i = 0; i < content.length; i += 1) {
-    const ch = content[i];
-
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-
-    if (ch === "\\") {
-      escaped = true;
-      continue;
-    }
-
-    if (ch === "`") {
-      // Count backticks in a run.
-      let runLen = 1;
-      while (i + runLen < content.length && content[i + runLen] === "`") runLen += 1;
-
-      if (!inCode) {
-        inCode = true;
-        codeFenceLen = runLen;
-      } else if (runLen === codeFenceLen) {
-        inCode = false;
-        codeFenceLen = 0;
-      }
-
-      i += runLen - 1;
-      continue;
-    }
-
-    if (ch === "|" && !inCode) {
-      cells.push(content.slice(cellStart, i));
-      cellStart = i + 1;
-    }
-  }
-
-  cells.push(content.slice(cellStart));
-  return { cells };
-}
-
 function formatMarkdownWithoutTables(
   text: string,
   config: CJKFormattingSettings,
@@ -213,7 +167,7 @@ function formatTableBlock(
       if (idx === delimiterIndex) return line.text + line.lineBreak;
 
       const { prefix, content } = splitBlockquotePrefix(line.text);
-      const { cells } = splitTableRowCells(content);
+      const cells = splitTableCells(content);
       if (cells.length <= 1) return line.text + line.lineBreak;
 
       const nextCells = cells.map((cell) => {

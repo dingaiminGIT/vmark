@@ -340,6 +340,12 @@ export function formatTable(view: EditorView, info: SourceTableInfo): boolean {
   const startLine = doc.line(info.startLine + 1);
   const endLine = doc.line(info.endLine + 1);
   const newContent = formattedLines.join("\n");
+  const currentContent = doc.sliceString(startLine.from, endLine.to);
+
+  // Only dispatch if content actually changed
+  if (newContent === currentContent) {
+    return false;
+  }
 
   view.dispatch({
     changes: { from: startLine.from, to: endLine.to, insert: newContent },

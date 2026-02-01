@@ -72,6 +72,14 @@ describe("tableParser", () => {
       // ``a`b`` should be seen as code span with content a`b
       expect(parseTableRow("| ``a`b|c`` | D |")).toEqual(["``a`b|c``", "D"]);
     });
+
+    it("preserves escaped trailing pipe", () => {
+      expect(parseTableRow("| A | B \\|")).toEqual(["A", "B \\|"]);
+    });
+
+    it("handles row with only escaped pipes", () => {
+      expect(parseTableRow("| A \\| B \\|")).toEqual(["A \\| B \\|"]);
+    });
   });
 
   describe("splitTableCells", () => {
