@@ -9,15 +9,11 @@ pub mod coordinator;
 pub mod commands;
 
 // Re-export commonly used types
-pub use session::{SessionData, WindowState, TabState, DocumentState};
-pub use storage::{write_session_atomic, read_session, delete_session};
-pub use coordinator::{capture_session, restore_session};
 
-// Event names
+// Event names (used by coordinator)
 pub const EVENT_CAPTURE_REQUEST: &str = "hot-exit:capture-request";
 pub const EVENT_CAPTURE_RESPONSE: &str = "hot-exit:capture-response";
 pub const EVENT_CAPTURE_TIMEOUT: &str = "hot-exit:capture-timeout";
 pub const EVENT_RESTORE_START: &str = "hot-exit:restore-start";
-pub const EVENT_RESTORE_COMPLETE: &str = "hot-exit:restore-complete";
-pub const EVENT_RESTORE_FAILED: &str = "hot-exit:restore-failed";
-pub const EVENT_TRIGGER_RESTART: &str = "hot-exit:trigger-restart";
+// Note: EVENT_RESTORE_COMPLETE, EVENT_RESTORE_FAILED, EVENT_TRIGGER_RESTART
+// are defined in TypeScript (src/utils/hotExit/types.ts) and emitted from frontend

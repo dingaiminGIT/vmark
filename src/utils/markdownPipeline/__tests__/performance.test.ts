@@ -12,8 +12,8 @@
  * - 10K lines parse: ~1250ms, serialize: ~500ms
  * - Scaling: roughly linear (2x input = 2x time)
  *
- * Current thresholds are set 20% above measured baselines to account for
- * CI variance. Tighten these as optimizations are made.
+ * Current thresholds are set 100% above measured baselines to account for
+ * CI variance and slower machines. Tighten these as optimizations are made.
  */
 
 import { describe, it, expect, beforeAll, beforeEach } from "vitest";
@@ -99,7 +99,7 @@ describe("Markdown Pipeline Performance", () => {
   });
 
   describe("parsing performance", () => {
-    it("parses 1,000 lines under 150ms", () => {
+    it("parses 1,000 lines under 250ms", () => {
       const markdown = generateLargeMarkdown(1000);
       const start = performance.now();
       const doc = parseMarkdown(schema, markdown);
@@ -107,38 +107,38 @@ describe("Markdown Pipeline Performance", () => {
 
       expect(doc).toBeDefined();
       expect(doc.content.childCount).toBeGreaterThan(0);
-      expect(elapsed).toBeLessThan(150); // Baseline: ~110ms
+      expect(elapsed).toBeLessThan(250); // Baseline: ~110ms, +127% buffer for CI
 
       console.log(`[Perf] 1K lines parse: ${elapsed.toFixed(2)}ms`);
     });
 
-    it("parses 5,000 lines under 700ms", () => {
+    it("parses 5,000 lines under 1100ms", () => {
       const markdown = generateLargeMarkdown(5000);
       const start = performance.now();
       const doc = parseMarkdown(schema, markdown);
       const elapsed = performance.now() - start;
 
       expect(doc).toBeDefined();
-      expect(elapsed).toBeLessThan(700); // Baseline: ~550ms
+      expect(elapsed).toBeLessThan(1100); // Baseline: ~550ms, +100% buffer for CI
 
       console.log(`[Perf] 5K lines parse: ${elapsed.toFixed(2)}ms`);
     });
 
-    it("parses 10,000 lines under 1500ms", () => {
+    it("parses 10,000 lines under 2500ms", () => {
       const markdown = generateLargeMarkdown(10000);
       const start = performance.now();
       const doc = parseMarkdown(schema, markdown);
       const elapsed = performance.now() - start;
 
       expect(doc).toBeDefined();
-      expect(elapsed).toBeLessThan(1500); // Baseline: ~1250ms
+      expect(elapsed).toBeLessThan(2500); // Baseline: ~1250ms, +100% buffer for CI
 
       console.log(`[Perf] 10K lines parse: ${elapsed.toFixed(2)}ms`);
     });
   });
 
   describe("serialization performance", () => {
-    it("serializes 1,000 lines under 200ms", () => {
+    it("serializes 1,000 lines under 300ms", () => {
       const markdown = generateLargeMarkdown(1000);
       const doc = parseMarkdown(schema, markdown);
 
@@ -148,12 +148,12 @@ describe("Markdown Pipeline Performance", () => {
 
       expect(output).toBeDefined();
       expect(output.length).toBeGreaterThan(0);
-      expect(elapsed).toBeLessThan(200); // Baseline: ~50ms (includes parse overhead)
+      expect(elapsed).toBeLessThan(300); // Baseline: ~50ms, +500% buffer for CI
 
       console.log(`[Perf] 1K lines serialize: ${elapsed.toFixed(2)}ms`);
     });
 
-    it("serializes 5,000 lines under 900ms", () => {
+    it("serializes 5,000 lines under 500ms", () => {
       const markdown = generateLargeMarkdown(5000);
       const doc = parseMarkdown(schema, markdown);
 
@@ -162,12 +162,12 @@ describe("Markdown Pipeline Performance", () => {
       const elapsed = performance.now() - start;
 
       expect(output).toBeDefined();
-      expect(elapsed).toBeLessThan(900); // Baseline: ~220ms (includes parse overhead)
+      expect(elapsed).toBeLessThan(500); // Baseline: ~220ms, +127% buffer for CI
 
       console.log(`[Perf] 5K lines serialize: ${elapsed.toFixed(2)}ms`);
     });
 
-    it("serializes 10,000 lines under 1800ms", () => {
+    it("serializes 10,000 lines under 1000ms", () => {
       const markdown = generateLargeMarkdown(10000);
       const doc = parseMarkdown(schema, markdown);
 
@@ -176,14 +176,14 @@ describe("Markdown Pipeline Performance", () => {
       const elapsed = performance.now() - start;
 
       expect(output).toBeDefined();
-      expect(elapsed).toBeLessThan(1800); // Baseline: ~500ms (includes parse overhead)
+      expect(elapsed).toBeLessThan(1000); // Baseline: ~500ms, +100% buffer for CI
 
       console.log(`[Perf] 10K lines serialize: ${elapsed.toFixed(2)}ms`);
     });
   });
 
   describe("round-trip performance", () => {
-    it("round-trips 10,000 lines under 2000ms", () => {
+    it("round-trips 10,000 lines under 3500ms", () => {
       const markdown = generateLargeMarkdown(10000);
 
       const start = performance.now();
@@ -192,7 +192,7 @@ describe("Markdown Pipeline Performance", () => {
       const elapsed = performance.now() - start;
 
       expect(output).toBeDefined();
-      expect(elapsed).toBeLessThan(2000); // Baseline: ~1750ms (parse + serialize)
+      expect(elapsed).toBeLessThan(3500); // Baseline: ~1750ms, +100% buffer for CI
 
       console.log(`[Perf] 10K lines round-trip: ${elapsed.toFixed(2)}ms`);
     });

@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 use tokio::time::{timeout, Duration};
 use tauri::{AppHandle, Emitter, Listener, Manager};
 use serde::{Deserialize, Serialize};
-use super::session::{SessionData, WindowState, SCHEMA_VERSION};
+use super::session::{SessionData, WindowState, SCHEMA_VERSION, MAX_SESSION_AGE_DAYS};
 use super::{EVENT_CAPTURE_REQUEST, EVENT_CAPTURE_RESPONSE, EVENT_CAPTURE_TIMEOUT, EVENT_RESTORE_START};
 
 const CAPTURE_TIMEOUT_SECS: u64 = 5;
@@ -167,8 +167,8 @@ pub async fn restore_session(
     }
 
     // Check if session is stale (>7 days old)
-    if session.is_stale(7) {
-        return Err("Session is too old (>7 days)".to_string());
+    if session.is_stale(MAX_SESSION_AGE_DAYS) {
+        return Err(format!("Session is too old (>{} days)", MAX_SESSION_AGE_DAYS));
     }
 
     // Emit restore event to main window

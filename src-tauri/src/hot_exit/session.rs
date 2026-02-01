@@ -96,7 +96,8 @@ pub struct WorkspaceState {
 }
 
 impl SessionData {
-    /// Create empty session with current version
+    /// Create empty session with current version (test helper)
+    #[cfg(test)]
     pub fn new(vmark_version: String) -> Self {
         Self {
             version: SCHEMA_VERSION,

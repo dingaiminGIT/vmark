@@ -2,7 +2,7 @@
 ///
 /// Uses tmp + rename pattern to ensure atomic writes and data durability.
 
-use std::fs::{File, rename};
+use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use tauri::Manager;
