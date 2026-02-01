@@ -734,6 +734,7 @@
   font-size: var(--editor-font-size-mono) !important;
   line-height: var(--editor-line-height, 1.6) !important;
   overflow-x: auto !important;
+  overflow-y: auto !important; /* Explicit vertical scroll for prod/dev parity */
 }
 
 /* Scrollbar styling for source editor */

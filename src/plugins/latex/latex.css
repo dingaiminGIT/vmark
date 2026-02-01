@@ -111,17 +111,6 @@
   font-size: var(--editor-font-size-mono);
 }
 
-/* Block math preview in code blocks (legacy) */
-.code-block-preview.latex-preview {
-  padding: 1rem;
-  text-align: center;
-  overflow-x: auto;
-}
-
-.code-block-preview.latex-preview .katex-display {
-  margin: 0;
-}
-
 /* Block math node - block style */
 .math-block {
   margin: 0 0 var(--editor-block-spacing, 1em) 0;
