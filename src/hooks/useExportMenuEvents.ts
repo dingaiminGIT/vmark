@@ -12,7 +12,8 @@ import { useEffect, useRef } from "react";
 import { type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { toast } from "sonner";
-import { exportToHtml, exportToPdf, copyAsHtml } from "@/export";
+// Export module is dynamically imported to avoid loading exportStyles.css at startup.
+// This prevents CSS cascade conflicts between dev and prod builds.
 import { getFileNameWithoutExtension, getDirectory } from "@/utils/pathUtils";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { withReentryGuard } from "@/utils/reentryGuard";
@@ -48,6 +49,7 @@ export function useExportMenuEvents(): void {
             : "document";
           const defaultDir = doc.filePath ? getDirectory(doc.filePath) : undefined;
           try {
+            const { exportToHtml } = await import("@/export");
             const success = await exportToHtml({
               markdown: doc.content,
               defaultName,
@@ -76,6 +78,7 @@ export function useExportMenuEvents(): void {
           const doc = getActiveDocument(windowLabel);
           if (!doc) return;
           try {
+            const { exportToPdf } = await import("@/export");
             await exportToPdf(doc.content);
           } catch (error) {
             console.error("[Menu] Failed to export PDF:", error);
@@ -93,6 +96,7 @@ export function useExportMenuEvents(): void {
           const doc = getActiveDocument(windowLabel);
           if (!doc) return;
           try {
+            const { copyAsHtml } = await import("@/export");
             await copyAsHtml(doc.content);
           } catch (error) {
             console.error("[Menu] Failed to copy HTML:", error);

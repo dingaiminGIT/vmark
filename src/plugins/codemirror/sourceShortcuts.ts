@@ -24,7 +24,7 @@ import { useSourceCursorContextStore } from "@/stores/sourceCursorContextStore";
 import { getSourceMultiSelectionContext } from "@/plugins/toolbarActions/multiSelectionContext";
 import { performSourceToolbarAction, setSourceHeadingLevel } from "@/plugins/toolbarActions/sourceAdapter";
 import { guardCodeMirrorKeyBinding } from "@/utils/imeGuard";
-import { copyAsHtml } from "@/export";
+// copyAsHtml is dynamically imported to avoid loading exportStyles.css at startup
 import { formatMarkdown, formatSelection } from "@/lib/cjkFormatter";
 import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
@@ -217,7 +217,8 @@ function copySelectionAsHtml(view: EditorView): boolean {
     ? view.state.doc.toString()
     : view.state.doc.sliceString(from, to);
 
-  void copyAsHtml(markdown);
+  // Dynamic import to avoid loading exportStyles.css at startup
+  void import("@/export").then(({ copyAsHtml }) => copyAsHtml(markdown));
   return true;
 }
 
