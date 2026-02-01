@@ -121,6 +121,7 @@ KaTeX-powered LaTeX rendering:
 - Inline math: `$E = mc^2$`
 - Display math: `$$...$$` blocks
 - Full LaTeX syntax support
+- Helpful error messages with syntax hints
 
 ### Diagrams
 

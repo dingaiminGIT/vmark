@@ -100,12 +100,17 @@ Edit LaTeX math expressions with live preview.
 **Fields:**
 - **LaTeX Input** — Edit the math expression
 - **Preview** — Real-time rendered preview
-- **Error Display** — Shows LaTeX errors
+- **Error Display** — Shows LaTeX errors with helpful syntax hints
 
 **Shortcuts:**
 - `Mod + Enter` — Save and close
 - `Escape` — Cancel and close
+- `Shift + Backspace` — Delete inline math (works even when non-empty)
 - `Alt + Mod + M` — Insert new inline math
+
+::: tip Error Hints
+When you have a LaTeX syntax error, the popup shows helpful suggestions like missing braces, unknown commands, or unbalanced delimiters.
+:::
 
 ::: info Source Mode
 In Source mode, edit math directly in the text. The preview appears in the Mermaid/Math preview panel.
