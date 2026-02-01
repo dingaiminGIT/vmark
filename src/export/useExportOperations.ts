@@ -223,6 +223,10 @@ export async function exportToPdf(markdown: string): Promise<void> {
     return;
   }
 
+  // Lazy-load print styles before invoking print dialog.
+  // This keeps @media print CSS out of the main bundle.
+  await import("@/styles/printStyles.css");
+
   // Use Tauri's native print API (wry WebView.print())
   // This triggers the native macOS print dialog properly,
   // unlike window.print() which silently fails in WKWebView
