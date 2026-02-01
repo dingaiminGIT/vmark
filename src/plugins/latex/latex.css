@@ -2,27 +2,8 @@
  * LaTeX Plugin Styles
  *
  * Includes custom styles for math nodes.
- * Note: katex.css must be imported separately.
+ * Note: katex.css and katexFixes.css are imported in main.tsx.
  */
-
-/* Fix KaTeX rendering after Tailwind preflight reset.
-   Tailwind's `* { border: 0 solid }` sets border-width to 0.
-   KaTeX expects browser defaults for elements that only set border-style.
-   These overrides restore the necessary border-widths. */
-.katex .frac-line {
-  border-bottom-width: 1px;
-}
-.katex .overline .overline-line,
-.katex .underline .underline-line {
-  border-bottom-width: 1px;
-}
-.katex .sqrt > .root {
-  border-bottom-width: 0;
-}
-.katex .hdashline,
-.katex .hline {
-  border-bottom-width: 1px;
-}
 
 /* Inline math node */
 .math-inline {

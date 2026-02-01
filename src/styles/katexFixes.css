@@ -1,0 +1,26 @@
+/**
+ * KaTeX Fixes for Tailwind v4
+ *
+ * Must be imported immediately after katex.min.css.
+ *
+ * Tailwind v4's preflight sets `* { border: 0 solid }` which breaks
+ * KaTeX fraction lines and other elements that expect browser defaults.
+ */
+
+.katex .frac-line {
+  border-bottom-width: 1px;
+}
+
+.katex .overline .overline-line,
+.katex .underline .underline-line {
+  border-bottom-width: 1px;
+}
+
+.katex .sqrt > .root {
+  border-bottom-width: 0;
+}
+
+.katex .hdashline,
+.katex .hline {
+  border-bottom-width: 1px;
+}
