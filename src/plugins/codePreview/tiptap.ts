@@ -184,7 +184,10 @@ function updateLivePreview(
         if (currentToken !== livePreviewToken) return;
         const { message, hint } = parseLatexError(e, trimmed);
         const errorText = hint ? `${message}: ${hint}` : message;
-        element.innerHTML = `<div class="code-block-live-preview-error">${errorText}</div>`;
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "code-block-live-preview-error";
+        errorDiv.textContent = errorText;
+        element.replaceChildren(errorDiv);
       }
     } else if (language === "mermaid") {
       const svg = await renderMermaid(trimmed);

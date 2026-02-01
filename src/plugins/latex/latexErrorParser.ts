@@ -25,12 +25,15 @@ const COMMAND_HINTS: Record<string, string> = {
 };
 
 /**
- * Count occurrences of a character in a string.
+ * Count occurrences of a character in a string, skipping escaped ones.
+ * In LaTeX, \{ and \} are literal braces and shouldn't affect brace matching.
  */
 function countChar(str: string, char: string): number {
   let count = 0;
-  for (const c of str) {
-    if (c === char) count++;
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === char && (i === 0 || str[i - 1] !== "\\")) {
+      count++;
+    }
   }
   return count;
 }

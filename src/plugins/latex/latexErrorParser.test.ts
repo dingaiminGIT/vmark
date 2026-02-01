@@ -43,6 +43,16 @@ describe("latexErrorParser", () => {
         const result = parseLatexError(error, "x}}");
         expect(result.hint).toContain("Extra closing");
       });
+
+      it("ignores escaped braces when counting", () => {
+        // \{ and \} are literal braces in LaTeX, not structural
+        const error = new Error("Expected '}'");
+        // Content has balanced braces: one unescaped { and one unescaped }
+        // The \{ and \} are escaped literals and should be ignored
+        const result = parseLatexError(error, "\\{x\\}");
+        // With escaped braces ignored, count is 0 open, 0 close = balanced
+        expect(result.hint).toContain("unmatched");
+      });
     });
 
     // Unknown commands
