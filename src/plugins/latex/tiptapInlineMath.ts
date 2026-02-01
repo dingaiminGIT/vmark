@@ -145,7 +145,7 @@ class MathInlineNodeView implements NodeView {
       visibility: hidden;
       white-space: pre;
       font-family: var(--font-mono, monospace);
-      font-size: inherit;
+      font-size: var(--editor-font-size-mono);
     `;
     this.dom.appendChild(this.measureSpan);
 

@@ -51,7 +51,7 @@
   background: transparent;
   color: var(--text-color);
   font-family: var(--font-mono);
-  font-size: inherit;
+  font-size: var(--editor-font-size-mono);
   line-height: inherit;
   outline: none;
   box-shadow: none;
