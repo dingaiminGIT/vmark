@@ -8,7 +8,8 @@
  * Reuses the MathPreviewView singleton from the latex plugin.
  */
 
-import { EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
+import { EditorView, ViewPlugin, ViewUpdate, keymap } from "@codemirror/view";
+import { Prec } from "@codemirror/state";
 import { getMathPreviewView } from "@/plugins/mathPreview/MathPreviewView";
 import { findInlineMathAtCursor, findBlockMathAtCursor } from "@/plugins/toolbarActions/sourceAdapterLinks";
 
@@ -124,6 +125,26 @@ class SourceMathPreviewPlugin {
   }
 }
 
+/** Keymap to close math preview on ESC */
+const mathPreviewEscKeymap = Prec.high(
+  keymap.of([
+    {
+      key: "Escape",
+      run: () => {
+        const preview = getMathPreviewView();
+        if (preview.isVisible()) {
+          preview.hide();
+          return true;
+        }
+        return false;
+      },
+    },
+  ])
+);
+
 export function createSourceMathPreviewPlugin() {
-  return ViewPlugin.fromClass(SourceMathPreviewPlugin);
+  return [
+    ViewPlugin.fromClass(SourceMathPreviewPlugin),
+    mathPreviewEscKeymap,
+  ];
 }

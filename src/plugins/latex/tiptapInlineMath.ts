@@ -350,15 +350,14 @@ class MathInlineNodeView implements NodeView {
       requestAnimationFrame(() => {
         this.exitingLeft = false;
       });
-    } else if (cursorOffset > 0) {
-      newPos = pos + node.nodeSize; // After the node
+    } else {
+      // cursorOffset >= 0: place cursor after the node
+      newPos = pos + node.nodeSize;
       // Set flag to prevent immediate re-entry (cursor will be at node boundary)
       this.exitingRight = true;
       requestAnimationFrame(() => {
         this.exitingRight = false;
       });
-    } else {
-      newPos = pos + node.nodeSize; // Default: after
     }
 
     // Set selection first - this positions the cursor correctly
