@@ -41,8 +41,7 @@ fn get_state() -> std::sync::MutexGuard<'static, Option<WindowReadyState>> {
     })
 }
 
-/// Mark a window as ready, show it, and flush any pending events.
-/// This is called when the frontend emits the "ready" event after React has rendered.
+/// Mark a window as ready and flush any pending events
 pub fn mark_window_ready(app: &AppHandle, label: &str) {
     let pending: Vec<PendingMenuEvent>;
     {
@@ -52,14 +51,8 @@ pub fn mark_window_ready(app: &AppHandle, label: &str) {
         pending = s.pending_events.remove(label).unwrap_or_default();
     }
 
-    // Show the window and emit pending events outside the lock
+    // Emit pending events outside the lock
     if let Some(window) = app.get_webview_window(label) {
-        // Show window now that frontend is ready (prevents flash of blank content)
-        let _ = window.show();
-        let _ = window.set_focus();
-        #[cfg(debug_assertions)]
-        eprintln!("[menu_events] Window '{}' is ready, showing it", label);
-
         for event in &pending {
             #[cfg(debug_assertions)]
             eprintln!(
