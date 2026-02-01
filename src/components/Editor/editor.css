@@ -696,6 +696,7 @@
 /* Source editor (CodeMirror) - matches WYSIWYG styling */
 .source-editor {
   /* No explicit width - block elements expand naturally to max-width with auto margins */
+  height: 100%;
   min-height: 100%;
 }
 
