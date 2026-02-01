@@ -36,7 +36,7 @@ import "@/plugins/underline/underline.css";
 import "@/plugins/markdownArtifacts/markdown-artifacts.css";
 import "@/plugins/imagePasteToast/image-paste-toast.css";
 import "@/plugins/cjkLetterSpacing/cjk-letter-spacing.css";
-import "katex/dist/katex.min.css";
+// Note: katex.min.css is imported in main.tsx for consistent dev/prod cascade order
 
 export function Editor() {
   const sourceMode = useEditorStore((state) => state.sourceMode);

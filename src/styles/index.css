@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Note: KaTeX CSS is imported in main.tsx (after this file) for consistent
+   dev/prod cascade order. CSS @import from node_modules doesn't work in Vite. */
 
 /* Enable selector-based dark mode for Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *));

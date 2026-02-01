@@ -4,6 +4,9 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import "./styles/index.css";
+// KaTeX CSS must load AFTER Tailwind (so preflight runs first) but BEFORE
+// latex.css overrides. JS import here ensures consistent dev/prod order.
+import "katex/dist/katex.min.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
