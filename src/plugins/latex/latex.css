@@ -40,6 +40,22 @@
   font-style: italic;
 }
 
+/* Loading indicator while KaTeX loads */
+.math-inline-loading {
+  color: var(--text-secondary);
+  font-style: italic;
+  animation: math-loading-pulse 1s ease-in-out infinite;
+}
+
+@keyframes math-loading-pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* Inline math input field - minimal underline style */
 .math-inline-input {
   display: inline;

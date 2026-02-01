@@ -2,7 +2,7 @@ import { Node } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import { Selection } from "@tiptap/pm/state";
 import type { NodeView, EditorView } from "@tiptap/pm/view";
-import { loadKatex } from "./katexLoader";
+import { loadKatex, isKatexLoaded } from "./katexLoader";
 import { getMathPreviewView } from "@/plugins/mathPreview/MathPreviewView";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { inlineNodeEditingKey } from "@/plugins/inlineNodeEditing/tiptap";
@@ -47,6 +47,10 @@ class MathInlineNodeView implements NodeView {
     this.dom = document.createElement("span");
     this.dom.className = "math-inline";
     this.dom.dataset.type = "math_inline";
+
+    // Accessibility attributes
+    this.dom.setAttribute("role", "math");
+    this.updateAriaLabel(this.currentLatex);
 
     this.previewDom = document.createElement("span");
     this.previewDom.className = "math-inline-preview";
@@ -287,6 +291,10 @@ class MathInlineNodeView implements NodeView {
       // Allow cursor to move out right
       e.preventDefault();
       this.commitAndExit(1);
+    } else if (e.key === "Backspace" && e.shiftKey) {
+      // Shift+Backspace: Delete entire math node (even with content)
+      e.preventDefault();
+      this.deleteNode();
     } else if ((e.key === "Backspace" || e.key === "Delete") && this.inputDom?.value === "") {
       // Delete empty math node entirely
       e.preventDefault();
@@ -371,6 +379,12 @@ class MathInlineNodeView implements NodeView {
     });
     dispatch(tr);
     this.currentLatex = newLatex;
+    this.updateAriaLabel(newLatex);
+  }
+
+  private updateAriaLabel(latex: string) {
+    const label = latex.trim() ? `Math: ${latex}` : "Math: empty";
+    this.dom.setAttribute("aria-label", label);
   }
 
   private commitAndExit(cursorOffset = 0) {
@@ -433,8 +447,14 @@ class MathInlineNodeView implements NodeView {
     }
 
     const currentToken = ++this.renderToken;
-    this.previewDom.textContent = trimmed;
     this.dom.classList.remove("math-error");
+
+    // Show loading indicator if KaTeX hasn't loaded yet
+    if (!isKatexLoaded()) {
+      this.previewDom.innerHTML = '<span class="math-inline-loading">...</span>';
+    } else {
+      this.previewDom.textContent = trimmed;
+    }
 
     const renderWithKatex = () => {
       loadKatex()
@@ -480,6 +500,7 @@ class MathInlineNodeView implements NodeView {
     // Only update preview if not currently editing this node
     if (!this.isEditing) {
       this.currentLatex = newLatex;
+      this.updateAriaLabel(newLatex);
       this.renderPreview(newLatex);
     }
 

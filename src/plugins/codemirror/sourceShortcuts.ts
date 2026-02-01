@@ -405,6 +405,7 @@ export function buildSourceShortcutKeymap(): KeyBinding[] {
   // --- Block formatting: Other blocks ---
   bindIfKey(bindings, shortcuts.getShortcut("blockquote"), toggleBlockquote);
   bindIfKey(bindings, shortcuts.getShortcut("codeBlock"), runSourceAction("insertCodeBlock"));
+  bindIfKey(bindings, shortcuts.getShortcut("mathBlock"), runSourceAction("insertMath"));
   bindIfKey(bindings, shortcuts.getShortcut("insertTable"), runSourceAction("insertTable"));
   bindIfKey(bindings, shortcuts.getShortcut("horizontalLine"), runSourceAction("insertDivider"));
   bindIfKey(bindings, shortcuts.getShortcut("insertImage"), runSourceAction("insertImage"));

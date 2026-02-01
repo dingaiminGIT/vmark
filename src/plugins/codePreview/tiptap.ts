@@ -6,6 +6,7 @@ import { renderLatex } from "../latex";
 import { renderMermaid, updateMermaidTheme } from "../mermaid";
 import { sanitizeKatex, sanitizeSvg } from "@/utils/sanitize";
 import { useBlockMathEditingStore } from "@/stores/blockMathEditingStore";
+import { parseLatexError } from "@/plugins/latex/latexErrorParser";
 
 const codePreviewPluginKey = new PluginKey("codePreview");
 const PREVIEW_ONLY_LANGUAGES = new Set(["latex", "mermaid", "$$math$$"]);
@@ -179,9 +180,11 @@ function updateLivePreview(
         const rendered = await renderLatex(trimmed);
         if (currentToken !== livePreviewToken) return;
         element.innerHTML = sanitizeKatex(rendered);
-      } catch {
+      } catch (e) {
         if (currentToken !== livePreviewToken) return;
-        element.innerHTML = '<div class="code-block-live-preview-error">Invalid syntax</div>';
+        const { message, hint } = parseLatexError(e, trimmed);
+        const errorText = hint ? `${message}: ${hint}` : message;
+        element.innerHTML = `<div class="code-block-live-preview-error">${errorText}</div>`;
       }
     } else if (language === "mermaid") {
       const svg = await renderMermaid(trimmed);

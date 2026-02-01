@@ -7,6 +7,7 @@
  */
 
 import { loadKatex } from "@/plugins/latex/katexLoader";
+import { parseLatexError } from "@/plugins/latex/latexErrorParser";
 import {
   calculatePopupPosition,
   getBoundaryRects,
@@ -139,10 +140,11 @@ export class MathPreviewView {
             throwOnError: true,
             displayMode: false,
           });
-        } catch {
+        } catch (e) {
           this.preview.textContent = trimmed;
           this.preview.classList.add("math-preview-error-state");
-          this.error.textContent = "Invalid LaTeX";
+          const { message, hint } = parseLatexError(e, trimmed);
+          this.error.textContent = hint ? `${message}: ${hint}` : message;
         }
       })
       .catch(() => {

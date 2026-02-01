@@ -21,3 +21,10 @@ export async function loadKatex(): Promise<KatexModule> {
 export function getKatexModule(): KatexModule | null {
   return katexModule;
 }
+
+/**
+ * Check if KaTeX module has been loaded.
+ */
+export function isKatexLoaded(): boolean {
+  return katexModule !== null;
+}
