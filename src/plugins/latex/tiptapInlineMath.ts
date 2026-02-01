@@ -8,6 +8,7 @@ import { isImeKeyEvent } from "@/utils/imeGuard";
 import { inlineNodeEditingKey } from "@/plugins/inlineNodeEditing/tiptap";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { matchesShortcutEvent } from "@/utils/shortcutMatch";
+import { useInlineMathEditingStore } from "@/stores/inlineMathEditingStore";
 
 /**
  * NodeView for inline math with inline editing support.
@@ -70,6 +71,25 @@ class MathInlineNodeView implements NodeView {
     }
   };
 
+  /**
+   * Force exit: commits changes but doesn't reposition cursor.
+   * Called by the store when user clicks another inline math.
+   */
+  private forceExit = () => {
+    if (!this.isEditing) return;
+
+    // Commit changes if any
+    if (this.inputDom) {
+      const newLatex = this.inputDom.value;
+      if (newLatex !== this.currentLatex) {
+        this.commitChanges(newLatex);
+      }
+    }
+
+    // Exit edit mode without repositioning cursor
+    this.exitEditMode();
+  };
+
   private handleClick = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -93,6 +113,16 @@ class MathInlineNodeView implements NodeView {
     if (this.isEditing) return;
     // Prevent re-entry when we just exited (cursor still at node boundary)
     if (this.exitingLeft || this.exitingRight) return;
+
+    const pos = this.getPos?.();
+    if (pos === undefined) return;
+
+    // Register with the global store - this will force-exit any other editing math
+    useInlineMathEditingStore.getState().startEditing(pos, {
+      forceExit: this.forceExit,
+      getNodePos: () => this.getPos?.(),
+    });
+
     this.isEditing = true;
 
     // Get entry direction from the inlineNodeEditing plugin state
@@ -151,6 +181,12 @@ class MathInlineNodeView implements NodeView {
     if (!this.isEditing) return;
     this.isEditing = false;
 
+    // Unregister from the global store
+    const pos = this.getPos?.();
+    if (pos !== undefined) {
+      useInlineMathEditingStore.getState().stopEditing(pos);
+    }
+
     // Commit changes before exiting
     if (this.inputDom) {
       const newLatex = this.inputDom.value;
@@ -181,7 +217,19 @@ class MathInlineNodeView implements NodeView {
   }
 
   private showFloatingPreview() {
-    const rect = this.dom.getBoundingClientRect();
+    // Use getClientRects() for wrapped inline elements - it returns separate
+    // rects for each line. getBoundingClientRect() returns a box encompassing
+    // all lines which gives wrong positioning for wrapped content.
+    const rects = this.dom.getClientRects();
+    let rect: DOMRect;
+
+    if (rects.length > 1) {
+      // For wrapped content, use the first line's rect for preview positioning
+      rect = rects[0];
+    } else {
+      rect = this.dom.getBoundingClientRect();
+    }
+
     getMathPreviewView().show(
       this.currentLatex,
       {
@@ -289,12 +337,15 @@ class MathInlineNodeView implements NodeView {
   }
 
   private handleBlur = () => {
-    // Small delay to allow click events to process
-    setTimeout(() => {
+    // Use requestAnimationFrame to allow click events to process first.
+    // If user clicked another inline math, that math's enterEditMode will
+    // call store.startEditing() which force-exits us BEFORE this runs.
+    requestAnimationFrame(() => {
+      // Only commit if we're still in editing mode (not force-exited)
       if (this.isEditing && !this.inputDom?.matches(":focus")) {
         this.commitAndExit();
       }
-    }, 100);
+    });
   };
 
   private commitChanges(newLatex: string) {
@@ -444,6 +495,12 @@ class MathInlineNodeView implements NodeView {
   }
 
   destroy(): void {
+    // Clear from the global store
+    const pos = this.getPos?.();
+    if (pos !== undefined) {
+      useInlineMathEditingStore.getState().clear(pos);
+    }
+
     this.observer?.disconnect();
     this.dom.removeEventListener("click", this.handleClick);
     if (this.inputDom) {
