@@ -72,6 +72,11 @@ export class MathPreviewView {
       ? getBoundaryRects(this.editorDom as HTMLElement, containerEl)
       : getViewportBounds();
 
+    // Calculate 0.8em gap based on editor font size
+    const fontSize = this.editorDom
+      ? parseFloat(getComputedStyle(this.editorDom).fontSize)
+      : 16;
+
     const popupRect = this.container.getBoundingClientRect();
     const { top, left } = calculatePopupPosition({
       anchor: anchorRect,
@@ -80,7 +85,7 @@ export class MathPreviewView {
         height: popupRect.height || 40,
       },
       bounds,
-      gap: 4,
+      gap: fontSize * 0.8, // 0.8em
       preferAbove: true,
     });
 
