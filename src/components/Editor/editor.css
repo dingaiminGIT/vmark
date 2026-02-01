@@ -1078,17 +1078,7 @@
   color: #8b949e;
 }
 
-/* Print styles */
-@media print {
-  .tiptap-editor {
-    font-size: 13px;
-  }
-
-  .tiptap-editor pre {
-    page-break-inside: avoid;
-    word-wrap: break-word;
-  }
-}
+/* Print styles are in src/styles/index.css for consistent cascade order */
 
 /* Drop Zone Indicator */
 .drop-zone-indicator {

@@ -56,69 +56,9 @@
 
 /* ===========================================
    Print Media Styles
+   Note: Main print styles are in src/styles/index.css
+   to ensure consistent cascade order in dev and prod.
    =========================================== */
-
-@media print {
-  /* Page setup */
-  @page {
-    margin: 1.5cm;
-    size: auto;
-  }
-
-  /* Hide non-content elements */
-  .ProseMirror-gapcursor,
-  .ProseMirror-selectednode::after,
-  .resize-handle,
-  .table-ui-wrapper,
-  .code-block-edit-header {
-    display: none !important;
-  }
-
-  /* Prevent page breaks inside blocks */
-  pre,
-  table,
-  .alert-block,
-  .details-block,
-  blockquote,
-  figure {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  /* Keep headings with following content */
-  h1, h2, h3, h4, h5, h6 {
-    break-after: avoid;
-    page-break-after: avoid;
-  }
-
-  /* Prevent orphan headings at bottom of page */
-  h1, h2, h3, h4, h5, h6 {
-    orphans: 3;
-    widows: 3;
-  }
-
-  /* Handle wide tables */
-  table {
-    width: 100%;
-    table-layout: auto;
-  }
-
-  /* Handle code blocks */
-  pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    overflow: visible;
-  }
-
-  /* Ensure links show URL in print (optional) */
-  /* Disabled by default - uncomment if needed
-  a[href]::after {
-    content: " (" attr(href) ")";
-    font-size: 0.8em;
-    color: var(--text-secondary);
-  }
-  */
-}
 
 /* ===========================================
    Fit-to-Page Strategies
