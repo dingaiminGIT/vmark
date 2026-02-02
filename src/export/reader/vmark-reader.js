@@ -965,6 +965,304 @@
     panel.querySelector('[data-setting="cjkFont"]').value = settings.cjkFont;
   }
 
+  // ============================================
+  // Keyboard Shortcuts
+  // ============================================
+
+  /**
+   * Setup keyboard shortcuts
+   */
+  function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      // Ignore if typing in input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      switch (e.key) {
+        case 'Escape':
+          if (isOpen) {
+            togglePanel();
+          }
+          if (lightbox && lightbox.classList.contains('visible')) {
+            closeLightbox();
+          }
+          break;
+        case 't':
+        case 'T':
+          if (!e.metaKey && !e.ctrlKey) {
+            settings.showToc = !settings.showToc;
+            saveSettings();
+            applySettings();
+          }
+          break;
+        case '=':
+        case '+':
+          if (!e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            adjustSetting('fontSize', 1);
+          }
+          break;
+        case '-':
+          if (!e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            adjustSetting('fontSize', -1);
+          }
+          break;
+      }
+    });
+  }
+
+  /**
+   * Adjust a setting by direction
+   */
+  function adjustSetting(action, dir) {
+    const bounds = BOUNDS[action];
+    if (!bounds) return;
+
+    let value = settings[action] + (dir * bounds.step);
+    value = Math.max(bounds.min, Math.min(bounds.max, value));
+    const precision = bounds.step < 0.1 ? 100 : 10;
+    value = Math.round(value * precision) / precision;
+
+    settings[action] = value;
+    saveSettings();
+    applySettings();
+  }
+
+  // ============================================
+  // Back to Top Button
+  // ============================================
+
+  let backToTopBtn = null;
+
+  /**
+   * Create back to top button
+   */
+  function createBackToTop() {
+    backToTopBtn = document.createElement('button');
+    backToTopBtn.className = 'vmark-back-to-top';
+    backToTopBtn.setAttribute('aria-label', 'Back to top');
+    backToTopBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>`;
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.body.appendChild(backToTopBtn);
+
+    // Show/hide based on scroll position
+    window.addEventListener('scroll', updateBackToTop, { passive: true });
+    updateBackToTop();
+  }
+
+  function updateBackToTop() {
+    if (!backToTopBtn) return;
+    const show = window.scrollY > 300;
+    backToTopBtn.classList.toggle('visible', show);
+  }
+
+  // ============================================
+  // Reading Progress Indicator
+  // ============================================
+
+  let progressBar = null;
+
+  /**
+   * Create reading progress bar
+   */
+  function createProgressBar() {
+    progressBar = document.createElement('div');
+    progressBar.className = 'vmark-progress-bar';
+    progressBar.setAttribute('role', 'progressbar');
+    progressBar.setAttribute('aria-label', 'Reading progress');
+
+    const progressFill = document.createElement('div');
+    progressFill.className = 'vmark-progress-fill';
+    progressBar.appendChild(progressFill);
+
+    document.body.appendChild(progressBar);
+
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+  }
+
+  function updateProgress() {
+    if (!progressBar) return;
+    const fill = progressBar.querySelector('.vmark-progress-fill');
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    fill.style.width = `${progress}%`;
+    progressBar.setAttribute('aria-valuenow', Math.round(progress));
+  }
+
+  // ============================================
+  // Image Lightbox
+  // ============================================
+
+  let lightbox = null;
+
+  /**
+   * Setup image lightbox
+   */
+  function setupImageLightbox() {
+    // Create lightbox container
+    lightbox = document.createElement('div');
+    lightbox.className = 'vmark-lightbox';
+    lightbox.setAttribute('role', 'dialog');
+    lightbox.setAttribute('aria-label', 'Image preview');
+    lightbox.innerHTML = `
+      <button class="vmark-lightbox-close" aria-label="Close">&times;</button>
+      <img class="vmark-lightbox-img" src="" alt="">
+    `;
+
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox || e.target.classList.contains('vmark-lightbox-close')) {
+        closeLightbox();
+      }
+    });
+
+    document.body.appendChild(lightbox);
+
+    // Add click handlers to images
+    const editor = document.querySelector('.export-surface-editor');
+    if (editor) {
+      editor.querySelectorAll('img').forEach(img => {
+        // Skip broken images and tiny images
+        if (img.classList.contains('broken-image') || img.width < 50) return;
+
+        img.style.cursor = 'zoom-in';
+        img.setAttribute('tabindex', '0');
+        img.setAttribute('role', 'button');
+        img.setAttribute('aria-label', 'Click to enlarge image');
+
+        img.addEventListener('click', () => openLightbox(img.src, img.alt));
+        img.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openLightbox(img.src, img.alt);
+          }
+        });
+      });
+    }
+  }
+
+  function openLightbox(src, alt) {
+    if (!lightbox) return;
+    const img = lightbox.querySelector('.vmark-lightbox-img');
+    img.src = src;
+    img.alt = alt || '';
+    lightbox.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+    lightbox.querySelector('.vmark-lightbox-close').focus();
+  }
+
+  function closeLightbox() {
+    if (!lightbox) return;
+    lightbox.classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+
+  // ============================================
+  // Footnote Navigation
+  // ============================================
+
+  /**
+   * Setup footnote navigation
+   */
+  function setupFootnoteNavigation() {
+    const editor = document.querySelector('.export-surface-editor');
+    if (!editor) return;
+
+    // Find footnote references and definitions
+    const refs = editor.querySelectorAll('.footnote-ref, [data-type="footnote_reference"]');
+    const defs = editor.querySelectorAll('.footnote-def, [data-type="footnote_definition"]');
+
+    // Create ID mappings if not present
+    refs.forEach((ref, i) => {
+      if (!ref.id) ref.id = `fnref-${i + 1}`;
+      const noteId = ref.dataset.noteId || (i + 1);
+
+      ref.style.cursor = 'pointer';
+      ref.setAttribute('role', 'link');
+      ref.setAttribute('aria-label', `Go to footnote ${noteId}`);
+
+      ref.addEventListener('click', (e) => {
+        e.preventDefault();
+        const def = editor.querySelector(`#fndef-${noteId}, .footnote-def[data-note-id="${noteId}"], [data-type="footnote_definition"][data-note-id="${noteId}"]`);
+        if (def) {
+          def.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          def.classList.add('vmark-highlight');
+          setTimeout(() => def.classList.remove('vmark-highlight'), 2000);
+        }
+      });
+    });
+
+    // Setup backlinks in definitions
+    defs.forEach((def, i) => {
+      if (!def.id) def.id = `fndef-${i + 1}`;
+      const noteId = def.dataset.noteId || (i + 1);
+
+      // Find or create backref
+      let backref = def.querySelector('.footnote-backref');
+      if (!backref) {
+        backref = document.createElement('a');
+        backref.className = 'footnote-backref';
+        backref.innerHTML = '↩';
+        backref.href = `#fnref-${noteId}`;
+        const content = def.querySelector('.footnote-def-content, dd');
+        if (content) content.appendChild(backref);
+      }
+
+      backref.setAttribute('aria-label', `Back to reference ${noteId}`);
+      backref.addEventListener('click', (e) => {
+        e.preventDefault();
+        const ref = editor.querySelector(`#fnref-${noteId}, .footnote-ref[data-note-id="${noteId}"]`);
+        if (ref) {
+          ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          ref.classList.add('vmark-highlight');
+          setTimeout(() => ref.classList.remove('vmark-highlight'), 2000);
+        }
+      });
+    });
+  }
+
+  // ============================================
+  // Accessibility Improvements
+  // ============================================
+
+  /**
+   * Improve accessibility of reader controls
+   */
+  function improveAccessibility() {
+    // Add aria labels to toggle button
+    const toggle = document.querySelector('.vmark-reader-toggle');
+    if (toggle) {
+      toggle.setAttribute('aria-label', 'Open reader settings');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-controls', 'vmark-reader-panel');
+    }
+
+    // Add id and role to panel
+    if (panel) {
+      panel.id = 'vmark-reader-panel';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-label', 'Reader settings');
+    }
+
+    // Update aria-expanded when panel toggles
+    const originalToggle = togglePanel;
+    togglePanel = function() {
+      originalToggle();
+      const toggle = document.querySelector('.vmark-reader-toggle');
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        toggle.setAttribute('aria-label', isOpen ? 'Close reader settings' : 'Open reader settings');
+      }
+    };
+  }
+
   /**
    * Initialize reader
    */
@@ -978,6 +1276,14 @@
     loadSettings();
     createPanel();
     applySettings();
+
+    // Additional features
+    setupKeyboardShortcuts();
+    createBackToTop();
+    createProgressBar();
+    setupImageLightbox();
+    setupFootnoteNavigation();
+    improveAccessibility();
   }
 
   // Start

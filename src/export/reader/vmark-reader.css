@@ -535,12 +535,199 @@
   color: var(--success-color-dark, #4ade80);
 }
 
+/* ============================================
+   Back to Top Button
+   ============================================ */
+.vmark-back-to-top {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-color, #eeeded);
+  color: var(--text-secondary, #666);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity 0.2s, visibility 0.2s, transform 0.2s, background 0.2s;
+  z-index: 9997;
+}
+
+.vmark-back-to-top.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.vmark-back-to-top:hover {
+  background: var(--bg-secondary, #e5e4e4);
+  color: var(--text-color, #1a1a1a);
+}
+
+.dark-theme .vmark-back-to-top {
+  background: var(--bg-color, #23262b);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .vmark-back-to-top:hover {
+  background: var(--bg-secondary, #2a2e34);
+}
+
+/* ============================================
+   Reading Progress Bar
+   ============================================ */
+.vmark-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--border-color, #d5d4d4);
+  z-index: 10000;
+}
+
+.vmark-progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--primary-color, #0066cc);
+  transition: width 0.1s ease-out;
+}
+
+.dark-theme .vmark-progress-bar {
+  background: var(--border-color, #3a3f46);
+}
+
+/* ============================================
+   Image Lightbox
+   ============================================ */
+.vmark-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  z-index: 10001;
+  cursor: zoom-out;
+}
+
+.vmark-lightbox.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.vmark-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.vmark-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.vmark-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  cursor: default;
+}
+
+/* ============================================
+   Footnote Highlight Animation
+   ============================================ */
+.vmark-highlight {
+  animation: vmark-highlight-pulse 2s ease-out;
+}
+
+@keyframes vmark-highlight-pulse {
+  0% {
+    background-color: var(--accent-bg, rgba(0, 102, 204, 0.2));
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* ============================================
+   Mobile Responsiveness
+   ============================================ */
+@media (max-width: 480px) {
+  .vmark-reader-panel {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    bottom: 70px;
+  }
+
+  .vmark-reader-toggle {
+    bottom: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .vmark-back-to-top {
+    bottom: 70px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .vmark-lightbox {
+    padding: 20px;
+  }
+
+  .vmark-lightbox-close {
+    top: 10px;
+    right: 10px;
+  }
+}
+
+/* Adjust back-to-top when panel is open */
+.vmark-reader-panel.open ~ .vmark-back-to-top {
+  bottom: 340px;
+}
+
+@media (max-width: 480px) {
+  .vmark-reader-panel.open ~ .vmark-back-to-top {
+    bottom: 400px;
+  }
+}
+
 /* Print: Hide interactive elements */
 @media print {
   .vmark-reader-toggle,
   .vmark-reader-panel,
   .vmark-toc-sidebar,
-  .vmark-code-btn-group {
+  .vmark-code-btn-group,
+  .vmark-back-to-top,
+  .vmark-progress-bar,
+  .vmark-lightbox {
     display: none !important;
   }
 
