@@ -14,13 +14,99 @@
 (function() {
   'use strict';
 
+  // Font stacks (matching VMark editor fonts)
+  const FONT_STACKS = {
+    latin: {
+      system: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      athelas: "Athelas, Georgia, serif",
+      palatino: "Palatino, 'Palatino Linotype', serif",
+      georgia: "Georgia, 'Times New Roman', serif",
+      charter: "Charter, Georgia, serif",
+      literata: "Literata, Georgia, serif"
+    },
+    cjk: {
+      system: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+      pingfang: '"PingFang SC", "PingFang TC", sans-serif',
+      songti: '"Songti SC", "STSong", "SimSun", serif',
+      kaiti: '"Kaiti SC", "STKaiti", "KaiTi", serif',
+      notoserif: '"Noto Serif CJK SC", "Source Han Serif SC", serif',
+      sourcehans: '"Source Han Sans SC", "Noto Sans CJK SC", sans-serif'
+    }
+  };
+
+  // Font options for UI
+  const FONT_OPTIONS = {
+    latin: [
+      { value: 'system', label: 'System' },
+      { value: 'athelas', label: 'Athelas' },
+      { value: 'palatino', label: 'Palatino' },
+      { value: 'georgia', label: 'Georgia' },
+      { value: 'charter', label: 'Charter' },
+      { value: 'literata', label: 'Literata' }
+    ],
+    cjk: [
+      { value: 'system', label: 'System' },
+      { value: 'pingfang', label: 'PingFang' },
+      { value: 'songti', label: 'Songti' },
+      { value: 'kaiti', label: 'Kaiti' },
+      { value: 'notoserif', label: 'Noto Serif' },
+      { value: 'sourcehans', label: 'Source Han' }
+    ]
+  };
+
+  // Theme definitions (matching VMark editor themes)
+  const THEMES = {
+    white: {
+      background: '#FFFFFF',
+      foreground: '#1a1a1a',
+      secondary: '#f8f8f8',
+      border: '#eeeeee',
+      link: '#0066cc',
+      isDark: false
+    },
+    paper: {
+      background: '#EEEDED',
+      foreground: '#1a1a1a',
+      secondary: '#e5e4e4',
+      border: '#d5d4d4',
+      link: '#0066cc',
+      isDark: false
+    },
+    mint: {
+      background: '#CCE6D0',
+      foreground: '#2d3a35',
+      secondary: '#b8d9bd',
+      border: '#a8c9ad',
+      link: '#1a6b4a',
+      isDark: false
+    },
+    sepia: {
+      background: '#F9F0DB',
+      foreground: '#5c4b37',
+      secondary: '#f0e5cc',
+      border: '#e0d5bc',
+      link: '#8b4513',
+      isDark: false
+    },
+    night: {
+      background: '#23262b',
+      foreground: '#d6d9de',
+      secondary: '#2a2e34',
+      border: '#3a3f46',
+      link: '#5aa8ff',
+      isDark: true
+    }
+  };
+
   // Default settings
   const DEFAULTS = {
     fontSize: 18,
     lineHeight: 1.6,
     contentWidth: 50,
+    latinFont: 'system',
+    cjkFont: 'system',
     cjkLetterSpacing: 0.05,
-    theme: 'light',
+    theme: 'paper',
     cjkLatinSpacing: true,
     expandDetails: false
   };
@@ -84,6 +170,11 @@
     root.style.setProperty('--editor-line-height', settings.lineHeight);
     root.style.setProperty('--editor-line-height-px', `${settings.fontSize * settings.lineHeight}px`);
 
+    // Fonts
+    const latinStack = FONT_STACKS.latin[settings.latinFont] || FONT_STACKS.latin.system;
+    const cjkStack = FONT_STACKS.cjk[settings.cjkFont] || FONT_STACKS.cjk.system;
+    root.style.setProperty('--font-sans', `${latinStack}, ${cjkStack}`);
+
     // Content width
     if (surface) {
       surface.style.maxWidth = `${settings.contentWidth}em`;
@@ -93,11 +184,7 @@
     applyCjkLetterSpacing();
 
     // Theme
-    if (settings.theme === 'dark') {
-      document.documentElement.classList.add('dark-theme');
-    } else {
-      document.documentElement.classList.remove('dark-theme');
-    }
+    applyTheme(settings.theme);
 
     // CJK spacing (handles both apply and remove based on setting)
     applyCjkSpacing();
@@ -107,6 +194,42 @@
 
     // Update UI if panel exists
     updatePanelUI();
+  }
+
+  /**
+   * Apply theme colors to the document
+   */
+  function applyTheme(themeId) {
+    const theme = THEMES[themeId] || THEMES.paper;
+    const root = document.documentElement;
+
+    // Apply theme colors as CSS variables
+    root.style.setProperty('--bg-color', theme.background);
+    root.style.setProperty('--text-color', theme.foreground);
+    root.style.setProperty('--bg-secondary', theme.secondary);
+    root.style.setProperty('--border-color', theme.border);
+    root.style.setProperty('--primary-color', theme.link);
+
+    // Code block colors
+    root.style.setProperty('--code-bg-color', theme.secondary);
+    root.style.setProperty('--code-text-color', theme.foreground);
+    root.style.setProperty('--code-border-color', theme.border);
+
+    // Text secondary (slightly muted)
+    if (theme.isDark) {
+      root.style.setProperty('--text-secondary', '#858585');
+      root.style.setProperty('--text-tertiary', '#6b7078');
+      root.style.setProperty('--hover-bg', 'rgba(255, 255, 255, 0.06)');
+      document.documentElement.classList.add('dark-theme');
+    } else {
+      root.style.setProperty('--text-secondary', '#666666');
+      root.style.setProperty('--text-tertiary', '#999999');
+      root.style.setProperty('--hover-bg', 'rgba(0, 0, 0, 0.04)');
+      document.documentElement.classList.remove('dark-theme');
+    }
+
+    // Update body background
+    document.body.style.backgroundColor = theme.background;
   }
 
   // Store original text for CJK spacing toggle
@@ -382,10 +505,25 @@
           </div>
         </div>
         <div class="vmark-reader-group">
+          <label>Latin Font</label>
+          <select class="vmark-reader-select" data-setting="latinFont">
+            ${FONT_OPTIONS.latin.map(o => `<option value="${o.value}" ${settings.latinFont === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="vmark-reader-group">
+          <label>CJK Font</label>
+          <select class="vmark-reader-select" data-setting="cjkFont">
+            ${FONT_OPTIONS.cjk.map(o => `<option value="${o.value}" ${settings.cjkFont === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="vmark-reader-group">
           <label>Theme</label>
-          <div class="vmark-reader-toggle-row">
-            <button class="vmark-reader-theme-btn ${settings.theme === 'light' ? 'active' : ''}" data-theme="light">Light</button>
-            <button class="vmark-reader-theme-btn ${settings.theme === 'dark' ? 'active' : ''}" data-theme="dark">Dark</button>
+          <div class="vmark-reader-theme-row">
+            <button class="vmark-reader-theme-circle ${settings.theme === 'white' ? 'active' : ''}" data-theme="white" title="White" style="background: ${THEMES.white.background}"></button>
+            <button class="vmark-reader-theme-circle ${settings.theme === 'paper' ? 'active' : ''}" data-theme="paper" title="Paper" style="background: ${THEMES.paper.background}"></button>
+            <button class="vmark-reader-theme-circle ${settings.theme === 'mint' ? 'active' : ''}" data-theme="mint" title="Mint" style="background: ${THEMES.mint.background}"></button>
+            <button class="vmark-reader-theme-circle ${settings.theme === 'sepia' ? 'active' : ''}" data-theme="sepia" title="Sepia" style="background: ${THEMES.sepia.background}"></button>
+            <button class="vmark-reader-theme-circle ${settings.theme === 'night' ? 'active' : ''}" data-theme="night" title="Night" style="background: ${THEMES.night.background}"></button>
           </div>
         </div>
         <div class="vmark-reader-group">
@@ -421,12 +559,16 @@
       btn.addEventListener('click', handleRangeClick);
     });
 
-    panel.querySelectorAll('.vmark-reader-theme-btn').forEach(btn => {
+    panel.querySelectorAll('.vmark-reader-theme-circle').forEach(btn => {
       btn.addEventListener('click', handleThemeClick);
     });
 
     panel.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
       checkbox.addEventListener('change', handleCheckboxChange);
+    });
+
+    panel.querySelectorAll('.vmark-reader-select').forEach(select => {
+      select.addEventListener('change', handleSelectChange);
     });
 
     panel.querySelector('.vmark-reader-reset-btn').addEventListener('click', handleReset);
@@ -487,6 +629,16 @@
   }
 
   /**
+   * Handle select changes
+   */
+  function handleSelectChange(e) {
+    const setting = e.target.dataset.setting;
+    settings[setting] = e.target.value;
+    saveSettings();
+    applySettings();
+  }
+
+  /**
    * Handle reset button
    */
   function handleReset() {
@@ -514,14 +666,18 @@
     panel.querySelector('[data-value="contentWidth"]').textContent = `${settings.contentWidth}em`;
     panel.querySelector('[data-value="cjkLetterSpacing"]').textContent = `${settings.cjkLetterSpacing}em`;
 
-    // Update theme buttons
-    panel.querySelectorAll('.vmark-reader-theme-btn').forEach(btn => {
+    // Update theme circles
+    panel.querySelectorAll('.vmark-reader-theme-circle').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.theme === settings.theme);
     });
 
     // Update checkboxes
     panel.querySelector('[data-setting="cjkLatinSpacing"]').checked = settings.cjkLatinSpacing;
     panel.querySelector('[data-setting="expandDetails"]').checked = settings.expandDetails;
+
+    // Update selects
+    panel.querySelector('[data-setting="latinFont"]').value = settings.latinFont;
+    panel.querySelector('[data-setting="cjkFont"]').value = settings.cjkFont;
   }
 
   /**
