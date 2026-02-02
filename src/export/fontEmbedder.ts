@@ -44,6 +44,77 @@ export const KATEX_FONTS = [
   "KaTeX_Size4-Regular",
 ] as const;
 
+/** KaTeX CDN base URL */
+const KATEX_CDN_BASE = "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/fonts";
+
+/** Font file to download */
+export interface FontFile {
+  /** Font family name */
+  family: string;
+  /** Local filename (e.g., "KaTeX_Main-Regular.woff2") */
+  filename: string;
+  /** Source URL to download from */
+  url: string;
+  /** Font weight */
+  weight: string;
+  /** Font style */
+  style: string;
+}
+
+/** Downloaded font data */
+export interface DownloadedFont {
+  /** Font file info */
+  file: FontFile;
+  /** Binary font data */
+  data: Uint8Array;
+}
+
+/**
+ * Get list of KaTeX font files to download.
+ */
+export function getKaTeXFontFiles(): FontFile[] {
+  return [
+    { family: "KaTeX_Main", filename: "KaTeX_Main-Regular.woff2", url: `${KATEX_CDN_BASE}/KaTeX_Main-Regular.woff2`, weight: "normal", style: "normal" },
+    { family: "KaTeX_Main", filename: "KaTeX_Main-Bold.woff2", url: `${KATEX_CDN_BASE}/KaTeX_Main-Bold.woff2`, weight: "bold", style: "normal" },
+    { family: "KaTeX_Main", filename: "KaTeX_Main-Italic.woff2", url: `${KATEX_CDN_BASE}/KaTeX_Main-Italic.woff2`, weight: "normal", style: "italic" },
+    { family: "KaTeX_Math", filename: "KaTeX_Math-Italic.woff2", url: `${KATEX_CDN_BASE}/KaTeX_Math-Italic.woff2`, weight: "normal", style: "italic" },
+    { family: "KaTeX_Size1", filename: "KaTeX_Size1-Regular.woff2", url: `${KATEX_CDN_BASE}/KaTeX_Size1-Regular.woff2`, weight: "normal", style: "normal" },
+    { family: "KaTeX_Size2", filename: "KaTeX_Size2-Regular.woff2", url: `${KATEX_CDN_BASE}/KaTeX_Size2-Regular.woff2`, weight: "normal", style: "normal" },
+    { family: "KaTeX_Size3", filename: "KaTeX_Size3-Regular.woff2", url: `${KATEX_CDN_BASE}/KaTeX_Size3-Regular.woff2`, weight: "normal", style: "normal" },
+    { family: "KaTeX_Size4", filename: "KaTeX_Size4-Regular.woff2", url: `${KATEX_CDN_BASE}/KaTeX_Size4-Regular.woff2`, weight: "normal", style: "normal" },
+  ];
+}
+
+/**
+ * Download a font file and return the binary data.
+ */
+export async function downloadFont(url: string): Promise<Uint8Array | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const buffer = await response.arrayBuffer();
+    return new Uint8Array(buffer);
+  } catch (error) {
+    console.warn("[FontEmbedder] Failed to download font:", url, error);
+    return null;
+  }
+}
+
+/**
+ * Generate @font-face CSS pointing to local font files.
+ *
+ * @param fonts - Array of font file info
+ * @param basePath - Base path for font URLs (e.g., "assets/fonts")
+ */
+export function generateLocalFontCSS(fonts: FontFile[], basePath: string = "assets/fonts"): string {
+  return fonts.map(font => `@font-face {
+  font-family: '${font.family}';
+  src: url('${basePath}/${font.filename}') format('woff2');
+  font-weight: ${font.weight};
+  font-style: ${font.style};
+}`).join("\n\n");
+}
+
 /**
  * Get the KaTeX font CSS.
  * KaTeX fonts are loaded from CDN in exports since they're not bundled.
@@ -168,6 +239,7 @@ function generateFontFace(config: FontConfig, dataUri?: string): string {
  */
 const GOOGLE_FONTS: Record<string, string> = {
   Inter: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff2",
+  Literata: "https://fonts.gstatic.com/s/literata/v35/or3PQ6P12-iJxAIgLa78DkrbXsDgk0oVDaDPYLanFLHpPf2TbBG_F_bcTWCWp8g.woff2",
   "Fira Code": "https://fonts.gstatic.com/s/firacode/v22/uU9NCBsR6Z2vfE9aq3bL0fxyUs4tcw4W_D1sFVc.woff2",
   "JetBrains Mono": "https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjOVGaysH0.woff2",
   "Source Code Pro": "https://fonts.gstatic.com/s/sourcecodepro/v23/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMdrTGasEmUl.woff2",
@@ -177,7 +249,45 @@ const GOOGLE_FONTS: Record<string, string> = {
   "Roboto Mono": "https://fonts.gstatic.com/s/robotomono/v23/L0xuDF4xlVMF-BfR8bXMIhJHg45mwgGEFl0_3vq_ROW4.woff2",
   "Noto Sans": "https://fonts.gstatic.com/s/notosans/v35/o-0IIpQlx3QUlC5A4PNb4j5Ba_2c7A.woff2",
   "Noto Sans SC": "https://fonts.gstatic.com/s/notosanssc/v36/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYxNbPzS5HE.woff2",
+  "Noto Serif CJK SC": "https://fonts.gstatic.com/s/notoserifsc/v22/H4c8BXePl9DZ0Xe7gG9cyOj7oqPcbj6IJdGTyO2SvLeF0EU.woff2",
+  "Source Han Sans SC": "https://fonts.gstatic.com/s/notosanssc/v36/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYxNbPzS5HE.woff2",
 };
+
+/**
+ * Map from settings keys to Google Font family names.
+ * Only fonts that are available as web fonts are included.
+ */
+const SETTINGS_TO_FONT_FAMILY: Record<string, string> = {
+  // Latin fonts
+  literata: "Literata",
+  // Mono fonts
+  jetbrains: "JetBrains Mono",
+  firacode: "Fira Code",
+  ibmplexmono: "IBM Plex Mono",
+  // CJK fonts
+  notoserif: "Noto Serif CJK SC",
+  sourcehans: "Source Han Sans SC",
+};
+
+/**
+ * Get FontFile for a user-selected font (if it's a web font).
+ */
+export function getUserFontFile(settingsKey: string): FontFile | null {
+  const family = SETTINGS_TO_FONT_FAMILY[settingsKey];
+  if (!family) return null;
+
+  const url = GOOGLE_FONTS[family];
+  if (!url) return null;
+
+  const filename = `${family.replace(/\s+/g, "-")}.woff2`;
+  return {
+    family,
+    filename,
+    url,
+    weight: "normal",
+    style: "normal",
+  };
+}
 
 /**
  * Try to get a Google Fonts URL for a font family.

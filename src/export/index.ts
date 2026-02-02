@@ -49,9 +49,13 @@ export {
   generateExportFontCSS,
   contentHasMath,
   getGoogleFontUrl,
+  getKaTeXFontFiles,
+  getUserFontFile,
+  downloadFont,
+  generateLocalFontCSS,
   KATEX_FONTS,
 } from "./fontEmbedder";
-export type { FontConfig, FontEmbedResult } from "./fontEmbedder";
+export type { FontConfig, FontEmbedResult, FontFile, DownloadedFont } from "./fontEmbedder";
 
 // HTML Export
 export { exportHtml, copyHtmlToClipboard } from "./htmlExport";

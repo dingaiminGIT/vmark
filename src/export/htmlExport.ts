@@ -26,10 +26,17 @@
  * 3. Users can choose which file to use after export based on their needs
  */
 
-import { writeTextFile, mkdir } from "@tauri-apps/plugin-fs";
+import { writeTextFile, writeFile, mkdir } from "@tauri-apps/plugin-fs";
 import { captureThemeCSS, isDarkTheme } from "./themeSnapshot";
 import { resolveResources, getDocumentBaseDir } from "./resourceResolver";
-import { generateExportFontCSS } from "./fontEmbedder";
+import {
+  contentHasMath,
+  getKaTeXFontFiles,
+  getUserFontFile,
+  downloadFont,
+  generateLocalFontCSS,
+  type FontFile,
+} from "./fontEmbedder";
 import { getReaderCSS, getReaderJS } from "./reader";
 
 /**
@@ -1120,14 +1127,50 @@ export async function exportHtml(
       mode: "single",
     });
 
+    // Download and save fonts for offline use
+    const fontsPath = `${assetsPath}/fonts`;
+    const fontsToExport: FontFile[] = [];
+
+    // Include KaTeX fonts if document has math
+    if (contentHasMath(sanitizedHtml)) {
+      fontsToExport.push(...getKaTeXFontFiles());
+    }
+
+    // Include user-selected fonts (if they're web fonts)
+    if (fontSettings?.fontFamily) {
+      const fontFile = getUserFontFile(fontSettings.fontFamily);
+      if (fontFile) fontsToExport.push(fontFile);
+    }
+    if (fontSettings?.monoFontFamily) {
+      const fontFile = getUserFontFile(fontSettings.monoFontFamily);
+      if (fontFile) fontsToExport.push(fontFile);
+    }
+
+    // Download and save fonts
+    let fontCSS = "";
+    if (fontsToExport.length > 0) {
+      await mkdir(fontsPath, { recursive: true });
+
+      const downloadedFonts: FontFile[] = [];
+      for (const font of fontsToExport) {
+        const data = await downloadFont(font.url);
+        if (data) {
+          await writeFile(`${fontsPath}/${font.filename}`, data);
+          totalSize += data.length;
+          downloadedFonts.push(font);
+        } else {
+          warnings.push(`Failed to download font: ${font.filename}`);
+        }
+      }
+
+      // Generate CSS pointing to local font files
+      if (downloadedFonts.length > 0) {
+        fontCSS = generateLocalFontCSS(downloadedFonts, "assets/fonts");
+      }
+    }
+
     // Generate CSS
     const themeCSS = captureThemeCSS();
-    const fontResult = await generateExportFontCSS(
-      sanitizedHtml,
-      fontSettings ?? {},
-      false // Don't embed fonts as data URIs
-    );
-    const fontCSS = fontResult.css;
     const contentCSS = getEditorContentCSS();
     const readerCSS = includeReader ? getReaderCSS() : "";
     const readerJS = includeReader ? getReaderJS() : "";
