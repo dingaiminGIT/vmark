@@ -75,6 +75,8 @@ const numericOptions = {
     { value: "0.03", label: "0.03em (Light)" },
     { value: "0.05", label: "0.05em (Normal)" },
     { value: "0.08", label: "0.08em (Wide)" },
+    { value: "0.10", label: "0.10em (Wider)" },
+    { value: "0.12", label: "0.12em (Extra)" },
   ],
   editorWidth: [
     { value: "36", label: "36em (Compact)" },

@@ -1,0 +1,314 @@
+/**
+ * VMark Reader - Settings Panel Styles
+ */
+
+/* Toggle Button */
+.vmark-reader-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-color, #eeeded);
+  color: var(--text-secondary, #666);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  z-index: 9998;
+}
+
+.vmark-reader-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: var(--bg-secondary, #e5e4e4);
+}
+
+.vmark-reader-toggle:active {
+  transform: scale(0.98);
+}
+
+.vmark-reader-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Settings Panel */
+.vmark-reader-panel {
+  position: fixed;
+  bottom: 76px;
+  right: 20px;
+  width: 280px;
+  background: var(--bg-color, #eeeded);
+  border: 1px solid var(--border-color, #d5d4d4);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+}
+
+.vmark-reader-panel.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Panel Header */
+.vmark-reader-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color, #d5d4d4);
+  font-weight: 600;
+  color: var(--text-color, #1a1a1a);
+}
+
+.vmark-reader-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary, #666);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.vmark-reader-close:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.04));
+  color: var(--text-color, #1a1a1a);
+}
+
+/* Panel Content */
+.vmark-reader-content {
+  padding: 8px 0;
+}
+
+/* Setting Groups */
+.vmark-reader-group {
+  padding: 8px 14px;
+}
+
+.vmark-reader-group label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-secondary, #666);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Range Row (with +/- buttons) */
+.vmark-reader-range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vmark-reader-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-color, #d5d4d4);
+  border-radius: 6px;
+  background: var(--bg-color, #eeeded);
+  color: var(--text-color, #1a1a1a);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.vmark-reader-btn:hover {
+  background: var(--bg-secondary, #e5e4e4);
+  border-color: var(--text-secondary, #666);
+}
+
+.vmark-reader-btn:active {
+  background: var(--bg-tertiary, #d8d8d8);
+}
+
+.vmark-reader-value {
+  flex: 1;
+  text-align: center;
+  font-weight: 500;
+  color: var(--text-color, #1a1a1a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Theme Toggle Row */
+.vmark-reader-toggle-row {
+  display: flex;
+  gap: 6px;
+}
+
+.vmark-reader-theme-btn {
+  flex: 1;
+  padding: 6px 12px;
+  border: 1px solid var(--border-color, #d5d4d4);
+  border-radius: 6px;
+  background: var(--bg-color, #eeeded);
+  color: var(--text-secondary, #666);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.vmark-reader-theme-btn:hover {
+  background: var(--bg-secondary, #e5e4e4);
+}
+
+.vmark-reader-theme-btn.active {
+  background: var(--primary-color, #0066cc);
+  border-color: var(--primary-color, #0066cc);
+  color: white;
+}
+
+/* Checkbox Row */
+.vmark-reader-checkbox-label {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0 !important;
+  cursor: pointer;
+  color: var(--text-color, #1a1a1a) !important;
+  font-size: 13px !important;
+  font-weight: normal !important;
+}
+
+.vmark-reader-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--primary-color, #0066cc);
+}
+
+/* Reset Button */
+.vmark-reader-reset {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #d5d4d4);
+}
+
+.vmark-reader-reset-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary, #666);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.vmark-reader-reset-btn:hover {
+  background: var(--hover-bg, rgba(0, 0, 0, 0.04));
+  color: var(--text-color, #1a1a1a);
+}
+
+/* Dark Theme Adjustments */
+.dark-theme .vmark-reader-toggle {
+  background: var(--bg-color, #1e1e1e);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .vmark-reader-toggle:hover {
+  background: var(--bg-secondary, #2d2d2d);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.dark-theme .vmark-reader-panel {
+  background: var(--bg-color, #1e1e1e);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .vmark-reader-btn {
+  background: var(--bg-secondary, #2d2d2d);
+}
+
+.dark-theme .vmark-reader-btn:hover {
+  background: var(--bg-tertiary, #3d3d3d);
+}
+
+.dark-theme .vmark-reader-theme-btn {
+  background: var(--bg-secondary, #2d2d2d);
+}
+
+.dark-theme .vmark-reader-theme-btn:hover {
+  background: var(--bg-tertiary, #3d3d3d);
+}
+
+/* Dark Theme Content Styles */
+.dark-theme {
+  /* Core colors (night theme) */
+  --bg-color: #23262b;
+  --text-color: #d6d9de;
+  --text-secondary: #858585;
+  --text-tertiary: #6b7078;
+  --primary-color: #5aa8ff;
+  --border-color: #3a3f46;
+  --bg-secondary: #2a2e34;
+  --bg-tertiary: #32363d;
+
+  /* Code blocks */
+  --code-bg-color: #2a2e34;
+  --code-text-color: #d6d9de;
+  --code-border-color: #3a3f46;
+
+  /* Syntax */
+  --md-char-color: #6a9955;
+  --strong-color: #569cd6;
+  --emphasis-color: #ce9178;
+
+  /* Selection */
+  --selection-color: rgba(79, 193, 255, 0.2);
+  --accent-bg: rgba(90, 168, 255, 0.12);
+  --accent-primary: #5aa8ff;
+
+  /* Alerts */
+  --alert-note: #58a6ff;
+  --alert-tip: #3fb950;
+  --alert-important: #a371f7;
+  --alert-warning: #d29922;
+  --alert-caution: #f85149;
+
+  /* Highlight */
+  --highlight-bg: #5c5c00;
+  --highlight-text: #fff3a3;
+
+  /* Hover */
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --hover-bg-strong: rgba(255, 255, 255, 0.1);
+
+  /* Errors */
+  --error-color: #f85149;
+  --error-bg: rgba(248, 81, 73, 0.15);
+}
+
+/* Print: Hide reader UI */
+@media print {
+  .vmark-reader-toggle,
+  .vmark-reader-panel {
+    display: none !important;
+  }
+}

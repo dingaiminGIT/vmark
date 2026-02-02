@@ -108,7 +108,7 @@ export const themes: Record<ThemeId, ThemeColors> = {
 };
 
 // CJK letter spacing options (0 = off)
-export type CJKLetterSpacingValue = "0" | "0.02" | "0.03" | "0.05" | "0.08";
+export type CJKLetterSpacingValue = "0" | "0.02" | "0.03" | "0.05" | "0.08" | "0.10" | "0.12";
 
 export interface AppearanceSettings {
   theme: ThemeId;
