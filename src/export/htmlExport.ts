@@ -2,13 +2,23 @@
  * HTML Export
  *
  * Generates HTML exports in multiple modes:
- * - Plain + Folder: No CSS, resources in assets folder
- * - Plain + Single: No CSS, resources as data URIs
- * - Styled + Folder: Full CSS, resources in assets folder
- * - Styled + Single: Full CSS, resources as data URIs
+ *
+ * Folder mode (default):
+ *   DocumentName/
+ *   ├── index.html
+ *   └── assets/
+ *       ├── image1.png
+ *       └── ...
+ *
+ * Single mode:
+ *   DocumentName.html (self-contained with data URIs)
+ *
+ * Style modes:
+ * - Plain: No CSS, minimal HTML
+ * - Styled: Full CSS with theme, fonts, and content styles
  */
 
-import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { writeTextFile, mkdir, exists } from "@tauri-apps/plugin-fs";
 import { captureThemeCSS, isDarkTheme } from "./themeSnapshot";
 import { resolveResources, getDocumentBaseDir } from "./resourceResolver";
 import { generateExportFontCSS } from "./fontEmbedder";
@@ -101,9 +111,9 @@ export interface HtmlExportOptions {
 export interface HtmlExportResult {
   /** Whether export succeeded */
   success: boolean;
-  /** Output file path */
+  /** Output file path (index.html in folder mode, or the .html file in single mode) */
   outputPath: string;
-  /** Assets folder path (if folder mode) */
+  /** Assets folder name relative to index.html (e.g., "assets") - only in folder mode */
   assetsPath?: string;
   /** Number of resources processed */
   resourceCount: number;
@@ -996,13 +1006,24 @@ export async function exportHtml(
     // Sanitize HTML - remove editor artifacts
     const sanitizedHtml = sanitizeExportHtml(html);
 
+    // For folder mode, outputPath is DocumentFolder/index.html
+    // We need to create the document folder first
+    const documentFolder = packaging === "folder" ? getOutputDir(outputPath) : undefined;
+
+    if (documentFolder) {
+      const folderExists = await exists(documentFolder);
+      if (!folderExists) {
+        await mkdir(documentFolder, { recursive: true });
+      }
+    }
+
     // Resolve resources
+    // For folder mode, outputDir is the document folder (contains index.html and assets/)
     const baseDir = await getDocumentBaseDir(sourceFilePath ?? null);
     const { html: processedHtml, report } = await resolveResources(sanitizedHtml, {
       baseDir,
       mode: packaging,
-      outputDir: packaging === "folder" ? await getOutputDir(outputPath) : undefined,
-      documentName: getDocumentName(outputPath),
+      outputDir: documentFolder,
     });
 
     resourceCount = report.resources.length;
@@ -1014,7 +1035,7 @@ export async function exportHtml(
     }
 
     if (packaging === "folder") {
-      assetsPath = `${getDocumentName(outputPath)}.assets`;
+      assetsPath = "assets";
     }
 
     // Generate CSS based on style mode
@@ -1080,20 +1101,12 @@ export async function exportHtml(
 
 /**
  * Get the output directory from a file path.
+ * For folder mode with index.html, this returns the document folder.
  */
-async function getOutputDir(filePath: string): Promise<string> {
+function getOutputDir(filePath: string): string {
   const parts = filePath.split(/[/\\]/);
-  parts.pop(); // Remove filename
+  parts.pop(); // Remove filename (e.g., index.html)
   return parts.join("/") || "/";
-}
-
-/**
- * Get the document name (without extension) from a file path.
- */
-function getDocumentName(filePath: string): string {
-  const parts = filePath.split(/[/\\]/);
-  const filename = parts.pop() ?? "document";
-  return filename.replace(/\.[^.]+$/, "");
 }
 
 /**

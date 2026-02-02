@@ -37,12 +37,10 @@ export interface ResourceReport {
 export interface ResolveOptions {
   /** Base directory for resolving relative paths (usually document directory) */
   baseDir: string;
-  /** Export mode: 'folder' creates assets folder, 'single' embeds as data URIs */
+  /** Export mode: 'folder' creates assets/ subfolder, 'single' embeds as data URIs */
   mode: "folder" | "single";
-  /** Output directory for folder mode */
+  /** Output directory for folder mode (the document folder containing index.html) */
   outputDir?: string;
-  /** Document name (used for assets folder name) */
-  documentName?: string;
 }
 
 /**
@@ -173,7 +171,7 @@ export async function resolveResources(
   html: string,
   options: ResolveOptions
 ): Promise<{ html: string; report: ResourceReport }> {
-  const { baseDir, mode, outputDir, documentName } = options;
+  const { baseDir, mode, outputDir } = options;
   const sources = extractImageSources(html);
 
   const resources: ResourceInfo[] = [];
@@ -182,9 +180,10 @@ export async function resolveResources(
   let totalSize = 0;
 
   // Create assets directory for folder mode
+  // Structure: DocumentFolder/assets/ (sibling to index.html)
   const assetsDir =
     mode === "folder" && outputDir
-      ? await join(outputDir, `${documentName ?? "document"}.assets`)
+      ? await join(outputDir, "assets")
       : null;
 
   if (assetsDir) {
@@ -247,7 +246,8 @@ export async function resolveResources(
 
         try {
           await copyFile(resolvedPath, destPath);
-          const relativePath = `${documentName ?? "document"}.assets/${fileName}`;
+          // Relative path from index.html to assets/filename
+          const relativePath = `assets/${fileName}`;
           info.exportSrc = relativePath;
           modifiedHtml = modifiedHtml.split(src).join(relativePath);
         } catch (e) {
