@@ -81,9 +81,11 @@ Enhance your writing focus with these view modes:
 
 ### Exporting
 
-- **Export HTML**: `Cmd/Ctrl + Shift + E`
+- **Export HTML**: `Cmd/Ctrl + Shift + E` — includes interactive VMark Reader
 - **Export PDF**: Use Print (`Cmd/Ctrl + P`) and save as PDF
 - **Copy as HTML**: `Cmd/Ctrl + Shift + C`
+
+Exported HTML includes the VMark Reader with table of contents, settings panel, and more. [Learn more →](/guide/export)
 
 ## Settings
 

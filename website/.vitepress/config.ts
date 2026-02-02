@@ -29,6 +29,7 @@ export default defineConfig({
           items: [
             { text: 'Getting Started', link: '/guide/' },
             { text: 'Features', link: '/guide/features' },
+            { text: 'Export & Print', link: '/guide/export' },
             { text: 'Keyboard Shortcuts', link: '/guide/shortcuts' },
             { text: 'Smart Tab Navigation', link: '/guide/tab-navigation' },
             { text: 'Multi-Cursor Editing', link: '/guide/multi-cursor' },

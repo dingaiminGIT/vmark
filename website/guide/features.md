@@ -142,17 +142,26 @@ Mermaid diagram support with live preview:
 
 ## Export Options
 
+VMark offers flexible export options for sharing your documents.
+
 ### HTML Export
 
-Export to standalone HTML with GitHub-style CSS.
+Export to standalone HTML with two packaging modes:
+
+- **Folder mode** (default): Creates `Document/index.html` with assets in a subfolder
+- **Single file mode**: Creates a self-contained `.html` file with embedded images
+
+Exported HTML includes the **VMark Reader** — interactive controls for settings, table of contents, image lightbox, and more.
+
+[Learn more about export →](/guide/export)
 
 ### PDF Export
 
-Print to PDF with native system dialog.
+Print to PDF with native system dialog (`Cmd/Ctrl + P`).
 
 ### Copy as HTML
 
-Copy formatted content for pasting into other apps.
+Copy formatted content for pasting into other apps (`Cmd/Ctrl + Shift + C`).
 
 ## CJK Formatting
 
