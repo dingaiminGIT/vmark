@@ -34,6 +34,12 @@ const WINDOWS_RESERVED_NAMES = new Set([
 const DEFAULT_MAX_LENGTH = 80;
 
 /**
+ * When truncating at word boundary, how many characters back from the
+ * max length to search for a space. Prevents awkward single-word truncation.
+ */
+const WORD_BOUNDARY_LOOKBACK = 20;
+
+/**
  * Extract the first H1 heading from markdown content.
  *
  * Supports two H1 syntaxes:
@@ -160,11 +166,11 @@ function truncateAtWordBoundary(text: string, maxLength: number): string {
     return text;
   }
 
-  // Try to find a space within the last 20 characters of the limit
+  // Try to find a space within the lookback window of the limit
   const truncated = text.slice(0, maxLength);
   const lastSpace = truncated.lastIndexOf(" ");
 
-  if (lastSpace > maxLength - 20 && lastSpace > 0) {
+  if (lastSpace > maxLength - WORD_BOUNDARY_LOOKBACK && lastSpace > 0) {
     return truncated.slice(0, lastSpace).trim();
   }
 

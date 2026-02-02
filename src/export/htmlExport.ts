@@ -13,8 +13,17 @@
  *           ├── image1.png
  *           └── ...
  *
- * - index.html: Clean HTML with external asset references, good for hosting
- * - standalone.html: Self-contained single file, good for sharing
+ * Architecture Decision:
+ * We always produce BOTH index.html and standalone.html in a single export.
+ * - index.html: Clean HTML with external asset references — ideal for hosting,
+ *   editing in other tools, or when file size matters (images stay external).
+ * - standalone.html: Everything embedded as data URIs — ideal for sharing a
+ *   single file via email/chat without worrying about missing assets.
+ *
+ * This "both files" approach was chosen over separate export modes because:
+ * 1. Users don't have to think about which mode to use
+ * 2. The cost of generating both is minimal (same render, different packaging)
+ * 3. Users can choose which file to use after export based on their needs
  */
 
 import { writeTextFile, mkdir } from "@tauri-apps/plugin-fs";

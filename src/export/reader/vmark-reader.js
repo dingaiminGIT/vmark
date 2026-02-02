@@ -579,10 +579,17 @@
     tocToggleTab.className = 'vmark-toc-toggle-tab';
     tocToggleTab.setAttribute('aria-label', 'Toggle Table of Contents');
     tocToggleTab.title = 'Table of Contents (T)';
-    // Chevron icon pointing right (expand) or left (collapse)
-    tocToggleTab.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-      <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"/>
-    </svg>`;
+
+    // Create chevron SVG using DOM methods (avoid innerHTML for security hygiene)
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '16');
+    svg.setAttribute('height', '16');
+    svg.setAttribute('viewBox', '0 0 16 16');
+    svg.setAttribute('fill', 'currentColor');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z');
+    svg.appendChild(path);
+    tocToggleTab.appendChild(svg);
 
     tocToggleTab.addEventListener('click', toggleToc);
     document.body.appendChild(tocToggleTab);

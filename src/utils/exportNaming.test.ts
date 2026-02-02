@@ -295,6 +295,20 @@ describe("sanitizeFileName", () => {
     it("handles names shorter than max length", () => {
       expect(sanitizeFileName("Short", 100)).toBe("Short");
     });
+
+    it("truncates without word boundary when no space in lookback window", () => {
+      // Create a string with no spaces near the end: "AAAA...AAAA" (100 chars)
+      const noSpaces = "A".repeat(100);
+      const result = sanitizeFileName(noSpaces, 50);
+      expect(result).toBe("A".repeat(50));
+    });
+
+    it("truncates at word boundary within lookback window", () => {
+      // Word boundary at position 45, maxLength 50, lookback 20 → should find it
+      const withSpace = "A".repeat(45) + " " + "B".repeat(54); // 100 chars total
+      const result = sanitizeFileName(withSpace, 50);
+      expect(result).toBe("A".repeat(45));
+    });
   });
 
   describe("Windows reserved names", () => {
