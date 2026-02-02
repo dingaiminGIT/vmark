@@ -470,9 +470,10 @@
 
   /**
    * Apply show/hide line numbers on code blocks
+   * Excludes preview-only blocks (mermaid, math) which never show line numbers
    */
   function applyLineNumbers() {
-    const lineNumbers = document.querySelectorAll('.code-line-numbers');
+    const lineNumbers = document.querySelectorAll('.code-block-wrapper:not(.code-block-preview-only) .code-line-numbers');
     lineNumbers.forEach(el => {
       el.style.display = settings.showLineNumbers ? 'flex' : 'none';
     });
@@ -488,7 +489,8 @@
     // Only add buttons once
     if (editor.dataset.copyButtonsApplied === 'true') return;
 
-    const codeBlocks = editor.querySelectorAll('.code-block-wrapper');
+    // Exclude preview-only blocks (mermaid, math) which show rendered output
+    const codeBlocks = editor.querySelectorAll('.code-block-wrapper:not(.code-block-preview-only)');
     codeBlocks.forEach(wrapper => {
       // Create copy button
       const btn = document.createElement('button');
