@@ -61,9 +61,17 @@ export function isDataUri(src: string): boolean {
 
 /**
  * Check if a URL is a Tauri asset URL.
+ * Tauri uses different formats depending on version/platform:
+ * - asset://localhost/... (older)
+ * - https://asset.localhost/... (newer, macOS/Linux)
+ * - https://asset.localhost/... (Windows with modified CSP)
  */
 export function isAssetUrl(src: string): boolean {
-  return src.startsWith("asset://") || src.startsWith("tauri://");
+  return (
+    src.startsWith("asset://") ||
+    src.startsWith("tauri://") ||
+    src.startsWith("https://asset.localhost/")
+  );
 }
 
 /**
@@ -97,9 +105,11 @@ export async function resolveRelativePath(
   }
 
   // Handle asset URLs - extract the path
+  // Formats: asset://localhost/path, https://asset.localhost/path
   if (isAssetUrl(src)) {
     try {
       const url = new URL(src);
+      // pathname is /path/to/file.png (includes leading slash)
       return decodeURIComponent(url.pathname);
     } catch (error) {
       console.warn("[ResourceResolver] Failed to parse asset URL:", src, error);
