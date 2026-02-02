@@ -179,21 +179,21 @@ export async function resolveResources(
   const missing: ResourceInfo[] = [];
   let totalSize = 0;
 
-  // Create assets directory for folder mode
-  // Structure: DocumentFolder/assets/ (sibling to index.html)
-  const assetsDir =
+  // Create images directory for folder mode
+  // Structure: DocumentFolder/assets/images/
+  const imagesDir =
     mode === "folder" && outputDir
-      ? await join(outputDir, "assets")
+      ? await join(outputDir, "assets", "images")
       : null;
 
-  if (assetsDir) {
+  if (imagesDir) {
     try {
-      const assetsDirExists = await exists(assetsDir);
-      if (!assetsDirExists) {
-        await mkdir(assetsDir, { recursive: true });
+      const imagesDirExists = await exists(imagesDir);
+      if (!imagesDirExists) {
+        await mkdir(imagesDir, { recursive: true });
       }
     } catch (e) {
-      console.warn("[ResourceResolver] Failed to create assets directory:", e);
+      console.warn("[ResourceResolver] Failed to create images directory:", e);
     }
   }
 
@@ -239,15 +239,15 @@ export async function resolveResources(
           info.exportSrc = dataUri;
           modifiedHtml = modifiedHtml.split(src).join(dataUri);
         }
-      } else if (mode === "folder" && assetsDir) {
-        // Copy to assets folder
+      } else if (mode === "folder" && imagesDir) {
+        // Copy to images folder
         const fileName = await basename(resolvedPath);
-        const destPath = await join(assetsDir, fileName);
+        const destPath = await join(imagesDir, fileName);
 
         try {
           await copyFile(resolvedPath, destPath);
-          // Relative path from index.html to assets/filename
-          const relativePath = `assets/${fileName}`;
+          // Relative path from index.html to assets/images/filename
+          const relativePath = `assets/images/${fileName}`;
           info.exportSrc = relativePath;
           modifiedHtml = modifiedHtml.split(src).join(relativePath);
         } catch (e) {

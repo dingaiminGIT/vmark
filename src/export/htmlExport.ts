@@ -1,24 +1,23 @@
 /**
  * HTML Export
  *
- * Generates HTML exports in multiple modes:
+ * Generates a document folder with:
  *
- * Folder mode (default):
  *   DocumentName/
- *   ├── index.html
+ *   ├── index.html           ← References external CSS/JS/images
+ *   ├── standalone.html      ← All embedded (CSS, JS, images as data URIs)
  *   └── assets/
- *       ├── image1.png
- *       └── ...
+ *       ├── vmark-reader.css
+ *       ├── vmark-reader.js
+ *       └── images/
+ *           ├── image1.png
+ *           └── ...
  *
- * Single mode:
- *   DocumentName.html (self-contained with data URIs)
- *
- * Style modes:
- * - Plain: No CSS, minimal HTML
- * - Styled: Full CSS with theme, fonts, and content styles
+ * - index.html: Clean HTML with external asset references, good for hosting
+ * - standalone.html: Self-contained single file, good for sharing
  */
 
-import { writeTextFile, mkdir, exists } from "@tauri-apps/plugin-fs";
+import { writeTextFile, mkdir } from "@tauri-apps/plugin-fs";
 import { captureThemeCSS, isDarkTheme } from "./themeSnapshot";
 import { resolveResources, getDocumentBaseDir } from "./resourceResolver";
 import { generateExportFontCSS } from "./fontEmbedder";
@@ -87,15 +86,11 @@ function sanitizeExportHtml(html: string): string {
 }
 
 export interface HtmlExportOptions {
-  /** Style mode: 'plain' (no CSS) or 'styled' (full CSS) */
-  style: "plain" | "styled";
-  /** Packaging mode: 'folder' (assets folder) or 'single' (data URIs) */
-  packaging: "folder" | "single";
   /** Document title */
   title?: string;
   /** Source file path (for resource resolution) */
   sourceFilePath?: string | null;
-  /** Output file path */
+  /** Output folder path (the document folder) */
   outputPath: string;
   /** User font settings */
   fontSettings?: {
@@ -104,17 +99,19 @@ export interface HtmlExportOptions {
   };
   /** Force light theme even if editor is in dark mode */
   forceLightTheme?: boolean;
-  /** Include interactive reader controls (default: true for styled mode) */
+  /** Include interactive reader controls (default: true) */
   includeReader?: boolean;
 }
 
 export interface HtmlExportResult {
   /** Whether export succeeded */
   success: boolean;
-  /** Output file path (index.html in folder mode, or the .html file in single mode) */
-  outputPath: string;
-  /** Assets folder name relative to index.html (e.g., "assets") - only in folder mode */
-  assetsPath?: string;
+  /** Path to index.html */
+  indexPath: string;
+  /** Path to standalone.html */
+  standalonePath: string;
+  /** Assets folder path */
+  assetsPath: string;
   /** Number of resources processed */
   resourceCount: number;
   /** Number of missing resources */
@@ -878,55 +875,33 @@ function getEditorContentCSS(): string {
 }
 
 /**
- * Generate the complete HTML document.
+ * Generate index.html with external CSS/JS references.
  */
-function generateHtmlDocument(
+function generateIndexHtml(
   content: string,
   options: {
     title: string;
-    themeCSS?: string;
-    fontCSS?: string;
-    contentCSS?: string;
+    themeCSS: string;
+    fontCSS: string;
+    contentCSS: string;
     isDark?: boolean;
     includeKaTeX?: boolean;
-    includeReader?: boolean;
   }
 ): string {
-  const { title, themeCSS, fontCSS, contentCSS, isDark, includeKaTeX = true, includeReader = true } = options;
+  const { title, themeCSS, fontCSS, contentCSS, isDark, includeKaTeX = true } = options;
 
-  const styleBlocks: string[] = [];
-
-  if (themeCSS) {
-    styleBlocks.push(`/* Theme Variables */\n${themeCSS}`);
-  }
-
-  if (fontCSS) {
-    styleBlocks.push(`/* Fonts */\n${fontCSS}`);
-  }
-
-  if (contentCSS) {
-    styleBlocks.push(`/* Content Styles */\n${contentCSS}`);
-  }
-
-  // Add reader CSS if enabled
-  if (includeReader) {
-    styleBlocks.push(`/* VMark Reader */\n${getReaderCSS()}`);
-  }
-
-  const styleTag = styleBlocks.length > 0
-    ? `<style>\n${styleBlocks.join("\n\n")}\n</style>`
-    : "";
+  // Inline only theme, font, and content CSS (small)
+  // Reader CSS/JS are external
+  const inlineStyles = [
+    `/* Theme Variables */\n${themeCSS}`,
+    `/* Fonts */\n${fontCSS}`,
+    `/* Content Styles */\n${contentCSS}`,
+  ].filter(s => s.trim()).join("\n\n");
 
   const themeClass = isDark ? "dark-theme" : "";
 
-  // KaTeX CSS for math rendering
   const katexLink = includeKaTeX
     ? `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">`
-    : "";
-
-  // Reader JavaScript
-  const readerScript = includeReader
-    ? `<script>\n${getReaderJS()}\n</script>`
     : "";
 
   return `<!DOCTYPE html>
@@ -936,7 +911,10 @@ function generateHtmlDocument(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(title)}</title>
   ${katexLink}
-  ${styleTag}
+  <link rel="stylesheet" href="assets/vmark-reader.css">
+  <style>
+${inlineStyles}
+  </style>
 </head>
 <body>
   <div class="export-surface">
@@ -944,7 +922,62 @@ function generateHtmlDocument(
 ${content}
     </div>
   </div>
-  ${readerScript}
+  <script src="assets/vmark-reader.js"></script>
+</body>
+</html>`;
+}
+
+/**
+ * Generate standalone.html with everything embedded.
+ */
+function generateStandaloneHtml(
+  content: string,
+  options: {
+    title: string;
+    themeCSS: string;
+    fontCSS: string;
+    contentCSS: string;
+    readerCSS: string;
+    readerJS: string;
+    isDark?: boolean;
+    includeKaTeX?: boolean;
+  }
+): string {
+  const { title, themeCSS, fontCSS, contentCSS, readerCSS, readerJS, isDark, includeKaTeX = true } = options;
+
+  const allStyles = [
+    `/* Theme Variables */\n${themeCSS}`,
+    `/* Fonts */\n${fontCSS}`,
+    `/* Content Styles */\n${contentCSS}`,
+    `/* VMark Reader */\n${readerCSS}`,
+  ].filter(s => s.trim()).join("\n\n");
+
+  const themeClass = isDark ? "dark-theme" : "";
+
+  const katexLink = includeKaTeX
+    ? `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="en" class="${themeClass}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(title)}</title>
+  ${katexLink}
+  <style>
+${allStyles}
+  </style>
+</head>
+<body>
+  <div class="export-surface">
+    <div class="export-surface-editor">
+${content}
+    </div>
+  </div>
+  <script>
+${readerJS}
+  </script>
 </body>
 </html>`;
 }
@@ -962,7 +995,14 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Export HTML document.
+ * Export HTML document to a folder.
+ *
+ * Creates:
+ * - index.html (external CSS/JS references)
+ * - standalone.html (all embedded)
+ * - assets/vmark-reader.css
+ * - assets/vmark-reader.js
+ * - assets/images/ (copied images)
  *
  * @param html - The rendered HTML content from ExportSurface
  * @param options - Export options
@@ -971,10 +1011,8 @@ function escapeHtml(text: string): string {
  * @example
  * ```ts
  * const result = await exportHtml(renderedHtml, {
- *   style: 'styled',
- *   packaging: 'folder',
  *   title: 'My Document',
- *   outputPath: '/path/to/output.html',
+ *   outputPath: '/path/to/MyDocument',
  * });
  * ```
  */
@@ -983,130 +1021,123 @@ export async function exportHtml(
   options: HtmlExportOptions
 ): Promise<HtmlExportResult> {
   const {
-    style,
-    packaging,
     title = "Document",
     sourceFilePath,
     outputPath,
     fontSettings,
     forceLightTheme = true,
-    includeReader,
+    includeReader = true,
   } = options;
-
-  // Include reader by default for styled exports
-  const shouldIncludeReader = includeReader ?? (style === "styled");
 
   const warnings: string[] = [];
   let totalSize = 0;
-  let resourceCount = 0;
-  let missingCount = 0;
-  let assetsPath: string | undefined;
+
+  const indexPath = `${outputPath}/index.html`;
+  const standalonePath = `${outputPath}/standalone.html`;
+  const assetsPath = `${outputPath}/assets`;
+  const imagesPath = `${assetsPath}/images`;
 
   try {
+    // Create folder structure
+    await mkdir(outputPath, { recursive: true });
+    await mkdir(assetsPath, { recursive: true });
+    await mkdir(imagesPath, { recursive: true });
+
     // Sanitize HTML - remove editor artifacts
     const sanitizedHtml = sanitizeExportHtml(html);
 
-    // For folder mode, outputPath is DocumentFolder/index.html
-    // We need to create the document folder first
-    const documentFolder = packaging === "folder" ? getOutputDir(outputPath) : undefined;
-
-    if (documentFolder) {
-      const folderExists = await exists(documentFolder);
-      if (!folderExists) {
-        await mkdir(documentFolder, { recursive: true });
-      }
-    }
-
-    // Resolve resources
-    // For folder mode, outputDir is the document folder (contains index.html and assets/)
+    // Resolve resources for index.html (external images)
     const baseDir = await getDocumentBaseDir(sourceFilePath ?? null);
-    const { html: processedHtml, report } = await resolveResources(sanitizedHtml, {
+    const { html: indexContent, report } = await resolveResources(sanitizedHtml, {
       baseDir,
-      mode: packaging,
-      outputDir: documentFolder,
+      mode: "folder",
+      outputDir: outputPath,
     });
-
-    resourceCount = report.resources.length;
-    missingCount = report.missing.length;
-    totalSize += report.totalSize;
 
     if (report.missing.length > 0) {
       warnings.push(`${report.missing.length} resource(s) not found`);
     }
 
-    if (packaging === "folder") {
-      assetsPath = "assets";
-    }
+    // Resolve resources for standalone.html (embedded images)
+    const { html: standaloneContent } = await resolveResources(sanitizedHtml, {
+      baseDir,
+      mode: "single",
+    });
 
-    // Generate CSS based on style mode
-    let themeCSS: string | undefined;
-    let fontCSS: string | undefined;
-    let contentCSS: string | undefined;
-
-    if (style === "styled") {
-      // Capture current theme
-      themeCSS = captureThemeCSS();
-
-      // Generate font CSS
-      const fontResult = await generateExportFontCSS(
-        processedHtml,
-        fontSettings ?? {},
-        packaging === "single"
-      );
-      fontCSS = fontResult.css;
-      totalSize += fontResult.totalSize;
-
-      // Add content CSS
-      contentCSS = getEditorContentCSS();
-    }
+    // Generate CSS
+    const themeCSS = captureThemeCSS();
+    const fontResult = await generateExportFontCSS(
+      sanitizedHtml,
+      fontSettings ?? {},
+      false // Don't embed fonts as data URIs
+    );
+    const fontCSS = fontResult.css;
+    const contentCSS = getEditorContentCSS();
+    const readerCSS = includeReader ? getReaderCSS() : "";
+    const readerJS = includeReader ? getReaderJS() : "";
 
     // Determine theme
     const useDarkTheme = !forceLightTheme && isDarkTheme();
 
-    // Generate final HTML document
-    const finalHtml = generateHtmlDocument(processedHtml, {
+    // Write assets/vmark-reader.css
+    if (includeReader) {
+      await writeTextFile(`${assetsPath}/vmark-reader.css`, readerCSS);
+      totalSize += new TextEncoder().encode(readerCSS).length;
+    }
+
+    // Write assets/vmark-reader.js
+    if (includeReader) {
+      await writeTextFile(`${assetsPath}/vmark-reader.js`, readerJS);
+      totalSize += new TextEncoder().encode(readerJS).length;
+    }
+
+    // Generate and write index.html
+    const indexHtml = generateIndexHtml(indexContent, {
       title,
       themeCSS,
       fontCSS,
       contentCSS,
       isDark: useDarkTheme,
-      includeReader: shouldIncludeReader,
     });
+    await writeTextFile(indexPath, indexHtml);
+    totalSize += new TextEncoder().encode(indexHtml).length;
 
-    // Write to file
-    await writeTextFile(outputPath, finalHtml);
-    totalSize += new TextEncoder().encode(finalHtml).length;
+    // Generate and write standalone.html (with embedded images)
+    const standaloneHtml = generateStandaloneHtml(standaloneContent, {
+      title,
+      themeCSS,
+      fontCSS,
+      contentCSS,
+      readerCSS,
+      readerJS,
+      isDark: useDarkTheme,
+    });
+    await writeTextFile(standalonePath, standaloneHtml);
+    totalSize += new TextEncoder().encode(standaloneHtml).length;
 
     return {
       success: true,
-      outputPath,
+      indexPath,
+      standalonePath,
       assetsPath,
-      resourceCount,
-      missingCount,
+      resourceCount: report.resources.length,
+      missingCount: report.missing.length,
       totalSize,
       warnings,
     };
   } catch (error) {
     return {
       success: false,
-      outputPath,
-      resourceCount,
-      missingCount,
+      indexPath,
+      standalonePath,
+      assetsPath,
+      resourceCount: 0,
+      missingCount: 0,
       totalSize,
       warnings,
       error: error instanceof Error ? error.message : String(error),
     };
   }
-}
-
-/**
- * Get the output directory from a file path.
- * For folder mode with index.html, this returns the document folder.
- */
-function getOutputDir(filePath: string): string {
-  const parts = filePath.split(/[/\\]/);
-  parts.pop(); // Remove filename (e.g., index.html)
-  return parts.join("/") || "/";
 }
 
 /**

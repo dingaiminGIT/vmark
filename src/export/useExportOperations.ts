@@ -119,23 +119,21 @@ async function renderMarkdownToHtml(
 export interface ExportToHtmlOptions {
   /** Markdown content */
   markdown: string;
-  /** Default filename without extension (used as folder name) */
+  /** Default folder name (document title) */
   defaultName?: string;
-  /** Default directory */
+  /** Default parent directory */
   defaultDirectory?: string;
-  /** Style mode */
-  style?: "plain" | "styled";
-  /** Packaging mode: 'folder' creates DocumentName/index.html + assets/, 'single' creates single .html file */
-  packaging?: "folder" | "single";
   /** Source file path for resource resolution */
   sourceFilePath?: string | null;
 }
 
 /**
- * Export markdown to HTML file with visual parity.
+ * Export markdown to HTML folder.
  *
- * Folder mode: Creates DocumentName/index.html + assets/
- * Single mode: Creates DocumentName.html (self-contained with data URIs)
+ * Creates:
+ * - DocumentName/index.html (external CSS/JS/images)
+ * - DocumentName/standalone.html (all embedded)
+ * - DocumentName/assets/ (CSS, JS, images)
  */
 export async function exportToHtml(
   options: ExportToHtmlOptions
@@ -144,8 +142,6 @@ export async function exportToHtml(
     markdown,
     defaultName = "document",
     defaultDirectory,
-    style = "styled",
-    packaging = "folder",
     sourceFilePath,
   } = options;
 
@@ -157,40 +153,18 @@ export async function exportToHtml(
   }
 
   try {
-    let outputPath: string;
+    // User picks/creates a folder
+    const defaultPath = defaultDirectory
+      ? joinPath(defaultDirectory, defaultName)
+      : defaultName;
 
-    if (packaging === "folder") {
-      // Folder mode: User picks/creates a folder, we write index.html inside
-      // Use save dialog with folder name as default (no extension)
-      const defaultPath = defaultDirectory
-        ? joinPath(defaultDirectory, defaultName)
-        : defaultName;
+    const folderPath = await save({
+      defaultPath,
+      title: "Export HTML",
+      // No file filters — we're creating a folder
+    });
 
-      const folderPath = await save({
-        defaultPath,
-        title: "Export HTML to Folder",
-        // No file filters — we're creating a folder
-      });
-
-      if (!folderPath) return false;
-
-      // The output path is index.html inside the chosen folder
-      outputPath = joinPath(folderPath, "index.html");
-    } else {
-      // Single mode: User picks a .html file
-      const filename = `${defaultName}.html`;
-      const defaultPath = defaultDirectory
-        ? joinPath(defaultDirectory, filename)
-        : filename;
-
-      const filePath = await save({
-        defaultPath,
-        filters: [{ name: "HTML", extensions: ["html", "htm"] }],
-      });
-
-      if (!filePath) return false;
-      outputPath = filePath;
-    }
+    if (!folderPath) return false;
 
     // Render markdown to HTML
     const html = await renderMarkdownToHtml(markdown, true);
@@ -204,11 +178,9 @@ export async function exportToHtml(
 
     // Export with options
     const result = await exportHtml(html, {
-      style,
-      packaging,
       title: defaultName.replace(/\.[^.]+$/, ""),
       sourceFilePath,
-      outputPath,
+      outputPath: folderPath,
       fontSettings,
       forceLightTheme: true,
     });
@@ -219,7 +191,6 @@ export async function exportToHtml(
 
     if (result.warnings.length > 0) {
       console.warn("[Export] Warnings:", result.warnings);
-      // Surface warnings to user
       const count = result.warnings.length;
       toast.warning(
         count === 1
@@ -228,6 +199,7 @@ export async function exportToHtml(
       );
     }
 
+    toast.success("Exported to folder");
     return true;
   } catch (error) {
     console.error("[Export] Failed to export HTML:", error);

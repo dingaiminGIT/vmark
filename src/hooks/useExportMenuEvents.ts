@@ -11,7 +11,6 @@
 import { useEffect, useRef } from "react";
 import { type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { toast } from "sonner";
 // Export module is dynamically imported to avoid loading exportStyles.css at startup.
 // This prevents CSS cascade conflicts between dev and prod builds.
 import { getFileNameWithoutExtension, getDirectory } from "@/utils/pathUtils";
@@ -50,17 +49,12 @@ export function useExportMenuEvents(): void {
           const defaultDir = doc.filePath ? getDirectory(doc.filePath) : undefined;
           try {
             const { exportToHtml } = await import("@/export");
-            const success = await exportToHtml({
+            await exportToHtml({
               markdown: doc.content,
               defaultName,
               defaultDirectory: defaultDir,
-              style: "styled",
-              packaging: "folder",
               sourceFilePath: doc.filePath,
             });
-            if (success) {
-              toast.success("Exported to HTML");
-            }
           } catch (error) {
             console.error("[Menu] Failed to export HTML:", error);
           }
