@@ -109,7 +109,8 @@
     theme: 'paper',
     cjkLatinSpacing: true,
     expandDetails: false,
-    showToc: false
+    showToc: false,
+    showLineNumbers: true
   };
 
   // Settings bounds
@@ -195,6 +196,12 @@
 
     // Table of Contents
     applyToc();
+
+    // Line numbers
+    applyLineNumbers();
+
+    // Copy buttons
+    applyCopyButtons();
 
     // Update UI if panel exists
     updatePanelUI();
@@ -461,6 +468,67 @@
     });
   }
 
+  /**
+   * Apply show/hide line numbers on code blocks
+   */
+  function applyLineNumbers() {
+    const lineNumbers = document.querySelectorAll('.code-line-numbers');
+    lineNumbers.forEach(el => {
+      el.style.display = settings.showLineNumbers ? 'flex' : 'none';
+    });
+  }
+
+  /**
+   * Apply copy buttons to code blocks
+   */
+  function applyCopyButtons() {
+    const editor = document.querySelector('.export-surface-editor');
+    if (!editor) return;
+
+    // Only add buttons once
+    if (editor.dataset.copyButtonsApplied === 'true') return;
+
+    const codeBlocks = editor.querySelectorAll('.code-block-wrapper');
+    codeBlocks.forEach(wrapper => {
+      // Create copy button
+      const btn = document.createElement('button');
+      btn.className = 'vmark-code-copy-btn';
+      btn.title = 'Copy code';
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>`;
+
+      btn.addEventListener('click', () => {
+        const pre = wrapper.querySelector('pre');
+        if (!pre) return;
+
+        const code = pre.textContent || '';
+        navigator.clipboard.writeText(code).then(() => {
+          // Show success feedback
+          btn.classList.add('copied');
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>`;
+
+          setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>`;
+          }, 2000);
+        }).catch(err => {
+          console.warn('[VMark Reader] Copy failed:', err);
+        });
+      });
+
+      wrapper.appendChild(btn);
+    });
+
+    editor.dataset.copyButtonsApplied = 'true';
+  }
+
   // TOC state
   let tocSidebar = null;
   let tocBackdrop = null;
@@ -714,7 +782,7 @@
             <button class="vmark-reader-theme-circle ${settings.theme === 'paper' ? 'active' : ''}" data-theme="paper" title="Paper" style="background: ${THEMES.paper.background}"></button>
             <button class="vmark-reader-theme-circle ${settings.theme === 'mint' ? 'active' : ''}" data-theme="mint" title="Mint" style="background: ${THEMES.mint.background}"></button>
             <button class="vmark-reader-theme-circle ${settings.theme === 'sepia' ? 'active' : ''}" data-theme="sepia" title="Sepia" style="background: ${THEMES.sepia.background}"></button>
-            <button class="vmark-reader-theme-circle ${settings.theme === 'night' ? 'active' : ''}" data-theme="night" title="Night" style="background: ${THEMES.night.background}"></button>
+            <button class="vmark-reader-theme-circle theme-night ${settings.theme === 'night' ? 'active' : ''}" data-theme="night" title="Night" style="background: ${THEMES.night.background}"></button>
           </div>
         </div>
         <div class="vmark-reader-group">
@@ -741,6 +809,12 @@
           <label class="vmark-reader-checkbox-label">
             <input type="checkbox" ${settings.expandDetails ? 'checked' : ''} data-setting="expandDetails">
             <span>Expand All Sections</span>
+          </label>
+        </div>
+        <div class="vmark-reader-group">
+          <label class="vmark-reader-checkbox-label">
+            <input type="checkbox" ${settings.showLineNumbers ? 'checked' : ''} data-setting="showLineNumbers">
+            <span>Code Line Numbers</span>
           </label>
         </div>
         <div class="vmark-reader-group vmark-reader-reset">
@@ -872,6 +946,7 @@
     panel.querySelector('[data-setting="showToc"]').checked = settings.showToc;
     panel.querySelector('[data-setting="cjkLatinSpacing"]').checked = settings.cjkLatinSpacing;
     panel.querySelector('[data-setting="expandDetails"]').checked = settings.expandDetails;
+    panel.querySelector('[data-setting="showLineNumbers"]').checked = settings.showLineNumbers;
 
     // Update selects
     panel.querySelector('[data-setting="latinFont"]').value = settings.latinFont;
