@@ -672,11 +672,11 @@ function getEditorContentCSS(): string {
   border-bottom-color: var(--border-color);
 }
 
-.export-surface-editor .details-block > *:not(summary):not(.details-summary) {
+.export-surface-editor .details-block > *:not(summary):not(.details-summary):not(ul):not(ol):not(blockquote):not(pre) {
   padding: 0.75em 1em;
 }
 
-.export-surface-editor .details-block > *:not(summary):not(.details-summary):not(:last-child) {
+.export-surface-editor .details-block > *:not(summary):not(.details-summary):not(ul):not(ol):not(:last-child) {
   padding-bottom: 0;
 }
 
@@ -686,6 +686,53 @@ function getEditorContentCSS(): string {
 
 .export-surface-editor .details-block > p:not(.details-summary):last-child {
   margin-bottom: 0;
+}
+
+/* Lists inside details - explicit padding for proper indentation */
+.export-surface-editor .details-block > ul,
+.export-surface-editor .details-block > ol {
+  margin: 0.5em 0;
+  padding-left: 2.5em;
+  padding-right: 1em;
+}
+
+.export-surface-editor .details-block > ul:first-of-type,
+.export-surface-editor .details-block > ol:first-of-type {
+  margin-top: 0;
+  padding-top: 0.75em;
+}
+
+.export-surface-editor .details-block > ul:last-child,
+.export-surface-editor .details-block > ol:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0.75em;
+}
+
+/* Blockquote inside details */
+.export-surface-editor .details-block > blockquote {
+  margin: 0.5em 1em;
+  padding: 0 1em;
+}
+
+.export-surface-editor .details-block > blockquote:first-of-type {
+  margin-top: 0.75em;
+}
+
+.export-surface-editor .details-block > blockquote:last-child {
+  margin-bottom: 0.75em;
+}
+
+/* Code blocks inside details */
+.export-surface-editor .details-block > pre {
+  margin: 0.5em 1em;
+}
+
+.export-surface-editor .details-block > pre:first-of-type {
+  margin-top: 0.75em;
+}
+
+.export-surface-editor .details-block > pre:last-child {
+  margin-bottom: 0.75em;
 }
 
 /* Math - inline and block */
