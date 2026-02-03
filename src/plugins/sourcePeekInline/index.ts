@@ -8,6 +8,7 @@ export {
   sourcePeekInlineExtension,
   sourcePeekInlinePluginKey,
   openSourcePeekInline,
+  canUseSourcePeek,
   commitSourcePeek,
   revertAndCloseSourcePeek,
   EDITING_STATE_CHANGED,

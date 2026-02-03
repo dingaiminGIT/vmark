@@ -940,9 +940,8 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
       revertAndCloseSourcePeek(view);
       return true;
     }
-    // Open inline Source Peek
-    openSourcePeekInline(view);
-    return true;
+    // Open inline Source Peek (returns false for excluded block types)
+    return openSourcePeekInline(view);
   });
 
   bindings.Escape = guardProseMirrorCommand((_state: EditorState, _dispatch, view) => {

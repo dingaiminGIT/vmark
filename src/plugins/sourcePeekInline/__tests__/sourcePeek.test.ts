@@ -9,6 +9,7 @@ import { EditorState, TextSelection } from "@tiptap/pm/state";
 import { Schema, DOMParser } from "@tiptap/pm/model";
 import { getSourcePeekRange, getExpandedSourcePeekRange } from "@/utils/sourcePeek";
 import { useSourcePeekStore } from "@/stores/sourcePeekStore";
+import { canUseSourcePeek } from "../tiptap";
 
 // Create a test schema with tables, lists, and blockquotes
 const testSchema = new Schema({
@@ -309,5 +310,55 @@ describe("useSourcePeekStore", () => {
 
     store.setMarkdown("Fixed content");
     expect(useSourcePeekStore.getState().parseError).toBe(null);
+  });
+});
+
+describe("canUseSourcePeek", () => {
+  it("returns true for paragraph", () => {
+    expect(canUseSourcePeek("paragraph")).toBe(true);
+  });
+
+  it("returns true for heading", () => {
+    expect(canUseSourcePeek("heading")).toBe(true);
+  });
+
+  it("returns true for blockquote", () => {
+    expect(canUseSourcePeek("blockquote")).toBe(true);
+  });
+
+  it("returns true for bulletList", () => {
+    expect(canUseSourcePeek("bulletList")).toBe(true);
+  });
+
+  it("returns true for orderedList", () => {
+    expect(canUseSourcePeek("orderedList")).toBe(true);
+  });
+
+  it("returns true for table", () => {
+    expect(canUseSourcePeek("table")).toBe(true);
+  });
+
+  it("returns false for codeBlock", () => {
+    expect(canUseSourcePeek("codeBlock")).toBe(false);
+  });
+
+  it("returns false for code_block", () => {
+    expect(canUseSourcePeek("code_block")).toBe(false);
+  });
+
+  it("returns false for block_image", () => {
+    expect(canUseSourcePeek("block_image")).toBe(false);
+  });
+
+  it("returns false for frontmatter", () => {
+    expect(canUseSourcePeek("frontmatter")).toBe(false);
+  });
+
+  it("returns false for html_block", () => {
+    expect(canUseSourcePeek("html_block")).toBe(false);
+  });
+
+  it("returns false for horizontalRule", () => {
+    expect(canUseSourcePeek("horizontalRule")).toBe(false);
   });
 });

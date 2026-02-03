@@ -35,6 +35,19 @@ const sourcePeekInlinePluginKey = new PluginKey("sourcePeekInline");
 /** Meta key to signal editing state changes */
 const EDITING_STATE_CHANGED = "sourcePeekEditingChanged";
 
+/**
+ * Block types that should NOT use Source Peek.
+ * These have their own editing mechanisms or no editable content.
+ */
+const SOURCE_PEEK_EXCLUDED_TYPES = new Set([
+  "codeBlock",
+  "code_block",
+  "block_image",
+  "frontmatter",
+  "html_block",
+  "horizontalRule",
+]);
+
 /** Track CodeMirror view for cleanup */
 let currentCMView: CMView | null = null;
 
@@ -253,17 +266,32 @@ function getMarkdownOptions() {
 }
 
 /**
+ * Check if a block type should use Source Peek.
+ * Returns false for blocks with their own editing mechanisms.
+ */
+export function canUseSourcePeek(typeName: string): boolean {
+  return !SOURCE_PEEK_EXCLUDED_TYPES.has(typeName);
+}
+
+/**
  * Open Source Peek for editing the block at cursor.
  * Creates a checkpoint in unified history for revert.
+ * Returns false if the block type is excluded from Source Peek.
  */
-export function openSourcePeekInline(view: EditorView): void {
+export function openSourcePeekInline(view: EditorView): boolean {
   const range = getExpandedSourcePeekRange(view.state);
-  const options = getMarkdownOptions();
-  const markdown = serializeSourcePeekRange(view.state, range, options);
 
   // Get block type name for header
   const node = view.state.doc.nodeAt(range.from);
   const blockTypeName = node?.type.name ?? "unknown";
+
+  // Skip excluded block types
+  if (!canUseSourcePeek(blockTypeName)) {
+    return false;
+  }
+
+  const options = getMarkdownOptions();
+  const markdown = serializeSourcePeekRange(view.state, range, options);
 
   // Create checkpoint in unified history
   const tabId = getCurrentTabId();
@@ -286,6 +314,8 @@ export function openSourcePeekInline(view: EditorView): void {
   // Dispatch to trigger decoration rebuild
   const tr = view.state.tr.setMeta(EDITING_STATE_CHANGED, true);
   view.dispatch(tr);
+
+  return true;
 }
 
 /**
