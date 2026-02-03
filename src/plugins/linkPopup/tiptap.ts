@@ -115,7 +115,8 @@ function navigateToFragment(view: EditorView, targetId: string): boolean {
   try {
     const $pos = view.state.doc.resolve(pos + 1);
     const selection = TextSelection.near($pos);
-    view.dispatch(view.state.tr.setSelection(selection).scrollIntoView());
+    const tr = view.state.tr.setSelection(selection).scrollIntoView();
+    view.dispatch(tr.setMeta("addToHistory", false));
     view.focus();
     return true;
   } catch (error) {

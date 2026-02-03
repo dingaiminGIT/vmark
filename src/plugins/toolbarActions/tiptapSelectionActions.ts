@@ -3,6 +3,15 @@ import type { EditorView } from "@tiptap/pm/view";
 
 const MAX_LINE_SEARCH_ITERATIONS = 500;
 
+/**
+ * Dispatch a selection change without adding to undo history.
+ * Selection changes are navigation, not content changes.
+ */
+function dispatchSelectionOnly(view: EditorView, from: number, to: number): void {
+  const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, from, to));
+  view.dispatch(tr.setMeta("addToHistory", false));
+}
+
 function findWordBoundaries(text: string, pos: number): { start: number; end: number } | null {
   if (pos < 0 || pos > text.length) return null;
   const wordChar = /[\p{L}\p{N}_]/u;
@@ -59,7 +68,7 @@ export function selectWordInView(view: EditorView): boolean {
   const from = blockStart + boundaries.start;
   const to = blockStart + boundaries.end;
 
-  view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, from, to)));
+  dispatchSelectionOnly(view, from, to);
   view.focus();
   return true;
 }
@@ -69,7 +78,7 @@ export function selectLineInView(view: EditorView): boolean {
   const { $from, $to } = state.selection;
 
   const { start, end } = findLineBoundaries(view, $from.pos, $to.pos);
-  view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, start, end)));
+  dispatchSelectionOnly(view, start, end);
   view.focus();
   return true;
 }
@@ -82,12 +91,12 @@ export function selectBlockInView(view: EditorView): boolean {
   while (depth > 0) {
     const node = $from.node(depth);
     if (node.isBlock && !node.isTextblock) {
-      view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, $from.start(depth), $from.end(depth))));
+      dispatchSelectionOnly(view, $from.start(depth), $from.end(depth));
       view.focus();
       return true;
     }
     if (node.isTextblock) {
-      view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, $from.start(depth), $from.end(depth))));
+      dispatchSelectionOnly(view, $from.start(depth), $from.end(depth));
       view.focus();
       return true;
     }
@@ -107,7 +116,7 @@ export function expandSelectionInView(view: EditorView): boolean {
       const blockStart = $from.start();
       const wordFrom = blockStart + boundaries.start;
       const wordTo = blockStart + boundaries.end;
-      view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, wordFrom, wordTo)));
+      dispatchSelectionOnly(view, wordFrom, wordTo);
       view.focus();
       return true;
     }
@@ -115,7 +124,7 @@ export function expandSelectionInView(view: EditorView): boolean {
 
   const { start: lineStart, end: lineEnd } = findLineBoundaries(view, from, to);
   if (lineStart < from || lineEnd > to) {
-    view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, lineStart, lineEnd)));
+    dispatchSelectionOnly(view, lineStart, lineEnd);
     view.focus();
     return true;
   }
@@ -124,13 +133,13 @@ export function expandSelectionInView(view: EditorView): boolean {
     const start = $from.start(depth);
     const end = $from.end(depth);
     if (start < from || end > to) {
-      view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, start, end)));
+      dispatchSelectionOnly(view, start, end);
       view.focus();
       return true;
     }
   }
 
-  view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, 0, state.doc.content.size)));
+  dispatchSelectionOnly(view, 0, state.doc.content.size);
   view.focus();
   return true;
 }

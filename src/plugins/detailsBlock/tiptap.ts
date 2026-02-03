@@ -136,7 +136,8 @@ export const detailsBlockExtension = Node.create({
                   ...node.attrs,
                   open: !node.attrs.open,
                 });
-                view.dispatch(tr);
+                // Toggle is UI state, not content change - don't add to history
+                view.dispatch(tr.setMeta("addToHistory", false));
                 return true;
               }
             }

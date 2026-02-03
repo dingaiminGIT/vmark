@@ -122,7 +122,8 @@ export class BlockImageNodeView implements NodeView {
     try {
       const { view } = this.editor;
       const selection = NodeSelection.create(view.state.doc, pos);
-      view.dispatch(view.state.tr.setSelection(selection));
+      const tr = view.state.tr.setSelection(selection);
+      view.dispatch(tr.setMeta("addToHistory", false));
     } catch {
       // Ignore selection errors
     }

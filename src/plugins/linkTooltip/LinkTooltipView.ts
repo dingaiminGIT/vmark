@@ -173,13 +173,12 @@ export class LinkTooltipView {
         try {
           const editorState = this.editorView.state as {
             doc: { resolve: (pos: number) => unknown };
-            tr: { setSelection: (sel: unknown) => { scrollIntoView: () => unknown } };
+            tr: { setSelection: (sel: unknown) => { scrollIntoView: () => { setMeta: (key: string, value: boolean) => unknown } } };
           };
           const $pos = editorState.doc.resolve(pos + 1);
           const selection = TextSelection.near($pos as Parameters<typeof TextSelection.near>[0]);
-          this.editorView.dispatch(
-            editorState.tr.setSelection(selection).scrollIntoView()
-          );
+          const tr = editorState.tr.setSelection(selection).scrollIntoView();
+          this.editorView.dispatch(tr.setMeta("addToHistory", false));
           useLinkTooltipStore.getState().hideTooltip();
           this.editorView.focus();
         } catch (error) {

@@ -104,7 +104,7 @@ export function addCursorAtPosition(
         return null; // Already primary
       }
       const newSel = new MultiSelection([...selection.ranges], existingIndex);
-      return state.tr.setSelection(newSel);
+      return state.tr.setSelection(newSel).setMeta("addToHistory", false);
     }
 
     // Add new cursor
@@ -115,7 +115,7 @@ export function addCursorAtPosition(
       newRanges.length - 1
     );
     const newSel = new MultiSelection(normalized.ranges, normalized.primaryIndex);
-    return state.tr.setSelection(newSel);
+    return state.tr.setSelection(newSel).setMeta("addToHistory", false);
   }
 
   // Convert single selection to MultiSelection
@@ -129,7 +129,7 @@ export function addCursorAtPosition(
   const newRanges = [existingRange, newRange];
   const normalized = normalizeRangesWithPrimary(newRanges, doc, 1);
   const newSel = new MultiSelection(normalized.ranges, normalized.primaryIndex); // New cursor is primary
-  return state.tr.setSelection(newSel);
+  return state.tr.setSelection(newSel).setMeta("addToHistory", false);
 }
 
 /**
@@ -166,7 +166,7 @@ export function removeCursorAtPosition(
     const remaining = newRanges[0];
     return state.tr.setSelection(
       TextSelection.create(doc, remaining.$from.pos, remaining.$to.pos)
-    );
+    ).setMeta("addToHistory", false);
   }
 
   // Adjust primary index
@@ -179,7 +179,7 @@ export function removeCursorAtPosition(
   }
 
   const newSel = new MultiSelection(newRanges, newPrimaryIndex);
-  return state.tr.setSelection(newSel);
+  return state.tr.setSelection(newSel).setMeta("addToHistory", false);
 }
 
 /**

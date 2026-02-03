@@ -120,8 +120,9 @@ export function handleClosingBracket(
   const nextChar = getCharAt(state, from);
   if (nextChar !== char) return false;
 
-  // Skip over the closing bracket
-  view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, from + 1)));
+  // Skip over the closing bracket (navigation, not content change)
+  const tr = state.tr.setSelection(TextSelection.create(state.doc, from + 1));
+  view.dispatch(tr.setMeta("addToHistory", false));
   return true;
 }
 
@@ -199,8 +200,9 @@ export function handleTabJump(
     if (!config.includeCJK || !config.includeCurlyQuotes) return false;
   }
 
-  // Jump over the closing bracket
-  view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, from + 1)));
+  // Jump over the closing bracket (navigation, not content change)
+  const tr = state.tr.setSelection(TextSelection.create(state.doc, from + 1));
+  view.dispatch(tr.setMeta("addToHistory", false));
   return true;
 }
 

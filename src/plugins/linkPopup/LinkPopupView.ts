@@ -186,9 +186,8 @@ export class LinkPopupView extends WysiwygPopupView<LinkPopupState> {
         try {
           const $pos = this.editorView.state.doc.resolve(pos + 1);
           const selection = TextSelection.near($pos);
-          this.editorView.dispatch(
-            this.editorView.state.tr.setSelection(selection).scrollIntoView()
-          );
+          const tr = this.editorView.state.tr.setSelection(selection).scrollIntoView();
+          this.editorView.dispatch(tr.setMeta("addToHistory", false));
           this.closePopup();
           this.focusEditor();
         } catch (error) {
