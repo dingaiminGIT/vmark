@@ -115,6 +115,7 @@ pub fn run() {
             mcp_server::mcp_server_status,
             mcp_server::mcp_sidecar_health,
             mcp_server::mcp_bridge_client_count,
+            mcp_server::write_mcp_tool_mode,
             mcp_bridge::mcp_bridge_respond,
             mcp_config::mcp_config_get_status,
             mcp_config::mcp_config_diagnose,

@@ -179,10 +179,13 @@ export type MarkdownPasteMode = "auto" | "off";
  */
 export type PasteMode = "smart" | "plain" | "rich";
 
+export type McpToolMode = "writer" | "full";
+
 export interface McpServerSettings {
   port: number;        // Default: 9223 (must match MCP bridge plugin port)
   autoStart: boolean;  // Start on app launch
   autoApproveEdits: boolean; // Auto-approve AI document edits without preview
+  toolMode: McpToolMode; // Which tools to expose to AI (writer = ~15 tools, full = all 76)
 }
 
 export interface AdvancedSettingsState {
@@ -373,6 +376,7 @@ const initialState: SettingsState = {
       port: 9223,
       autoStart: true,
       autoApproveEdits: false, // Require approval by default (safer)
+      toolMode: "writer", // Default to writer mode (~15 focused tools)
     },
     customLinkProtocols: ["obsidian", "vscode", "dict", "x-dictionary"],
   },

@@ -51,6 +51,10 @@ export { registerBatchOpTools } from './tools/batch-ops.js';
 // Resource registrations
 export { registerDocumentResources } from './resources/document.js';
 
+// Writer mode tools list
+export { WRITER_MODE_TOOLS, isWriterModeTool } from './writerModeTools.js';
+export type { WriterModeTool } from './writerModeTools.js';
+
 export type {
   Bridge,
   BridgeRequest,

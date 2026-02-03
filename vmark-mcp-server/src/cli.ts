@@ -41,6 +41,7 @@ async function runHealthCheck(): Promise<void> {
   try {
     // 1. Can we import the server module?
     const { createVMarkMcpServer } = await import('./index.js');
+    const { isWriterModeTool } = await import('./writerModeTools.js');
 
     // 2. Create a mock bridge that doesn't connect
     const mockBridge = {
@@ -54,28 +55,37 @@ async function runHealthCheck(): Promise<void> {
 
     // 3. Can we instantiate the server and list tools?
     const server = createVMarkMcpServer(mockBridge as any);
-    const tools = server.listTools();
+    const allTools = server.listTools();
     const resources = server.listResources();
 
     // 4. Validate we have expected tools
-    if (tools.length === 0) {
+    if (allTools.length === 0) {
       throw new Error('No tools registered');
     }
 
     // 5. Validate tool schemas are valid
-    for (const tool of tools) {
+    for (const tool of allTools) {
       if (!tool.name || !tool.inputSchema) {
         throw new Error(`Invalid tool definition: ${tool.name}`);
       }
     }
 
+    // 6. Read tool mode and filter tools
+    const toolMode = readToolMode();
+    const filteredTools =
+      toolMode === 'writer'
+        ? allTools.filter((tool) => isWriterModeTool(tool.name))
+        : allTools;
+
     // Success - output structured result
     const result = {
       status: 'ok',
       version: VERSION,
-      toolCount: tools.length,
+      toolMode,
+      toolCount: filteredTools.length,
+      totalToolCount: allTools.length,
       resourceCount: resources.length,
-      tools: tools.map((t) => t.name),
+      tools: filteredTools.map((t) => t.name),
     };
 
     console.log(JSON.stringify(result, null, 2));
@@ -94,6 +104,7 @@ async function runHealthCheck(): Promise<void> {
 
 import { createVMarkMcpServer } from './index.js';
 import { WebSocketBridge, ClientIdentity } from './bridge/websocket.js';
+import { isWriterModeTool } from './writerModeTools.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z, ZodTypeAny } from 'zod';
@@ -101,6 +112,52 @@ import { execSync } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+
+/**
+ * Tool mode setting.
+ * - "writer": ~15 tools focused on reading and writing content
+ * - "full": All 76 tools including low-level controls
+ */
+type ToolMode = 'writer' | 'full';
+
+/**
+ * MCP settings stored in ~/.vmark/mcp-settings.json
+ */
+interface McpSettings {
+  toolMode?: ToolMode;
+}
+
+/**
+ * Get the path to the MCP settings file (~/.vmark/mcp-settings.json).
+ */
+function getMcpSettingsPath(): string {
+  return join(homedir(), '.vmark', 'mcp-settings.json');
+}
+
+/**
+ * Read tool mode from the settings file.
+ * Returns 'writer' as default if file doesn't exist or is invalid.
+ */
+function readToolMode(): ToolMode {
+  const settingsPath = getMcpSettingsPath();
+
+  if (!existsSync(settingsPath)) {
+    return 'writer'; // Default to writer mode
+  }
+
+  try {
+    const content = readFileSync(settingsPath, 'utf8');
+    const settings: McpSettings = JSON.parse(content);
+
+    if (settings.toolMode === 'full' || settings.toolMode === 'writer') {
+      return settings.toolMode;
+    }
+  } catch {
+    // File read/parse error - use default
+  }
+
+  return 'writer'; // Default to writer mode
+}
 
 /**
  * Get the path to the port file (~/.vmark/mcp-port).
@@ -384,6 +441,16 @@ async function main(): Promise<void> {
   // Create the VMark MCP server with all tools
   const vmarkServer = createVMarkMcpServer(bridge);
 
+  // Read tool mode from settings
+  const toolMode = readToolMode();
+
+  // Get tools filtered by mode
+  const allTools = vmarkServer.listTools();
+  const filteredTools =
+    toolMode === 'writer'
+      ? allTools.filter((tool) => isWriterModeTool(tool.name))
+      : allTools;
+
   // Create high-level MCP server
   const mcpServer = new McpServer(
     {
@@ -398,8 +465,8 @@ async function main(): Promise<void> {
     }
   );
 
-  // Register all tools from the VMark server
-  for (const tool of vmarkServer.listTools()) {
+  // Register tools based on mode (filtered or all)
+  for (const tool of filteredTools) {
     // Convert JSON Schema to Zod schema for proper parameter exposure
     const zodSchema = jsonSchemaToZod(tool.inputSchema as JsonSchemaInput);
 

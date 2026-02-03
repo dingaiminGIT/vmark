@@ -2,6 +2,37 @@
 
 This page documents all MCP tools available when Claude (or other AI assistants) connects to VMark.
 
+## Tool Modes
+
+VMark offers two tool modes to optimize the AI assistant experience:
+
+### Writer Mode (Default)
+
+**~15 tools** focused on reading and writing content. Ideal for writing assistance.
+
+Writer mode exposes only the essential tools for content creation:
+- `get_document_digest` — Document overview and outline
+- `document_search` — Find content
+- `get_section` — Read a section by heading
+- `document_get_content` — Full document content
+- `update_section` — Modify section content
+- `insert_section` — Add new sections
+- `move_section` — Reorder sections
+- `editor_undo` / `editor_redo` — Fix mistakes
+- `suggestion_list` / `suggestion_accept` / `suggestion_reject` — Manage suggestions
+- `workspace_save_document` — Save changes
+- `tabs_switch` / `tabs_list` — Navigate documents
+
+### Full Mode
+
+**All 76 tools** including low-level editor controls. For power users and advanced automation.
+
+::: tip Changing Tool Mode
+Go to **Settings → Integrations → Tool Mode** to switch between Writer and Full modes. Changes take effect immediately when AI clients reconnect.
+:::
+
+---
+
 ## Document Tools
 
 Tools for reading and writing document content.

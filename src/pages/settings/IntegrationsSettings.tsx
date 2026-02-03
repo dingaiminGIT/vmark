@@ -6,7 +6,8 @@
 
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { SettingRow, Toggle, SettingsGroup, CopyButton } from "./components";
+import { SettingRow, Toggle, SettingsGroup, CopyButton, Select } from "./components";
+import type { McpToolMode } from "@/stores/settingsStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useMcpServer } from "@/hooks/useMcpServer";
 import { useMcpHealthCheck } from "@/hooks/useMcpHealthCheck";
@@ -97,6 +98,14 @@ export function IntegrationsSettings() {
     updateAdvancedSetting("mcpServer", { ...mcpSettings, autoApproveEdits: enabled });
   };
 
+  const handleToolModeChange = (mode: McpToolMode) => {
+    updateAdvancedSetting("mcpServer", { ...mcpSettings, toolMode: mode });
+    // Write to config file for MCP server to read
+    invoke("write_mcp_tool_mode", { mode }).catch((err) => {
+      console.error("Failed to write tool mode config:", err);
+    });
+  };
+
   // Called after MCP config is successfully installed to a provider
   // Enables autoStart and starts the bridge so it works immediately
   const handleMcpConfigInstalled = async () => {
@@ -148,6 +157,22 @@ export function IntegrationsSettings() {
           <Toggle
             checked={mcpSettings.autoApproveEdits}
             onChange={handleAutoApproveChange}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Tool mode"
+          description={mcpSettings.toolMode === "writer"
+            ? "~15 tools for reading and writing content"
+            : "All 76 tools including low-level controls"}
+        >
+          <Select<McpToolMode>
+            value={mcpSettings.toolMode ?? "writer"}
+            options={[
+              { value: "writer", label: "Writer" },
+              { value: "full", label: "Full" },
+            ]}
+            onChange={handleToolModeChange}
           />
         </SettingRow>
 

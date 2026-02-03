@@ -14,6 +14,8 @@
 
 use crate::mcp_bridge;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{command, AppHandle, Emitter};
@@ -270,6 +272,62 @@ pub async fn mcp_sidecar_health(app: AppHandle) -> Result<McpHealthInfo, String>
 #[command]
 pub async fn mcp_bridge_client_count() -> Result<usize, String> {
     Ok(mcp_bridge::client_count().await)
+}
+
+/// Get the path to the MCP settings file (~/.vmark/mcp-settings.json)
+fn get_mcp_settings_path() -> Option<PathBuf> {
+    dirs::home_dir().map(|home| home.join(".vmark").join("mcp-settings.json"))
+}
+
+/// MCP settings file content
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct McpSettings {
+    tool_mode: String,
+}
+
+/// Write tool mode to config file for MCP server to read.
+/// The MCP server reads this file at startup to filter tools.
+#[command]
+pub fn write_mcp_tool_mode(mode: String) -> Result<(), String> {
+    let path = get_mcp_settings_path().ok_or("Cannot determine home directory")?;
+
+    // Create ~/.vmark directory if it doesn't exist
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create ~/.vmark directory: {}", e))?;
+    }
+
+    // Read existing settings or create new
+    let mut settings = if path.exists() {
+        fs::read_to_string(&path)
+            .ok()
+            .and_then(|content| serde_json::from_str::<McpSettings>(&content).ok())
+            .unwrap_or(McpSettings {
+                tool_mode: mode.clone(),
+            })
+    } else {
+        McpSettings {
+            tool_mode: mode.clone(),
+        }
+    };
+
+    // Update tool mode
+    settings.tool_mode = mode.clone();
+
+    // Write to file
+    let content = serde_json::to_string_pretty(&settings)
+        .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+
+    fs::write(&path, content).map_err(|e| format!("Failed to write settings file: {}", e))?;
+
+    #[cfg(debug_assertions)]
+    eprintln!(
+        "[MCP Settings] Tool mode '{}' written to {:?}",
+        mode, path
+    );
+
+    Ok(())
 }
 
 /// Cleanup function to kill the MCP server on app exit.
