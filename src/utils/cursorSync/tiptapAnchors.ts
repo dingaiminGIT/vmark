@@ -105,7 +105,9 @@ export function restoreCursorInTable(
           const offset = Math.min(anchor.offsetInCell, cellNode.content.size);
           const finalPos = cellPos + offset;
           try {
-            const tr = state.tr.setSelection(TextSelection.near(state.doc.resolve(finalPos)));
+            const tr = state.tr
+              .setSelection(TextSelection.near(state.doc.resolve(finalPos)))
+              .setMeta("addToHistory", false); // Cursor restoration shouldn't add to history
             view.dispatch(tr.scrollIntoView());
             return true;
           } catch {
@@ -170,7 +172,9 @@ export function restoreCursorInCodeBlock(
   const finalPos = codeBlockPos + 1 + offset; // +1 for node opening
 
   try {
-    const tr = state.tr.setSelection(TextSelection.near(state.doc.resolve(finalPos)));
+    const tr = state.tr
+      .setSelection(TextSelection.near(state.doc.resolve(finalPos)))
+      .setMeta("addToHistory", false); // Cursor restoration shouldn't add to history
     view.dispatch(tr.scrollIntoView());
     return true;
   } catch {

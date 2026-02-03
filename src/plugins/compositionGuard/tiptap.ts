@@ -73,6 +73,11 @@ export const compositionGuardExtension = Extension.create({
           if (compositionMeta) return true;
           if (uiEvent === "input" || uiEvent === "composition") return true;
 
+          // Allow undo/redo during composition - users should be able to undo mistakes
+          // while still in IME input mode (especially important for CJK users)
+          const historyMeta = tr.getMeta("history$");
+          if (historyMeta) return true;
+
           return false;
         },
         props: {

@@ -107,7 +107,9 @@ export function useOutlineSync(getEditorView: EditorViewGetter) {
               // Ignore coords errors
             }
 
-            const tr = view.state.tr.setSelection(Selection.near(doc.resolve(pos + 1)));
+            const tr = view.state.tr
+              .setSelection(Selection.near(doc.resolve(pos + 1)))
+              .setMeta("addToHistory", false); // Navigation shouldn't add to undo history
             view.dispatch(tr.scrollIntoView());
             view.focus();
           }

@@ -156,7 +156,9 @@ export function restoreCursorInTiptap(view: EditorView, cursorInfo: CursorInfo):
   if (targetPos === null || targetNode === null) {
     // Last resort: go to start
     try {
-      const tr = state.tr.setSelection(Selection.atStart(state.doc));
+      const tr = state.tr
+        .setSelection(Selection.atStart(state.doc))
+        .setMeta("addToHistory", false); // Cursor restoration shouldn't add to history
       view.dispatch(tr.scrollIntoView());
     } catch {
       // Ignore
@@ -180,10 +182,14 @@ export function restoreCursorInTiptap(view: EditorView, cursorInfo: CursorInfo):
   const clampedPos = Math.max(0, Math.min(pos, state.doc.content.size));
 
   try {
-    const tr = state.tr.setSelection(TextSelection.near(state.doc.resolve(clampedPos)));
+    const tr = state.tr
+      .setSelection(TextSelection.near(state.doc.resolve(clampedPos)))
+      .setMeta("addToHistory", false); // Cursor restoration shouldn't add to history
     view.dispatch(tr.scrollIntoView());
   } catch {
-    const tr = state.tr.setSelection(Selection.atStart(state.doc));
+    const tr = state.tr
+      .setSelection(Selection.atStart(state.doc))
+      .setMeta("addToHistory", false);
     view.dispatch(tr.scrollIntoView());
   }
 }

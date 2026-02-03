@@ -1007,6 +1007,30 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
     return doWysiwygTransformToggleCase(view);
   });
 
+  // --- Undo/Redo fallback ---
+  // These are handled by History extension's keymaps but we add fallbacks
+  // in case menu dispatch fails or keybindings are somehow not registered.
+  // Hardcoded since users should not customize these (per design decision).
+  bindings["Mod-z"] = guardProseMirrorCommand((_state, _dispatch, view) => {
+    if (!view) return false;
+    const editor = (view.dom as HTMLElement & { editor?: TiptapEditor }).editor;
+    if (!editor) return false;
+    return editor.commands.undo();
+  });
+  bindings["Mod-Shift-z"] = guardProseMirrorCommand((_state, _dispatch, view) => {
+    if (!view) return false;
+    const editor = (view.dom as HTMLElement & { editor?: TiptapEditor }).editor;
+    if (!editor) return false;
+    return editor.commands.redo();
+  });
+  // Windows/Linux convention: Ctrl+Y for redo
+  bindings["Mod-y"] = guardProseMirrorCommand((_state, _dispatch, view) => {
+    if (!view) return false;
+    const editor = (view.dom as HTMLElement & { editor?: TiptapEditor }).editor;
+    if (!editor) return false;
+    return editor.commands.redo();
+  });
+
   return bindings;
 }
 

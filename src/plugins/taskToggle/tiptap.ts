@@ -52,6 +52,8 @@ function toggleTaskCheckbox(state: EditorState, dispatch?: EditorView["dispatch"
     checked: nextChecked,
   });
 
+  // Explicitly mark as history entry for consistent undo behavior
+  tr.setMeta("addToHistory", true);
   dispatch?.(tr.scrollIntoView());
   return true;
 }
@@ -140,6 +142,8 @@ export const taskListItemExtension = Node.create({
 
               const nodePos = $pos.before(d);
               const tr = view.state.tr.setNodeMarkup(nodePos, null, { ...node.attrs, checked: !checked });
+              // Explicitly mark as history entry for consistent undo behavior
+              tr.setMeta("addToHistory", true);
               view.dispatch(tr);
               return true;
             }

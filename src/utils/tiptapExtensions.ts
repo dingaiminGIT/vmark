@@ -82,6 +82,13 @@ export function createTiptapExtensions(): Extensions {
       horizontalRule: false,
       // Disable StarterKit's link - we use a custom configured one below
       link: false,
+      // Configure undo/redo with increased depth for larger documents
+      undoRedo: {
+        // Increase depth for larger documents (default is 100)
+        depth: 200,
+        // Group changes within 500ms into single undo step (default)
+        newGroupDelay: 500,
+      },
     }),
     // Custom Link extension with excludes to prevent nested links and code inside links
     Link.extend({

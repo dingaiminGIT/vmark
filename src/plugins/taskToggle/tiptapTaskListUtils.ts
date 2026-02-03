@@ -38,6 +38,7 @@ function clearCheckedAttribute(editor: TiptapEditor): void {
       if (checked === true || checked === false) {
         const pos = $from.before(d);
         const tr = state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: null });
+        tr.setMeta("addToHistory", true);
         view.dispatch(tr);
       }
       break;
@@ -116,7 +117,9 @@ export function convertSelectionToTaskList(editor: TiptapEditor): void {
       const pos = $after.before(d);
       const checked = node.attrs.checked as unknown;
       if (checked === true || checked === false) return;
-      view.dispatch(view.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: false }));
+      const tr = view.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: false });
+      tr.setMeta("addToHistory", true);
+      view.dispatch(tr);
       view.focus();
       return;
     }
@@ -138,6 +141,7 @@ export function convertSelectionToTaskList(editor: TiptapEditor): void {
     tr.setNodeMarkup(listPos + 1 + offset, undefined, { ...item.attrs, checked: false });
   });
 
+  tr.setMeta("addToHistory", true);
   view.dispatch(tr);
   view.focus();
 }

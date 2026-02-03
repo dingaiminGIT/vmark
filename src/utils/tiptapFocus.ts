@@ -71,7 +71,9 @@ export function scheduleTiptapFocusAndRestore(
 
       // Set selection to start of document (ProseMirror may have placed it elsewhere)
       try {
-        const tr = view.state.tr.setSelection(Selection.atStart(view.state.doc));
+        const tr = view.state.tr
+          .setSelection(Selection.atStart(view.state.doc))
+          .setMeta("addToHistory", false); // Don't pollute undo history during focus
         view.dispatch(tr);
       } catch {
         // Ignore selection errors

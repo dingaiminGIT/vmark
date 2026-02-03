@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
+import type { Node as PMNode } from "@tiptap/pm/model";
 import { Selection } from "@tiptap/pm/state";
 import { useDocumentActions, useDocumentContent, useDocumentCursorInfo } from "@/hooks/useDocumentState";
 import { useImageContextMenu } from "@/hooks/useImageContextMenu";
@@ -36,6 +37,27 @@ import "@/plugins/codeBlockLineNumbers/code-block-line-numbers.css";
  * Prevents spurious cursor sync during initial render/focus.
  */
 const CURSOR_TRACKING_DELAY_MS = 200;
+
+/**
+ * Set editor content without adding to undo history.
+ * Tiptap's setContent in v3.x does NOT exclude from history by default,
+ * so we use a direct ProseMirror transaction with addToHistory: false.
+ */
+function setContentWithoutHistory(editor: TiptapEditor, doc: PMNode): void {
+  const view = getTiptapEditorView(editor);
+  if (!view) {
+    // Fallback to standard setContent if view not available
+    editor.commands.setContent(doc, { emitUpdate: false });
+    return;
+  }
+
+  const { state } = view;
+  const tr = state.tr
+    .replaceWith(0, state.doc.content.size, doc.content)
+    .setMeta("addToHistory", false)
+    .setMeta("preventUpdate", true); // Don't emit update event
+  view.dispatch(tr);
+}
 
 /**
  * Calculate adaptive debounce delay based on document size.
@@ -149,7 +171,8 @@ export function TiptapEditorInner() {
           preserveLineBreaks: preserveLineBreaksRef.current,
         });
         lastExternalContent.current = content;
-        editor.commands.setContent(doc, { emitUpdate: false });
+        // Use helper to avoid polluting undo history with initial content load
+        setContentWithoutHistory(editor, doc);
         editorInitialized.current = true;
       } catch (error) {
         console.error("[TiptapEditor] Failed to parse initial markdown:", error);
@@ -295,7 +318,9 @@ export function TiptapEditorInner() {
     // Dispatch empty transaction to trigger plugin state recalculation
     const view = getTiptapEditorView(editor);
     if (view) {
-      const tr = view.state.tr.setMeta("cjkLetterSpacingChanged", true);
+      const tr = view.state.tr
+        .setMeta("cjkLetterSpacingChanged", true)
+        .setMeta("addToHistory", false); // Settings change shouldn't pollute undo history
       view.dispatch(tr);
     }
   }, [editor, cjkLetterSpacing]);
@@ -322,7 +347,9 @@ export function TiptapEditorInner() {
 
         if (cancelled) return;
 
-        editor.commands.setContent(doc, { emitUpdate: false });
+        // Use helper to avoid polluting undo history with external content sync
+        // (e.g., content changed in source mode, tab switch, etc.)
+        setContentWithoutHistory(editor, doc);
         lastExternalContent.current = contentToLoad;
 
         // For fresh document load (no saved cursor position), set cursor to start
@@ -330,7 +357,10 @@ export function TiptapEditorInner() {
           const view = getTiptapEditorView(editor);
           if (view) {
             try {
-              const tr = view.state.tr.setSelection(Selection.atStart(view.state.doc)).scrollIntoView();
+              const tr = view.state.tr
+                .setSelection(Selection.atStart(view.state.doc))
+                .scrollIntoView()
+                .setMeta("addToHistory", false); // Don't pollute undo history during load
               view.dispatch(tr);
             } catch {
               // Ignore selection errors
