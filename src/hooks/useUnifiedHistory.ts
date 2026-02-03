@@ -8,7 +8,7 @@
  */
 
 import { useCallback } from "react";
-import { undoDepth, redoDepth } from "@codemirror/commands";
+import { undo, redo, undoDepth, redoDepth } from "@codemirror/commands";
 import { useUnifiedHistoryStore } from "@/stores/unifiedHistoryStore";
 import { useEditorStore } from "@/stores/editorStore";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -111,10 +111,7 @@ export function doNativeUndo(): boolean {
     const view = useActiveEditorStore.getState().activeSourceView;
     if (!view) return false;
     if (undoDepth(view.state) === 0) return false;
-    // Import and call undo command
-    import("@codemirror/commands").then(({ undo }) => {
-      undo(view);
-    });
+    undo(view);
     return true;
   } else {
     const editor = useTiptapEditorStore.getState().editor;
@@ -136,9 +133,7 @@ export function doNativeRedo(): boolean {
     const view = useActiveEditorStore.getState().activeSourceView;
     if (!view) return false;
     if (redoDepth(view.state) === 0) return false;
-    import("@codemirror/commands").then(({ redo }) => {
-      redo(view);
-    });
+    redo(view);
     return true;
   } else {
     const editor = useTiptapEditorStore.getState().editor;
