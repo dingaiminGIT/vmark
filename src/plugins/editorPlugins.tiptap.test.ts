@@ -16,4 +16,10 @@ describe("buildEditorKeymapBindings", () => {
     expect(bindings["Mod-Shift-b"]).toBeTypeOf("function");
     expect(bindings["Mod-b"]).toBeUndefined();
   });
+
+  it("includes sourcePeek binding", () => {
+    const bindings = buildEditorKeymapBindings();
+    // Default key is F5
+    expect(bindings["F5"]).toBeTypeOf("function");
+  });
 });

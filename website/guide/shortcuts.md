@@ -7,6 +7,33 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 - **Mod** = Cmd on macOS, Ctrl on Windows/Linux
 - **Alt** = Option on macOS
 
+## Function Keys on macOS
+
+VMark uses function keys (F4–F9) for quick mode toggles. On macOS, these keys are mapped to system functions (brightness, volume, etc.) by default.
+
+**To use F-keys directly without holding Fn:**
+
+1. Open **System Settings** → **Keyboard**
+2. Enable **"Use F1, F2, etc. keys as standard function keys"**
+
+Alternatively, hold the **Fn** key when pressing F4–F9 to trigger VMark shortcuts.
+
+::: tip
+If you prefer keeping system functions on F-keys, you can customize VMark shortcuts in Settings (`Mod + ,`) to use different key combinations.
+:::
+
+### F-Key Quick Reference
+
+| Key | Action |
+|-----|--------|
+| `F4` | Sort Lines Ascending |
+| `Shift + F4` | Sort Lines Descending |
+| `F5` | Source Peek |
+| `F6` | Toggle Source Mode |
+| `F7` | Toggle Status Bar |
+| `F8` | Focus Mode |
+| `F9` | Typewriter Mode |
+
 ## Edit
 
 | Action | Shortcut |
@@ -59,8 +86,8 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 | Duplicate Line | `Shift + Alt + Down` |
 | Delete Line | `Mod + Shift + K` |
 | Join Lines | `Mod + J` |
-| Sort Lines Ascending | `F5` |
-| Sort Lines Descending | `Shift + F5` |
+| Sort Lines Ascending | `F4` |
+| Sort Lines Descending | `Shift + F4` |
 
 ## Text Transformations
 
@@ -122,7 +149,7 @@ VMark is designed for keyboard-first workflows. All shortcuts can be customized 
 | Toggle Line Numbers | `Alt + Mod + L` |
 | Toggle Diagram Preview | `Alt + Mod + P` |
 | Universal Toolbar | `Mod + Shift + P` |
-| Source Peek | `Alt + Mod + /` |
+| Source Peek | `F5` |
 
 ## File Operations
 

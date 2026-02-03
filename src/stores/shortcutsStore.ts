@@ -90,7 +90,7 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "selectLine", label: "Select Line", category: "navigation", defaultKey: "Mod-l", menuId: "select-line" },
   { id: "expandSelection", label: "Expand Selection", category: "navigation", defaultKey: "Ctrl-Shift-Up", menuId: "expand-selection" },
   { id: "formatToolbar", label: "Universal Toolbar", category: "navigation", defaultKey: "Mod-Shift-p", description: "Show the universal bottom toolbar" },
-  { id: "sourcePeek", label: "Source Peek", category: "navigation", defaultKey: "Mod-Alt-/", description: "Edit selection as markdown" },
+  { id: "sourcePeek", label: "Source Peek", category: "navigation", defaultKey: "F5", description: "Edit selection as markdown" },
   { id: "findReplace", label: "Find & Replace", category: "navigation", defaultKey: "Mod-f", menuId: "find-replace" },
   { id: "findNext", label: "Find Next", category: "navigation", defaultKey: "Mod-g", menuId: "find-next" },
   { id: "findPrevious", label: "Find Previous", category: "navigation", defaultKey: "Mod-Shift-g", menuId: "find-prev" },
@@ -108,8 +108,8 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "duplicateLine", label: "Duplicate Line", category: "editing", defaultKey: "Shift-Alt-Down", menuId: "duplicate-line" },
   { id: "deleteLine", label: "Delete Line", category: "editing", defaultKey: "Mod-Shift-k", menuId: "delete-line" },
   { id: "joinLines", label: "Join Lines", category: "editing", defaultKey: "Mod-j", menuId: "join-lines" },
-  { id: "sortLinesAsc", label: "Sort Lines Ascending", category: "editing", defaultKey: "F5", menuId: "sort-lines-asc" },
-  { id: "sortLinesDesc", label: "Sort Lines Descending", category: "editing", defaultKey: "Shift-F5", menuId: "sort-lines-desc" },
+  { id: "sortLinesAsc", label: "Sort Lines Ascending", category: "editing", defaultKey: "F4", menuId: "sort-lines-asc" },
+  { id: "sortLinesDesc", label: "Sort Lines Descending", category: "editing", defaultKey: "Shift-F4", menuId: "sort-lines-desc" },
 
   // === Text Transformations ===
   { id: "transformUppercase", label: "Transform to UPPERCASE", category: "editing", defaultKey: "Ctrl-Shift-u", menuId: "transform-uppercase" },

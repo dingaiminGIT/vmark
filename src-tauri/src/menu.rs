@@ -222,8 +222,8 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &MenuItem::with_id(app, "join-lines", "Join Lines", true, Some("CmdOrCtrl+J"))?,
             &MenuItem::with_id(app, "remove-blank-lines", "Remove Blank Lines", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "sort-lines-asc", "Sort Lines Ascending", true, Some("F5"))?,
-            &MenuItem::with_id(app, "sort-lines-desc", "Sort Lines Descending", true, Some("Shift+F5"))?,
+            &MenuItem::with_id(app, "sort-lines-asc", "Sort Lines Ascending", true, Some("F4"))?,
+            &MenuItem::with_id(app, "sort-lines-desc", "Sort Lines Descending", true, Some("Shift+F4"))?,
         ],
     )?;
 
@@ -889,8 +889,8 @@ fn create_menu_with_shortcuts(
             &MenuItem::with_id(app, "join-lines", "Join Lines", true, get_accel("join-lines", "CmdOrCtrl+J"))?,
             &MenuItem::with_id(app, "remove-blank-lines", "Remove Blank Lines", true, get_accel("remove-blank-lines", ""))?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "sort-lines-asc", "Sort Lines Ascending", true, get_accel("sort-lines-asc", "F5"))?,
-            &MenuItem::with_id(app, "sort-lines-desc", "Sort Lines Descending", true, get_accel("sort-lines-desc", "Shift+F5"))?,
+            &MenuItem::with_id(app, "sort-lines-asc", "Sort Lines Ascending", true, get_accel("sort-lines-asc", "F4"))?,
+            &MenuItem::with_id(app, "sort-lines-desc", "Sort Lines Descending", true, get_accel("sort-lines-desc", "Shift+F4"))?,
         ],
     )?;
 
