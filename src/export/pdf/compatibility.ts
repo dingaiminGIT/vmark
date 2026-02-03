@@ -46,6 +46,7 @@ export const CSS_VARIABLE_VALUES: Record<string, string> = {
   "--border-color": "#d5d4d4",
   "--code-bg-color": "#e5e4e4",
   "--code-text-color": "#1a1a1a",
+  "--table-border-color": "#d5d4d4",
   "--meta-content-color": "#666666",
   "--strong-color": "rgb(63, 86, 99)",
   "--emphasis-color": "rgb(91, 4, 17)",
