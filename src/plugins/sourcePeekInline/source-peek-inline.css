@@ -232,16 +232,4 @@
   display: block;
   opacity: 0.5;
   pointer-events: none;
-  position: relative;
-}
-
-.source-peek-editing.source-peek-live::before {
-  content: "Preview";
-  position: absolute;
-  top: -1.2em;
-  left: 0;
-  font-size: 10px;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
