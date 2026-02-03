@@ -488,6 +488,17 @@
   justify-content: center;
 }
 
+/* Extra breathing room between consecutive visual blocks.
+   Single blocks keep normal spacing; only consecutive heavy blocks get extra margin. */
+.tiptap-editor .ProseMirror > .block-image + .block-image,
+.tiptap-editor .ProseMirror > .block-image + .table-scroll-wrapper,
+.tiptap-editor .ProseMirror > .table-scroll-wrapper + .block-image,
+.tiptap-editor .ProseMirror > .table-scroll-wrapper + .table-scroll-wrapper,
+.tiptap-editor .ProseMirror > .math-block + .math-block,
+.tiptap-editor .ProseMirror > .mermaid-block + .mermaid-block {
+  margin-top: 0.5em;
+}
+
 /* Task list items - use negative margin to align text with regular list items.
    Checkbox size matches mono ratio (0.85×). Gap is ~40% of checkbox size.
    The offset is pulled into the padding area where bullets normally render. */
