@@ -10,6 +10,7 @@ import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
 import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { normalizeLineEndings } from "@/utils/linebreaks";
+import { toggleSourceModeWithCheckpoint } from "@/hooks/useUnifiedHistory";
 
 const DEFAULT_FONT_SIZE = 18;
 const MIN_FONT_SIZE = 12;
@@ -42,7 +43,8 @@ export function useViewMenuEvents(): void {
           toastStore.hideToast();
         }
         flushActiveWysiwygNow();
-        useEditorStore.getState().toggleSourceMode();
+        // Use checkpoint-aware mode switch to preserve undo history
+        toggleSourceModeWithCheckpoint(windowLabel);
       });
       if (cancelled) { unlistenSourceMode(); return; }
       unlistenRefs.current.push(unlistenSourceMode);

@@ -12,6 +12,8 @@ import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { isImeKeyEvent } from "@/utils/imeGuard";
 import { matchesShortcutEvent } from "@/utils/shortcutMatch";
+import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
+import { toggleSourceModeWithCheckpoint } from "@/hooks/useUnifiedHistory";
 
 export function useViewShortcuts() {
   useEffect(() => {
@@ -35,7 +37,8 @@ export function useViewShortcuts() {
           toastStore.hideToast();
         }
         flushActiveWysiwygNow();
-        useEditorStore.getState().toggleSourceMode();
+        // Use checkpoint-aware mode switch to preserve undo history
+        toggleSourceModeWithCheckpoint(getCurrentWindowLabel());
         return;
       }
 

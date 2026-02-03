@@ -28,6 +28,8 @@ import { extractHeadingsWithIds } from "@/utils/headingSlug";
 import { getBoundaryRects, getViewportBounds } from "@/utils/popupPosition";
 import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { triggerPastePlainText } from "@/plugins/markdownPaste/tiptap";
+import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
+import { performUnifiedUndo, performUnifiedRedo } from "@/hooks/useUnifiedHistory";
 import { handleRemoveBlockquote } from "@/plugins/formatToolbar/nodeActions.tiptap";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { readClipboardUrl } from "@/utils/clipboardUrl";
@@ -1007,28 +1009,18 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
     return doWysiwygTransformToggleCase(view);
   });
 
-  // --- Undo/Redo fallback ---
-  // These are handled by History extension's keymaps but we add fallbacks
-  // in case menu dispatch fails or keybindings are somehow not registered.
-  // Hardcoded since users should not customize these (per design decision).
-  bindings["Mod-z"] = guardProseMirrorCommand((_state, _dispatch, view) => {
-    if (!view) return false;
-    const editor = (view.dom as HTMLElement & { editor?: TiptapEditor }).editor;
-    if (!editor) return false;
-    return editor.commands.undo();
+  // --- Unified Undo/Redo ---
+  // Uses unified history that works across mode switches.
+  // First tries native undo/redo, then falls back to checkpoint-based undo/redo.
+  bindings["Mod-z"] = guardProseMirrorCommand(() => {
+    return performUnifiedUndo(getCurrentWindowLabel());
   });
-  bindings["Mod-Shift-z"] = guardProseMirrorCommand((_state, _dispatch, view) => {
-    if (!view) return false;
-    const editor = (view.dom as HTMLElement & { editor?: TiptapEditor }).editor;
-    if (!editor) return false;
-    return editor.commands.redo();
+  bindings["Mod-Shift-z"] = guardProseMirrorCommand(() => {
+    return performUnifiedRedo(getCurrentWindowLabel());
   });
   // Windows/Linux convention: Ctrl+Y for redo
-  bindings["Mod-y"] = guardProseMirrorCommand((_state, _dispatch, view) => {
-    if (!view) return false;
-    const editor = (view.dom as HTMLElement & { editor?: TiptapEditor }).editor;
-    if (!editor) return false;
-    return editor.commands.redo();
+  bindings["Mod-y"] = guardProseMirrorCommand(() => {
+    return performUnifiedRedo(getCurrentWindowLabel());
   });
 
   return bindings;

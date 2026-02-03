@@ -3,7 +3,9 @@
  */
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, drawSelection, dropCursor, lineNumbers } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { defaultKeymap, history } from "@codemirror/commands";
+import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
+import { performUnifiedUndo, performUnifiedRedo } from "@/hooks/useUnifiedHistory";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { syntaxHighlighting } from "@codemirror/language";
@@ -172,7 +174,23 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
       }),
       ...closeBracketsKeymap,
       ...defaultKeymap,
-      ...historyKeymap,
+      // Unified undo/redo that works across mode switches
+      guardCodeMirrorKeyBinding({
+        key: "Mod-z",
+        run: () => performUnifiedUndo(getCurrentWindowLabel()),
+        preventDefault: true,
+      }),
+      guardCodeMirrorKeyBinding({
+        key: "Mod-Shift-z",
+        run: () => performUnifiedRedo(getCurrentWindowLabel()),
+        preventDefault: true,
+      }),
+      // Windows/Linux convention: Ctrl+Y for redo
+      guardCodeMirrorKeyBinding({
+        key: "Mod-y",
+        run: () => performUnifiedRedo(getCurrentWindowLabel()),
+        preventDefault: true,
+      }),
       // Fallback Tab handlers: insert spaces if Tab/Shift-Tab not handled above
       tabIndentFallbackKeymap,
       shiftTabIndentFallbackKeymap,
