@@ -334,8 +334,6 @@ export interface ParagraphTarget {
   index?: number;
   /** Match by text the paragraph contains */
   containing?: string;
-  /** Scope the search to a specific section */
-  withinSection?: string;
 }
 
 /**
@@ -399,10 +397,8 @@ export interface SmartInsertResult {
   suggestionId?: string;
   applied: boolean;
   newRevision?: string;
-  insertedAt?: {
-    from: number;
-    to: number;
-  };
+  /** Position where content was inserted (ProseMirror offset) */
+  insertPosition?: number;
 }
 
 // =============================================================================

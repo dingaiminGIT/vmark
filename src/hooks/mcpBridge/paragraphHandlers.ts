@@ -16,7 +16,6 @@ type ParagraphOperation = "replace" | "append" | "prepend" | "delete";
 interface ParagraphTarget {
   index?: number;
   containing?: string;
-  withinSection?: string;
 }
 
 interface ParagraphInfo {
@@ -318,12 +317,20 @@ export async function handleParagraphWrite(
 
     const newRevision = getCurrentRevision();
 
+    // Build grammatically correct message
+    const operationVerb = {
+      replace: "replaced",
+      append: "appended to",
+      prepend: "prepended to",
+      delete: "deleted",
+    }[operation];
+
     await respond({
       id,
       success: true,
       data: {
         success: true,
-        message: `Paragraph ${operation}d successfully`,
+        message: `Paragraph ${operationVerb} successfully`,
         applied: true,
         newRevision,
       },

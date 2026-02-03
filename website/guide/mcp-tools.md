@@ -8,7 +8,7 @@ VMark offers two tool modes to optimize the AI assistant experience:
 
 ### Writer Mode (Default)
 
-**~19 tools** focused on reading and writing content. Ideal for writing assistance.
+**18 tools** focused on reading and writing content. Ideal for writing assistance.
 
 Writer mode exposes only the essential tools for content creation:
 
@@ -40,7 +40,7 @@ Writer mode exposes only the essential tools for content creation:
 
 ### Full Mode
 
-**All 78 tools** including low-level editor controls. For power users and advanced automation.
+**All tools** including low-level editor controls. For power users and advanced automation.
 
 ::: tip Changing Tool Mode
 Go to **Settings → Integrations → Tool Mode** to switch between Writer and Full modes. Changes take effect immediately when AI clients reconnect.

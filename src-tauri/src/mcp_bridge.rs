@@ -246,6 +246,8 @@ fn is_read_only_operation(request_type: &str) -> bool {
             | "windows.list"
             | "windows.getFocused"
             | "workspace.getDocumentInfo"
+            | "workspace.listRecentFiles"
+            | "workspace.getInfo"
             // Tab read operations
             | "tabs.list"
             | "tabs.getActive"
@@ -254,6 +256,16 @@ fn is_read_only_operation(request_type: &str) -> bool {
             | "editor.getUndoState"
             // Suggestion read operations
             | "suggestion.list"
+            // Paragraph read operations
+            | "paragraph.read"
+            // Protocol/structure read operations
+            | "protocol.getCapabilities"
+            | "protocol.getRevision"
+            | "structure.getAst"
+            | "structure.getDigest"
+            | "structure.listBlocks"
+            | "structure.resolveTargets"
+            | "structure.getSection"
     )
 }
 

@@ -4,7 +4,7 @@
  * These are the tools exposed in "Writer" mode — focused on reading and writing
  * content rather than low-level editor manipulation.
  *
- * Total: ~15 tools (down from 76 in Full mode)
+ * Total: 18 tools (down from 78 in Full mode)
  */
 
 export const WRITER_MODE_TOOLS = [

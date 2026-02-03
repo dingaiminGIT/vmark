@@ -41,10 +41,6 @@ export function registerParagraphTools(server: VMarkMcpServer): void {
                 type: 'string',
                 description: 'Text the paragraph contains (partial match)',
               },
-              withinSection: {
-                type: 'string',
-                description: 'Scope search to a specific section heading',
-              },
             },
             description: 'How to identify the target paragraph',
           },
@@ -111,10 +107,6 @@ export function registerParagraphTools(server: VMarkMcpServer): void {
               containing: {
                 type: 'string',
                 description: 'Text the paragraph contains (partial match)',
-              },
-              withinSection: {
-                type: 'string',
-                description: 'Scope search to a specific section heading',
               },
             },
             description: 'How to identify the target paragraph',

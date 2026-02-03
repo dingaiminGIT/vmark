@@ -29,10 +29,8 @@ interface SmartInsertResult {
   suggestionId?: string;
   applied: boolean;
   newRevision?: string;
-  insertedAt?: {
-    from: number;
-    to: number;
-  };
+  /** Position where content was inserted (ProseMirror offset) */
+  insertPosition?: number;
 }
 
 /**
@@ -117,7 +115,8 @@ function findInsertPosition(
     let targetLevel = 0;
     let insertPos: number | null = null;
 
-    doc.descendants((node, pos) => {
+    // Iterate over top-level children only to avoid nested node issues
+    doc.forEach((node, offset) => {
       if (node.type.name === "heading") {
         const headingText = extractText(node).toLowerCase();
         const headingLevel = node.attrs.level as number;
@@ -125,21 +124,20 @@ function findInsertPosition(
         if (inTargetSection) {
           // Found next heading at same or higher level - insert before it
           if (headingLevel <= targetLevel) {
-            insertPos = pos;
-            return false; // Stop traversal
+            // insertPos already points to end of last block in section
+            return; // Stop processing (we can't break forEach, but insertPos is set)
           }
         } else if (headingText.includes(searchHeading)) {
           // Found the target heading
           inTargetSection = true;
           targetLevel = headingLevel;
-          // Default to right after the heading if no subsequent heading found
-          insertPos = pos + node.nodeSize;
         }
-      } else if (inTargetSection) {
-        // Track position at end of section content
-        insertPos = pos + node.nodeSize;
       }
-      return true;
+
+      if (inTargetSection) {
+        // Track position at end of this top-level block
+        insertPos = offset + node.nodeSize;
+      }
     });
 
     if (insertPos !== null) {
@@ -221,10 +219,7 @@ export async function handleSmartInsert(
         message: "Insert suggestion created",
         suggestionId,
         applied: false,
-        insertedAt: {
-          from: insertPos,
-          to: insertPos + contentToInsert.length,
-        },
+        insertPosition: insertPos,
       };
 
       await respond({
@@ -249,10 +244,7 @@ export async function handleSmartInsert(
       message: "Content inserted successfully",
       applied: true,
       newRevision,
-      insertedAt: {
-        from: insertPos,
-        to: insertPos + contentToInsert.length,
-      },
+      insertPosition: insertPos,
     };
 
     await respond({
