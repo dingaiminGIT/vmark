@@ -206,14 +206,20 @@
   animation: source-peek-inline-fade-in 0.15s ease-out;
 }
 
-/* Mark the block being edited - dimmed but visible as preview */
+/* Block being edited - hidden by default (live preview OFF) */
 .source-peek-editing {
+  display: none;
+}
+
+/* Show dimmed preview when live preview is ON */
+.source-peek-editing.source-peek-live {
+  display: block;
   opacity: 0.5;
   pointer-events: none;
   position: relative;
 }
 
-.source-peek-editing::before {
+.source-peek-editing.source-peek-live::before {
   content: "Preview";
   position: absolute;
   top: -1.2em;

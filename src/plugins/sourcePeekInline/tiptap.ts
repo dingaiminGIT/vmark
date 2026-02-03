@@ -478,10 +478,11 @@ export const sourcePeekInlineExtension = Extension.create({
             );
             decorations.push(wrapperWidget);
 
-            // Mark the node as being edited (dims it in CSS)
+            // Mark the node as being edited
+            // Show dimmed preview when live preview is ON, hide when OFF
             decorations.push(
               Decoration.node(nodeStart, nodeEnd, {
-                class: "source-peek-editing",
+                class: livePreview ? "source-peek-editing source-peek-live" : "source-peek-editing",
               })
             );
 
