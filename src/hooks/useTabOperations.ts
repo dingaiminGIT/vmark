@@ -15,6 +15,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { findOrphanedImages, deleteOrphanedImages } from "@/utils/orphanAssetCleanup";
+import { clearDocumentHistory } from "@/hooks/useUnifiedHistory";
 
 /**
  * Clean up orphaned images for a document if setting is enabled.
@@ -61,6 +62,7 @@ export async function closeTabWithDirtyCheck(
     await cleanupOrphansIfEnabled(doc.filePath, doc.content);
     useTabStore.getState().closeTab(windowLabel, tabId);
     useDocumentStore.getState().removeDocument(tabId);
+    clearDocumentHistory(tabId);
     return true;
   }
 
@@ -90,6 +92,7 @@ export async function closeTabWithDirtyCheck(
   // Proceed to close
   useTabStore.getState().closeTab(windowLabel, tabId);
   useDocumentStore.getState().removeDocument(tabId);
+  clearDocumentHistory(tabId);
   return true;
 }
 

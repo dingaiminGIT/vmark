@@ -45,8 +45,8 @@ export function toggleSourceModeWithCheckpoint(windowLabel: string): void {
   const currentMode = editorStore.sourceMode ? "source" : "wysiwyg";
   const cursorInfo = doc.cursorInfo ?? null;
 
-  // Create checkpoint with current state before switching
-  historyStore.createCheckpoint({
+  // Create checkpoint with current state before switching (per-document)
+  historyStore.createCheckpoint(tabId, {
     markdown: doc.content,
     mode: currentMode,
     cursorInfo,
@@ -164,6 +164,9 @@ export function useUnifiedUndo() {
     const documentStore = useDocumentStore.getState();
     const tabStore = useTabStore.getState();
 
+    const tabId = tabStore.activeTabId[windowLabel];
+    if (!tabId) return;
+
     // First, try native undo
     if (canNativeUndo()) {
       doNativeUndo();
@@ -172,28 +175,25 @@ export function useUnifiedUndo() {
       return;
     }
 
-    // Native undo exhausted, check for checkpoint
-    if (!historyStore.canUndoCheckpoint()) {
+    // Native undo exhausted, check for checkpoint (per-document)
+    if (!historyStore.canUndoCheckpoint(tabId)) {
       // Nothing to undo
       return;
     }
 
-    const tabId = tabStore.activeTabId[windowLabel];
-    if (!tabId) return;
-
     const doc = documentStore.getDocument(tabId);
     if (!doc) return;
 
-    // Save current state to redo stack before restoring checkpoint
+    // Save current state to redo stack before restoring checkpoint (per-document)
     const currentMode = editorStore.sourceMode ? "source" : "wysiwyg";
-    historyStore.pushRedo({
+    historyStore.pushRedo(tabId, {
       markdown: doc.content,
       mode: currentMode,
       cursorInfo: doc.cursorInfo ?? null,
     });
 
-    // Pop checkpoint
-    const checkpoint = historyStore.popUndo();
+    // Pop checkpoint (per-document)
+    const checkpoint = historyStore.popUndo(tabId);
     if (!checkpoint) return;
 
     // Restore content
@@ -231,34 +231,34 @@ export function useUnifiedRedo() {
     const documentStore = useDocumentStore.getState();
     const tabStore = useTabStore.getState();
 
+    const tabId = tabStore.activeTabId[windowLabel];
+    if (!tabId) return;
+
     // First, try native redo
     if (canNativeRedo()) {
       doNativeRedo();
       return;
     }
 
-    // Native redo exhausted, check for checkpoint
-    if (!historyStore.canRedoCheckpoint()) {
+    // Native redo exhausted, check for checkpoint (per-document)
+    if (!historyStore.canRedoCheckpoint(tabId)) {
       // Nothing to redo
       return;
     }
 
-    const tabId = tabStore.activeTabId[windowLabel];
-    if (!tabId) return;
-
     const doc = documentStore.getDocument(tabId);
     if (!doc) return;
 
-    // Save current state to undo stack before restoring
+    // Save current state to undo stack before restoring (per-document)
     const currentMode = editorStore.sourceMode ? "source" : "wysiwyg";
-    historyStore.createCheckpoint({
+    historyStore.createCheckpoint(tabId, {
       markdown: doc.content,
       mode: currentMode,
       cursorInfo: doc.cursorInfo ?? null,
     });
 
-    // Pop redo checkpoint
-    const checkpoint = historyStore.popRedo();
+    // Pop redo checkpoint (per-document)
+    const checkpoint = historyStore.popRedo(tabId);
     if (!checkpoint) return;
 
     // Restore content
@@ -285,10 +285,17 @@ export function useUnifiedRedo() {
 }
 
 /**
- * Clear unified history (call when document changes or closes).
+ * Clear unified history for a specific document (call when tab closes).
  */
-export function clearUnifiedHistory(): void {
-  useUnifiedHistoryStore.getState().clear();
+export function clearDocumentHistory(tabId: string): void {
+  useUnifiedHistoryStore.getState().clearDocument(tabId);
+}
+
+/**
+ * Clear all unified history (call on app reset).
+ */
+export function clearAllHistory(): void {
+  useUnifiedHistoryStore.getState().clearAll();
 }
 
 /**
@@ -301,33 +308,33 @@ export function performUnifiedUndo(windowLabel: string): boolean {
   const documentStore = useDocumentStore.getState();
   const tabStore = useTabStore.getState();
 
+  const tabId = tabStore.activeTabId[windowLabel];
+  if (!tabId) return false;
+
   // First, try native undo
   if (canNativeUndo()) {
     doNativeUndo();
     return true;
   }
 
-  // Native undo exhausted, check for checkpoint
-  if (!historyStore.canUndoCheckpoint()) {
+  // Native undo exhausted, check for checkpoint (per-document)
+  if (!historyStore.canUndoCheckpoint(tabId)) {
     return false;
   }
-
-  const tabId = tabStore.activeTabId[windowLabel];
-  if (!tabId) return false;
 
   const doc = documentStore.getDocument(tabId);
   if (!doc) return false;
 
-  // Save current state to redo stack before restoring checkpoint
+  // Save current state to redo stack before restoring checkpoint (per-document)
   const currentMode = editorStore.sourceMode ? "source" : "wysiwyg";
-  historyStore.pushRedo({
+  historyStore.pushRedo(tabId, {
     markdown: doc.content,
     mode: currentMode,
     cursorInfo: doc.cursorInfo ?? null,
   });
 
-  // Pop checkpoint
-  const checkpoint = historyStore.popUndo();
+  // Pop checkpoint (per-document)
+  const checkpoint = historyStore.popUndo(tabId);
   if (!checkpoint) return false;
 
   // Restore content
@@ -360,33 +367,33 @@ export function performUnifiedRedo(windowLabel: string): boolean {
   const documentStore = useDocumentStore.getState();
   const tabStore = useTabStore.getState();
 
+  const tabId = tabStore.activeTabId[windowLabel];
+  if (!tabId) return false;
+
   // First, try native redo
   if (canNativeRedo()) {
     doNativeRedo();
     return true;
   }
 
-  // Native redo exhausted, check for checkpoint
-  if (!historyStore.canRedoCheckpoint()) {
+  // Native redo exhausted, check for checkpoint (per-document)
+  if (!historyStore.canRedoCheckpoint(tabId)) {
     return false;
   }
-
-  const tabId = tabStore.activeTabId[windowLabel];
-  if (!tabId) return false;
 
   const doc = documentStore.getDocument(tabId);
   if (!doc) return false;
 
-  // Save current state to undo stack before restoring
+  // Save current state to undo stack before restoring (per-document)
   const currentMode = editorStore.sourceMode ? "source" : "wysiwyg";
-  historyStore.createCheckpoint({
+  historyStore.createCheckpoint(tabId, {
     markdown: doc.content,
     mode: currentMode,
     cursorInfo: doc.cursorInfo ?? null,
   });
 
-  // Pop redo checkpoint
-  const checkpoint = historyStore.popRedo();
+  // Pop redo checkpoint (per-document)
+  const checkpoint = historyStore.popRedo(tabId);
   if (!checkpoint) return false;
 
   // Restore content

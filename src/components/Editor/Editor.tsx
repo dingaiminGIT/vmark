@@ -1,9 +1,7 @@
-import { useEffect, useRef } from "react";
 import { useEditorStore } from "@/stores/editorStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useActiveTabId, useDocumentId } from "@/hooks/useDocumentState";
 import { useUnifiedMenuCommands } from "@/hooks/useUnifiedMenuCommands";
-import { clearUnifiedHistory } from "@/hooks/useUnifiedHistory";
 import { SourceEditor } from "./SourceEditor";
 import { TiptapEditorInner } from "./TiptapEditor";
 import { HeadingPicker } from "./HeadingPicker";
@@ -51,16 +49,6 @@ export function Editor() {
 
   // Mount unified menu dispatcher (handles routing based on mode)
   useUnifiedMenuCommands();
-
-  // Track previous tabId to clear unified history on tab switch
-  const prevTabIdRef = useRef(tabId);
-  useEffect(() => {
-    if (prevTabIdRef.current !== tabId) {
-      // Tab changed - clear unified history since it's a different document
-      clearUnifiedHistory();
-      prevTabIdRef.current = tabId;
-    }
-  }, [tabId]);
 
   // Include tabId in key to ensure editor remounts when switching tabs
   // documentId handles content reloads within the same tab
