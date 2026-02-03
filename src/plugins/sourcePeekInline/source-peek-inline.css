@@ -96,9 +96,25 @@
 }
 
 /* Live preview toggle */
+.source-peek-inline-btn--live {
+  position: relative;
+}
+
 .source-peek-inline-btn--live.active {
   background: var(--accent-bg);
   color: var(--accent-primary);
+}
+
+/* Status dot when live preview is active */
+.source-peek-inline-btn--live.active::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  background: var(--success-color);
+  border-radius: 50%;
 }
 
 /* Focus indicator for buttons */
@@ -206,8 +222,20 @@
   animation: source-peek-inline-fade-in 0.15s ease-out;
 }
 
-/* Mark the block being edited with a subtle highlight */
+/* Mark the block being edited - dimmed but visible as preview */
 .source-peek-editing {
-  /* Editing block is hidden - we show our preview instead */
-  display: none;
+  opacity: 0.5;
+  pointer-events: none;
+  position: relative;
+}
+
+.source-peek-editing::before {
+  content: "Preview";
+  position: absolute;
+  top: -1.2em;
+  left: 0;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
