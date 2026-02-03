@@ -458,10 +458,14 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
 /**
  * Hook to enable MCP bridge request handling.
  * Should be used once in the main app component.
+ *
+ * Note: Properly handles React Strict Mode double-mount by tracking
+ * mounted state and cleaning up async listener registration.
  */
 export function useMcpBridge(): void {
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    let mounted = true;
 
     listen<McpRequestEventRaw>("mcp-bridge:request", (event) => {
       // Parse args_json to avoid Tauri IPC double-encoding issues
@@ -490,10 +494,16 @@ export function useMcpBridge(): void {
       };
       handleRequest(parsed);
     }).then((fn) => {
+      // If unmounted before Promise resolved, clean up immediately
+      if (!mounted) {
+        fn();
+        return;
+      }
       unlisten = fn;
     });
 
     return () => {
+      mounted = false;
       unlisten?.();
     };
   }, []);
