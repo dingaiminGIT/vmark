@@ -58,20 +58,29 @@ pub fn migrate_session(mut session: SessionData) -> Result<SessionData, String> 
 /// Migrate session to the next version.
 ///
 /// This is where individual version migrations are dispatched.
-fn migrate_to_next_version(mut session: SessionData) -> Result<SessionData, String> {
+fn migrate_to_next_version(session: SessionData) -> Result<SessionData, String> {
     match session.version {
-        // Add migration cases here as schema evolves:
-        // 1 => migrate_v1_to_v2(session),
+        1 => migrate_v1_to_v2(session),
+        // Add future migrations here:
         // 2 => migrate_v2_to_v3(session),
-
-        // Default: just bump version (for compatible changes)
-        v if v < SCHEMA_VERSION => {
-            session.version = v + 1;
-            Ok(session)
-        }
 
         _ => Err(format!("No migration path from version {}", session.version)),
     }
+}
+
+/// Migrate v1 -> v2: Add undo/redo history to documents
+///
+/// v2 adds undo_history and redo_history arrays to DocumentState
+/// for preserving cross-mode undo capability across restarts.
+///
+/// Note: The actual migration is handled by serde's #[serde(default)]
+/// attribute on the new fields, which initializes them to empty Vec.
+/// This function just bumps the version number.
+fn migrate_v1_to_v2(mut session: SessionData) -> Result<SessionData, String> {
+    session.version = 2;
+    // undo_history and redo_history are automatically initialized to empty
+    // vectors by serde's #[serde(default)] when deserializing v1 sessions
+    Ok(session)
 }
 
 /// Check if session needs migration.

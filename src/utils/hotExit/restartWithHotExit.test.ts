@@ -77,7 +77,9 @@ describe('checkAndRestoreSession', () => {
     await new Promise(resolve => setTimeout(resolve, 50));
 
     // Verify restore was called (single-window uses legacy command)
-    expect(mockInvoke).toHaveBeenCalledWith('hot_exit_restore', { session: mockSession });
+    // Session is migrated from v1 to v2 before restore
+    const migratedSession = { ...mockSession, version: 2 };
+    expect(mockInvoke).toHaveBeenCalledWith('hot_exit_restore', { session: migratedSession });
 
     // Verify clear_session has NOT been called yet (waiting for event)
     const clearCalls = mockInvoke.mock.calls.filter(

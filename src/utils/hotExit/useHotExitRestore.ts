@@ -16,9 +16,11 @@ import { useTabStore } from '@/stores/tabStore';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useEditorStore } from '@/stores/editorStore';
-import type { SessionData, WindowState } from './types';
+import { useUnifiedHistoryStore } from '@/stores/unifiedHistoryStore';
+import type { SessionData, WindowState, HistoryCheckpoint } from './types';
 import { HOT_EXIT_EVENTS } from './types';
 import type { LineEnding } from '@/utils/linebreakDetection';
+import type { HistoryCheckpoint as StoreHistoryCheckpoint } from '@/stores/unifiedHistoryStore';
 
 /**
  * Convert hot exit line ending format back to store format
@@ -32,6 +34,29 @@ function fromHotExitLineEnding(lineEnding: '\n' | '\r\n' | 'unknown'): LineEndin
     case 'unknown':
       return 'unknown';
   }
+}
+
+/**
+ * Convert hot exit checkpoint back to store format
+ */
+function fromHotExitCheckpoint(checkpoint: HistoryCheckpoint): StoreHistoryCheckpoint {
+  return {
+    markdown: checkpoint.markdown,
+    mode: checkpoint.mode as 'source' | 'wysiwyg',
+    cursorInfo: checkpoint.cursor_info
+      ? {
+          sourceLine: checkpoint.cursor_info.source_line,
+          wordAtCursor: checkpoint.cursor_info.word_at_cursor,
+          offsetInWord: checkpoint.cursor_info.offset_in_word,
+          nodeType: checkpoint.cursor_info.node_type as import('@/types/cursorSync').NodeType,
+          percentInLine: checkpoint.cursor_info.percent_in_line,
+          contextBefore: checkpoint.cursor_info.context_before,
+          contextAfter: checkpoint.cursor_info.context_after,
+          blockAnchor: checkpoint.cursor_info.block_anchor as import('@/types/cursorSync').BlockAnchor | undefined,
+        }
+      : null,
+    timestamp: checkpoint.timestamp,
+  };
 }
 
 export function useHotExitRestore() {
@@ -293,4 +318,42 @@ async function restoreDocumentState(
       blockAnchor: docState.cursor_info.block_anchor as import('@/types/cursorSync').BlockAnchor | undefined,
     });
   }
+
+  // Restore unified history (cross-mode undo/redo checkpoints)
+  restoreUnifiedHistory(tabId, docState);
+}
+
+/**
+ * Restore unified history checkpoints for a tab
+ */
+function restoreUnifiedHistory(
+  tabId: string,
+  docState: import('./types').DocumentState
+): void {
+  const undoHistory = docState.undo_history || [];
+  const redoHistory = docState.redo_history || [];
+
+  // Skip if no history to restore
+  if (undoHistory.length === 0 && redoHistory.length === 0) {
+    return;
+  }
+
+  // Convert checkpoints from hot exit format to store format
+  const undoStack = undoHistory.map(fromHotExitCheckpoint);
+  const redoStack = redoHistory.map(fromHotExitCheckpoint);
+
+  // Directly set the history state for this document
+  useUnifiedHistoryStore.setState((state) => ({
+    documents: {
+      ...state.documents,
+      [tabId]: {
+        undoStack,
+        redoStack,
+      },
+    },
+  }));
+
+  console.log(
+    `[HotExit] Restored unified history for tab '${tabId}': ${undoStack.length} undo, ${redoStack.length} redo checkpoints`
+  );
 }

@@ -131,7 +131,7 @@ pub async fn delete_session(app: &tauri::AppHandle) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
     // Note: These tests would require mocking AppHandle
     // For now, we test the logic with manual integration tests
 }

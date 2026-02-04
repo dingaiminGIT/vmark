@@ -143,7 +143,7 @@ export async function checkAndRestoreSession(
 async function waitForRestoreEvent(
   timeoutMs: number
 ): Promise<{ success: boolean; error?: string }> {
-  return new Promise(async (resolve) => {
+  return new Promise((resolve) => {
     let resolved = false;
     let unlistenComplete: (() => void) | null = null;
     let unlistenFailed: (() => void) | null = null;
@@ -162,40 +162,43 @@ async function waitForRestoreEvent(
       }
     }, timeoutMs);
 
-    try {
-      // Listen for restore-complete event
-      unlistenComplete = await listen(HOT_EXIT_EVENTS.RESTORE_COMPLETE, () => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timeoutId);
-          cleanup();
-          resolve({ success: true });
-        }
-      });
-
-      // Listen for restore-failed event
-      unlistenFailed = await listen<{ error: string }>(
-        HOT_EXIT_EVENTS.RESTORE_FAILED,
-        (event) => {
+    // Set up event listeners (async IIFE to avoid async executor)
+    void (async () => {
+      try {
+        // Listen for restore-complete event
+        unlistenComplete = await listen(HOT_EXIT_EVENTS.RESTORE_COMPLETE, () => {
           if (!resolved) {
             resolved = true;
             clearTimeout(timeoutId);
             cleanup();
-            resolve({ success: false, error: event.payload.error });
+            resolve({ success: true });
           }
-        }
-      );
-    } catch (error) {
-      // Failed to set up listeners
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(timeoutId);
-        cleanup();
-        resolve({
-          success: false,
-          error: `Failed to set up event listeners: ${error}`,
         });
+
+        // Listen for restore-failed event
+        unlistenFailed = await listen<{ error: string }>(
+          HOT_EXIT_EVENTS.RESTORE_FAILED,
+          (event) => {
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timeoutId);
+              cleanup();
+              resolve({ success: false, error: event.payload.error });
+            }
+          }
+        );
+      } catch (error) {
+        // Failed to set up listeners
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          cleanup();
+          resolve({
+            success: false,
+            error: `Failed to set up event listeners: ${error}`,
+          });
+        }
       }
-    }
+    })();
   });
 }

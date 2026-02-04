@@ -12,9 +12,11 @@ import { useTabStore } from '@/stores/tabStore';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useEditorStore } from '@/stores/editorStore';
-import type { WindowState, TabState, CaptureResponse } from './types';
+import { useUnifiedHistoryStore } from '@/stores/unifiedHistoryStore';
+import type { WindowState, TabState, CaptureResponse, HistoryCheckpoint } from './types';
 import { HOT_EXIT_EVENTS } from './types';
 import type { LineEnding as StoreLineEnding } from '@/utils/linebreakDetection';
+import type { HistoryCheckpoint as StoreHistoryCheckpoint } from '@/stores/unifiedHistoryStore';
 
 /**
  * Convert store line ending format to hot exit format
@@ -28,6 +30,29 @@ function toHotExitLineEnding(lineEnding: StoreLineEnding): '\n' | '\r\n' | 'unkn
     case 'unknown':
       return 'unknown';
   }
+}
+
+/**
+ * Convert store history checkpoint to hot exit format
+ */
+function toHotExitCheckpoint(checkpoint: StoreHistoryCheckpoint): HistoryCheckpoint {
+  return {
+    markdown: checkpoint.markdown,
+    mode: checkpoint.mode,
+    cursor_info: checkpoint.cursorInfo
+      ? {
+          source_line: checkpoint.cursorInfo.sourceLine,
+          word_at_cursor: checkpoint.cursorInfo.wordAtCursor,
+          offset_in_word: checkpoint.cursorInfo.offsetInWord,
+          node_type: checkpoint.cursorInfo.nodeType,
+          percent_in_line: checkpoint.cursorInfo.percentInLine,
+          context_before: checkpoint.cursorInfo.contextBefore,
+          context_after: checkpoint.cursorInfo.contextAfter,
+          block_anchor: checkpoint.cursorInfo.blockAnchor,
+        }
+      : null,
+    timestamp: checkpoint.timestamp,
+  };
 }
 
 export function useHotExitCapture() {
@@ -87,12 +112,18 @@ export function useHotExitCapture() {
 function captureWindowState(windowLabel: string, isMainWindow: boolean): WindowState {
   const tabStore = useTabStore.getState();
   const documentStore = useDocumentStore.getState();
+  const historyStore = useUnifiedHistoryStore.getState();
 
   // Get tabs for this window
   const windowTabs = tabStore.getTabsByWindow(windowLabel);
 
   const tabs: TabState[] = windowTabs.map((tab) => {
     const doc = documentStore.getDocument(tab.id);
+    const docHistory = historyStore.documents[tab.id];
+
+    // Capture undo/redo history for this tab
+    const undoHistory = docHistory?.undoStack.map(toHotExitCheckpoint) || [];
+    const redoHistory = docHistory?.redoStack.map(toHotExitCheckpoint) || [];
 
     return {
       id: tab.id,
@@ -122,6 +153,8 @@ function captureWindowState(windowLabel: string, isMainWindow: boolean): WindowS
             last_modified_timestamp: doc.lastAutoSave,
             is_untitled: !tab.filePath,
             untitled_number: tab.filePath ? null : extractUntitledNumber(tab.title),
+            undo_history: undoHistory,
+            redo_history: redoHistory,
           }
         : {
         // Fallback if document not found
@@ -135,6 +168,8 @@ function captureWindowState(windowLabel: string, isMainWindow: boolean): WindowS
         last_modified_timestamp: null,
         is_untitled: !tab.filePath,
         untitled_number: tab.filePath ? null : extractUntitledNumber(tab.title),
+        undo_history: [],
+        redo_history: [],
       },
     };
   });

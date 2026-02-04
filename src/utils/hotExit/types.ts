@@ -5,7 +5,7 @@
  * These types define the complete application session state for save/restore.
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /**
  * Line ending types
@@ -51,6 +51,21 @@ export interface DocumentState {
   last_modified_timestamp: number | null;
   is_untitled: boolean;
   untitled_number: number | null;
+  /** Undo history checkpoints (cross-mode undo) - added in v2 */
+  undo_history: HistoryCheckpoint[];
+  /** Redo history checkpoints (cross-mode redo) - added in v2 */
+  redo_history: HistoryCheckpoint[];
+}
+
+/**
+ * History checkpoint for cross-mode undo/redo
+ * Mirrors unifiedHistoryStore.HistoryCheckpoint
+ */
+export interface HistoryCheckpoint {
+  markdown: string;
+  mode: 'source' | 'wysiwyg';
+  cursor_info: CursorInfo | null;
+  timestamp: number;
 }
 
 export interface CursorInfo {

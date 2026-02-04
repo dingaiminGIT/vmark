@@ -11,10 +11,10 @@
  * - Version 0 is invalid and rejected
  */
 
-import type { SessionData } from './types';
+import type { SessionData, DocumentState } from './types';
 
 /** Current schema version - must match types.ts and Rust session.rs */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Minimum supported version for migration */
 const MIN_SUPPORTED_VERSION = 1;
@@ -28,14 +28,9 @@ type MigrationFn = (session: SessionData) => SessionData;
 /**
  * Registry of migration functions.
  * Key is the source version, value migrates from that version to the next.
- *
- * Example when we have v2:
- * migrations[1] = (session) => migrateV1toV2(session)
- * migrations[2] = (session) => migrateV2toV3(session)
  */
 const migrations: Record<number, MigrationFn> = {
-  // Currently no migrations needed since we're at v1
-  // When we add v2, add: 1: migrateV1toV2
+  1: migrateV1toV2,
 };
 
 /**
@@ -123,19 +118,32 @@ export function needsMigration(session: SessionData): boolean {
 // 4. Transform data structures as needed
 
 /**
- * Example migration template for v1 -> v2 (when needed):
+ * Migrate v1 -> v2: Add undo/redo history to documents
  *
- * function migrateV1toV2(session: SessionDataV1): SessionData {
- *   return {
- *     ...session,
- *     version: 2,
- *     // Add new fields with defaults
- *     newField: 'default_value',
- *     // Transform existing fields if needed
- *     windows: session.windows.map(w => ({
- *       ...w,
- *       newWindowField: false,
- *     })),
- *   };
- * }
+ * v2 adds undo_history and redo_history arrays to DocumentState
+ * for preserving cross-mode undo capability across restarts.
  */
+function migrateV1toV2(session: SessionData): SessionData {
+  return {
+    ...session,
+    version: 2,
+    windows: session.windows.map(window => ({
+      ...window,
+      tabs: window.tabs.map(tab => ({
+        ...tab,
+        document: addHistoryToDocument(tab.document),
+      })),
+    })),
+  };
+}
+
+/**
+ * Add empty history arrays to a document (v1 -> v2 migration helper)
+ */
+function addHistoryToDocument(doc: Partial<DocumentState>): DocumentState {
+  return {
+    ...doc,
+    undo_history: [],
+    redo_history: [],
+  } as DocumentState;
+}

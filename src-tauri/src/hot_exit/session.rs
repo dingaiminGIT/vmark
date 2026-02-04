@@ -5,7 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Schema version for hot exit sessions
-pub const SCHEMA_VERSION: u32 = 1;
+/// v1: Initial schema
+/// v2: Added undo_history and redo_history to DocumentState
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Maximum session age in days before considering it stale
 pub const MAX_SESSION_AGE_DAYS: i64 = 7;
@@ -54,6 +56,22 @@ pub struct DocumentState {
     pub last_modified_timestamp: Option<i64>,
     pub is_untitled: bool,
     pub untitled_number: Option<u32>,
+    /// Undo history checkpoints (cross-mode undo) - added in v2
+    #[serde(default)]
+    pub undo_history: Vec<HistoryCheckpoint>,
+    /// Redo history checkpoints (cross-mode redo) - added in v2
+    #[serde(default)]
+    pub redo_history: Vec<HistoryCheckpoint>,
+}
+
+/// History checkpoint for cross-mode undo/redo
+/// Mirrors frontend unifiedHistoryStore.HistoryCheckpoint
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct HistoryCheckpoint {
+    pub markdown: String,
+    pub mode: String, // "source" | "wysiwyg"
+    pub cursor_info: Option<CursorInfo>,
+    pub timestamp: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
