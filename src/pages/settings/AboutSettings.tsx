@@ -18,12 +18,15 @@ import {
   Download,
   RefreshCw,
   SkipForward,
-  ExternalLink,
+  Globe,
+  Github,
+  MessageCircle,
 } from "lucide-react";
 import appIcon from "@/assets/app-icon.png";
 
 const WEBSITE_URL = "https://vmark.app";
 const GITHUB_URL = "https://github.com/xiaolai/vmark";
+const DISCUSSIONS_URL = "https://github.com/xiaolai/vmark/discussions";
 
 function VersionInfo() {
   const [version, setVersion] = useState<string>("");
@@ -44,18 +47,26 @@ function VersionInfo() {
 }
 
 function Links() {
-  const handleOpenWebsite = () => openUrl(WEBSITE_URL);
-  const handleOpenGitHub = () => openUrl(GITHUB_URL);
+  const links = [
+    { icon: Globe, label: "Website", url: WEBSITE_URL },
+    { icon: Github, label: "GitHub", url: GITHUB_URL },
+    { icon: MessageCircle, label: "Discussions", url: DISCUSSIONS_URL },
+  ];
 
   return (
-    <div className="flex gap-3">
-      <Button variant="tertiary" onClick={handleOpenWebsite} icon={<ExternalLink className="w-3 h-3" />}>
-        Website
-      </Button>
-      <Button variant="tertiary" onClick={handleOpenGitHub} icon={<ExternalLink className="w-3 h-3" />}>
-        GitHub
-      </Button>
-    </div>
+    <ul className="space-y-0.5 pt-0.5">
+      {links.map(({ icon: Icon, label, url }) => (
+        <li key={label}>
+          <button
+            onClick={() => openUrl(url)}
+            className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--primary-color)] transition-colors"
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {label}
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -297,7 +308,7 @@ export function AboutSettings() {
     <div>
       {/* App info */}
       <SettingsGroup title="">
-        <div className="px-4 py-4 flex items-center justify-between">
+        <div className="py-2 flex items-start justify-between">
           <VersionInfo />
           <Links />
         </div>
