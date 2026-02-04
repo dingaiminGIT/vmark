@@ -1,13 +1,14 @@
 /**
- * Update Settings Section
+ * About Settings Section
  *
- * Settings for automatic update checking and installation.
+ * Shows app info (version, links) and update status.
  */
 
 import { useState, useEffect } from "react";
+import { getVersion } from "@tauri-apps/api/app";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
-import { SettingRow, Toggle, SettingsGroup, Select, Button } from "./components";
-import { useSettingsStore, type UpdateCheckFrequency } from "@/stores/settingsStore";
+import { SettingRow, SettingsGroup, Button } from "./components";
 import { useUpdateStore } from "@/stores/updateStore";
 import { useUpdateOperations } from "@/hooks/useUpdateOperations";
 import {
@@ -17,14 +18,46 @@ import {
   Download,
   RefreshCw,
   SkipForward,
+  ExternalLink,
 } from "lucide-react";
+import appIcon from "@/assets/app-icon.png";
 
-const frequencyOptions: { value: UpdateCheckFrequency; label: string }[] = [
-  { value: "startup", label: "On startup" },
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "manual", label: "Manual only" },
-];
+const WEBSITE_URL = "https://vmark.app";
+const GITHUB_URL = "https://github.com/xiaolai/vmark";
+
+function VersionInfo() {
+  const [version, setVersion] = useState<string>("");
+
+  useEffect(() => {
+    getVersion().then(setVersion);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-3">
+      <img src={appIcon} alt="VMark" className="w-12 h-12" />
+      <div>
+        <div className="text-lg font-semibold text-[var(--text-primary)]">VMark</div>
+        <div className="text-sm text-[var(--text-secondary)]">Version {version}</div>
+      </div>
+    </div>
+  );
+}
+
+function Links() {
+  const handleOpenWebsite = () => openUrl(WEBSITE_URL);
+  const handleOpenGitHub = () => openUrl(GITHUB_URL);
+
+  return (
+    <div className="flex gap-3">
+      <Button variant="tertiary" onClick={handleOpenWebsite} icon={<ExternalLink className="w-3 h-3" />}>
+        Website
+      </Button>
+      <Button variant="tertiary" onClick={handleOpenGitHub} icon={<ExternalLink className="w-3 h-3" />}>
+        GitHub
+      </Button>
+    </div>
+  );
+}
 
 function StatusIndicator() {
   const status = useUpdateStore((state) => state.status);
@@ -155,13 +188,11 @@ function UpdateAvailableCard() {
   const handleDownload = async () => {
     setIsDownloading(true);
     await downloadAndInstall();
-    // Note: isDownloading is reset by the status change effect
   };
 
   const handleRestart = async () => {
     setIsRestarting(true);
     await restartApp();
-    // Note: isRestarting is reset by the restart-cancelled event if user cancels
   };
 
   const handleSkip = () => {
@@ -241,24 +272,10 @@ function UpdateAvailableCard() {
   );
 }
 
-export function UpdateSettings() {
-  const updateSettings = useSettingsStore((state) => state.update);
-  const updateUpdateSetting = useSettingsStore((state) => state.updateUpdateSetting);
+export function AboutSettings() {
   const status = useUpdateStore((state) => state.status);
   const { checkForUpdates } = useUpdateOperations();
   const [isChecking, setIsChecking] = useState(false);
-
-  const handleAutoCheckChange = (enabled: boolean) => {
-    updateUpdateSetting("autoCheckEnabled", enabled);
-  };
-
-  const handleFrequencyChange = (frequency: UpdateCheckFrequency) => {
-    updateUpdateSetting("checkFrequency", frequency);
-  };
-
-  const handleAutoDownloadChange = (enabled: boolean) => {
-    updateUpdateSetting("autoDownload", enabled);
-  };
 
   const handleCheckNow = async () => {
     setIsChecking(true);
@@ -269,11 +286,6 @@ export function UpdateSettings() {
     }
   };
 
-  // Format last check time
-  const lastCheckText = updateSettings.lastCheckTimestamp
-    ? new Date(updateSettings.lastCheckTimestamp).toLocaleString()
-    : "Never";
-
   // Disable check button during active operations
   const checkDisabled =
     isChecking ||
@@ -283,46 +295,20 @@ export function UpdateSettings() {
 
   return (
     <div>
+      {/* App info */}
+      <SettingsGroup title="">
+        <div className="px-4 py-4 flex items-center justify-between">
+          <VersionInfo />
+          <Links />
+        </div>
+      </SettingsGroup>
+
       {/* Update available/downloading/ready card */}
       <UpdateAvailableCard />
 
-      <SettingsGroup title="Automatic Updates">
-        <SettingRow
-          label="Check for updates automatically"
-          description="Periodically check for new versions"
-        >
-          <Toggle
-            checked={updateSettings.autoCheckEnabled}
-            onChange={handleAutoCheckChange}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Check frequency"
-          description="How often to check for updates"
-          disabled={!updateSettings.autoCheckEnabled}
-        >
-          <Select
-            value={updateSettings.checkFrequency}
-            options={frequencyOptions}
-            onChange={handleFrequencyChange}
-            disabled={!updateSettings.autoCheckEnabled}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Download updates automatically"
-          description="Download in the background when available"
-        >
-          <Toggle
-            checked={updateSettings.autoDownload}
-            onChange={handleAutoDownloadChange}
-          />
-        </SettingRow>
-      </SettingsGroup>
-
-      <SettingsGroup title="Manual Check">
-        <SettingRow label="Check now" description={`Last checked: ${lastCheckText}`}>
+      {/* Check for updates */}
+      <SettingsGroup title="Updates">
+        <SettingRow label="Check for updates">
           <div className="flex items-center gap-3">
             <StatusIndicator />
             <Button
@@ -330,23 +316,11 @@ export function UpdateSettings() {
               onClick={handleCheckNow}
               disabled={checkDisabled}
             >
-              {isChecking || status === "checking" ? "Checking..." : "Check for Updates"}
+              {isChecking || status === "checking" ? "Checking..." : "Check Now"}
             </Button>
           </div>
         </SettingRow>
       </SettingsGroup>
-
-      {updateSettings.skipVersion && (
-        <div className="mt-4 text-xs text-[var(--text-tertiary)]">
-          Skipped version: {updateSettings.skipVersion}{" "}
-          <button
-            onClick={() => updateUpdateSetting("skipVersion", null)}
-            className="text-[var(--primary-color)] hover:underline"
-          >
-            Clear
-          </button>
-        </div>
-      )}
     </div>
   );
 }

@@ -312,21 +312,18 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 2px 4px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-tertiary);
-  font-size: 11px;
   cursor: default;
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.status-update:disabled {
-  cursor: default;
-}
-
-.status-update:not(:disabled):hover {
+/* Only show hover effect for clickable states (ready, error) */
+.status-update.ready:hover,
+.status-update.error:hover {
   background-color: var(--hover-bg);
 }
 
@@ -369,13 +366,11 @@
 /* Available state - accent color with dot */
 .status-update.available {
   color: var(--primary-color);
-  cursor: pointer;
 }
 
 /* Ready state - success color with dot */
 .status-update.ready {
   color: var(--success-color, #22c55e);
-  cursor: pointer;
 }
 
 .dark-theme .status-update.ready {
@@ -385,11 +380,6 @@
 /* Error state */
 .status-update.error {
   color: var(--error-color);
-  cursor: pointer;
-}
-
-.status-update-label {
-  font-weight: 500;
 }
 
 /* Notification dot */

@@ -6,12 +6,11 @@
  *
  * Also handles update operation requests from other windows,
  * ensuring all operations run in the main window context.
+ * Updates are fully automatic — no menu interaction needed.
  */
 
 import { useEffect, useRef } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -53,7 +52,7 @@ function shouldCheckNow(
 }
 
 /**
- * Hook to check for updates on startup and handle menu events.
+ * Hook to check for updates on startup and handle cross-window requests.
  * Should be used in the main window only.
  */
 export function useUpdateChecker() {
@@ -230,77 +229,6 @@ export function useUpdateChecker() {
       });
     };
   }, [EVENTS.REQUEST_STATE]);
-
-  // Listen for menu "Check for Updates..." event - starts check immediately, then opens Settings
-  // Event payload contains the focused window label from Rust
-  useEffect(() => {
-    const unlistenPromise = listen<string>("menu:check-updates", (event) => {
-      (async () => {
-        try {
-          // Immediately start checking for updates (don't wait for user to click button)
-          await emit(EVENTS.REQUEST_CHECK);
-
-          const settingsWidth = 760;
-          const settingsHeight = 540;
-
-          // Calculate centered position based on the window that triggered the menu
-          const calculateCenteredPosition = async (): Promise<{ x: number; y: number } | null> => {
-            try {
-              const sourceWindow = await WebviewWindow.getByLabel(event.payload);
-              if (!sourceWindow) return null;
-              const scaleFactor = await sourceWindow.scaleFactor();
-              const [position, size] = await Promise.all([
-                sourceWindow.outerPosition(),
-                sourceWindow.outerSize(),
-              ]);
-              const x = Math.round(position.x / scaleFactor + (size.width / scaleFactor - settingsWidth) / 2);
-              const y = Math.round(position.y / scaleFactor + (size.height / scaleFactor - settingsHeight) / 2);
-              return { x, y };
-            } catch {
-              return null;
-            }
-          };
-
-          // If Settings exists, reposition, navigate, and focus
-          const existing = await WebviewWindow.getByLabel("settings");
-          if (existing) {
-            const pos = await calculateCenteredPosition();
-            if (pos) {
-              await existing.setPosition(new LogicalPosition(pos.x, pos.y));
-            }
-            await existing.setFocus();
-            await emit("settings:navigate", "updates");
-            return;
-          }
-
-          // Create new Settings window
-          const pos = await calculateCenteredPosition();
-          new WebviewWindow("settings", {
-            url: "/settings?section=updates",
-            title: "Settings",
-            width: settingsWidth,
-            height: settingsHeight,
-            minWidth: 600,
-            minHeight: 400,
-            x: pos?.x,
-            y: pos?.y,
-            center: !pos,
-            resizable: true,
-            titleBarStyle: "overlay" as const,
-            hiddenTitle: true,
-          });
-        } catch (error) {
-          console.error("[UpdateChecker] Menu check-updates handler failed:", error);
-        }
-      })();
-    });
-
-    return () => {
-      unlistenPromise.then((fn) => fn()).catch(() => {
-        // Ignore cleanup errors
-      });
-    };
-  }, [EVENTS.REQUEST_CHECK]);
 
   // Listen for restart request (from Settings page) - capture session and restart
   useEffect(() => {

@@ -42,7 +42,7 @@ pub fn get_recent_workspace_path(index: usize) -> Option<String> {
 // - Block menu merged into Format
 // - Tools menu removed (CJK/Cleanup → Format)
 // - Window menu added
-// - About/Updates moved to App menu (macOS) or Help menu (others)
+// - About in App menu (macOS) or Help menu (others); updates are automatic
 // ============================================================================
 
 pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
@@ -56,7 +56,6 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         true,
         &[
             &PredefinedMenuItem::about(app, Some("About VMark"), None)?,
-            &MenuItem::with_id(app, "check-updates", "Check for Updates...", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "preferences", "Settings...", true, Some("CmdOrCtrl+,"))?,
             &PredefinedMenuItem::separator(app)?,
@@ -522,7 +521,6 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "report-issue", "Report an Issue...", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "check-updates", "Check for Updates...", true, None::<&str>)?,
             &PredefinedMenuItem::about(app, Some("About VMark"), None)?,
         ],
     )?;
@@ -723,7 +721,6 @@ fn create_menu_with_shortcuts(
         true,
         &[
             &PredefinedMenuItem::about(app, Some("About VMark"), None)?,
-            &MenuItem::with_id(app, "check-updates", "Check for Updates...", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "preferences", "Settings...", true, get_accel("preferences", "CmdOrCtrl+,"))?,
             &PredefinedMenuItem::separator(app)?,
@@ -1191,7 +1188,6 @@ fn create_menu_with_shortcuts(
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "report-issue", "Report an Issue...", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "check-updates", "Check for Updates...", true, None::<&str>)?,
             &PredefinedMenuItem::about(app, Some("About VMark"), None)?,
         ],
     )?;

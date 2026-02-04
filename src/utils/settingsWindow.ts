@@ -38,7 +38,7 @@ async function calculateCenteredPosition(): Promise<{ x: number; y: number } | n
  * - If Settings window exists, focuses it and navigates to the section
  * - If not, creates a new Settings window centered on the current window
  *
- * @param section - Optional section to navigate to (e.g., "integrations", "updates")
+ * @param section - Optional section to navigate to (e.g., "integrations", "about")
  */
 export async function openSettingsWindow(section?: string): Promise<void> {
   const pos = await calculateCenteredPosition();

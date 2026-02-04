@@ -15,7 +15,7 @@ import {
   FileText,
   Keyboard,
   Plug,
-  RefreshCw,
+  Info,
 } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -32,7 +32,7 @@ import { IntegrationsSettings } from "./settings/IntegrationsSettings";
 import { LanguageSettings } from "./settings/LanguageSettings";
 import { MarkdownSettings } from "./settings/MarkdownSettings";
 import { ShortcutsSettings } from "./settings/ShortcutsSettings";
-import { UpdateSettings } from "./settings/UpdateSettings";
+import { AboutSettings } from "./settings/AboutSettings";
 import { AdvancedSettings } from "./settings/AdvancedSettings";
 
 // Hook to handle Cmd+W for settings window
@@ -71,6 +71,7 @@ function useDevSectionShortcut() {
 }
 
 type Section =
+  | "about"
   | "appearance"
   | "editor"
   | "files"
@@ -78,7 +79,6 @@ type Section =
   | "language"
   | "markdown"
   | "shortcuts"
-  | "updates"
   | "advanced";
 
 interface NavItemProps {
@@ -105,7 +105,7 @@ function NavItem({ icon, label, active, onClick }: NavItemProps) {
   );
 }
 
-// Navigation config - alphabetical order
+// Navigation config - alphabetical order, except About at the end
 // Note: Advanced section is added dynamically based on showDevSection state
 const navConfig = [
   { id: "appearance" as const, icon: Palette, label: "Appearance" },
@@ -115,13 +115,13 @@ const navConfig = [
   { id: "language" as const, icon: Languages, label: "Language" },
   { id: "markdown" as const, icon: FileText, label: "Markdown" },
   { id: "shortcuts" as const, icon: Keyboard, label: "Shortcuts" },
-  { id: "updates" as const, icon: RefreshCw, label: "Updates" },
+  { id: "about" as const, icon: Info, label: "About" },
 ] as const;
 
 // Valid section IDs for URL param validation
 const validSections = new Set<string>([
-  "appearance", "editor", "files", "integrations", "language",
-  "markdown", "shortcuts", "updates", "advanced"
+  "about", "appearance", "editor", "files", "integrations", "language",
+  "markdown", "shortcuts", "advanced"
 ]);
 
 function isValidSection(value: string): value is Section {
@@ -222,6 +222,7 @@ export function SettingsPage() {
         <div data-tauri-drag-region className="h-12 shrink-0" />
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
+          {section === "about" && <AboutSettings />}
           {section === "appearance" && <AppearanceSettings />}
           {section === "editor" && <EditorSettings />}
           {section === "files" && <FilesImagesSettings />}
@@ -229,7 +230,6 @@ export function SettingsPage() {
           {section === "language" && <LanguageSettings />}
           {section === "markdown" && <MarkdownSettings />}
           {section === "shortcuts" && <ShortcutsSettings />}
-          {section === "updates" && <UpdateSettings />}
           {section === "advanced" && <AdvancedSettings />}
         </div>
       </div>
