@@ -87,3 +87,9 @@ export const useUpdateStore = create<UpdateState & UpdateActions>()((set) => ({
   clearDismissed: () => set({ dismissed: false }),
   reset: () => set(initialState),
 }));
+
+// Dev helper: expose store for testing update UI
+if (import.meta.env.DEV) {
+  (window as unknown as { __updateStore: typeof useUpdateStore }).
+    __updateStore = useUpdateStore;
+}
