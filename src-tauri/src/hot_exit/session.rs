@@ -108,7 +108,9 @@ impl SessionData {
         }
     }
 
-    /// Validate session schema version
+    /// Validate session schema version (exact match).
+    /// Note: For production use, prefer migration::can_migrate() which supports older versions.
+    #[allow(dead_code)]
     pub fn is_compatible(&self) -> bool {
         self.version == SCHEMA_VERSION
     }

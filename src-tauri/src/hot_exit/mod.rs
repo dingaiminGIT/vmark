@@ -7,6 +7,7 @@ pub mod session;
 pub mod storage;
 pub mod coordinator;
 pub mod commands;
+pub mod migration;
 
 // Re-export commonly used types
 

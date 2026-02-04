@@ -3,9 +3,13 @@
  *
  * Listens for restore requests from Rust coordinator and applies
  * session state to recreate tabs, documents, and UI state.
+ *
+ * For main window: Receives RESTORE_START event with full session
+ * For secondary windows: Pulls pending state via invoke on mount
  */
 
 import { useEffect, useRef } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { emit, listen } from '@tauri-apps/api/event';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { useTabStore } from '@/stores/tabStore';
@@ -33,8 +37,50 @@ function fromHotExitLineEnding(lineEnding: '\n' | '\r\n' | 'unknown'): LineEndin
 export function useHotExitRestore() {
   // Prevent concurrent restore attempts
   const isRestoring = useRef(false);
+  const hasCheckedPending = useRef(false);
 
   useEffect(() => {
+    const windowLabel = getCurrentWebviewWindow().label;
+
+    // For secondary windows (doc-*), check for pending restore state on mount
+    // This is necessary because they're created after the RESTORE_START event
+    const checkPendingState = async () => {
+      if (hasCheckedPending.current || isRestoring.current) return;
+      hasCheckedPending.current = true;
+
+      // Only secondary windows need to pull state - main window gets event
+      if (windowLabel === 'main') return;
+
+      try {
+        const windowState = await invoke<WindowState | null>(
+          'hot_exit_get_window_state',
+          { window_label: windowLabel }
+        );
+
+        if (windowState) {
+          console.log(`[HotExit] Secondary window '${windowLabel}' found pending state`);
+          isRestoring.current = true;
+
+          try {
+            await restoreWindowState(windowLabel, windowState);
+            // Signal completion for this window
+            await invoke('hot_exit_window_restore_complete', { window_label: windowLabel });
+            console.log(`[HotExit] Secondary window '${windowLabel}' restored successfully`);
+          } catch (error) {
+            console.error(`[HotExit] Secondary window '${windowLabel}' restore failed:`, error);
+          } finally {
+            isRestoring.current = false;
+          }
+        }
+      } catch (error) {
+        console.error(`[HotExit] Failed to check pending state for '${windowLabel}':`, error);
+      }
+    };
+
+    // Check for pending state immediately for secondary windows
+    checkPendingState();
+
+    // Listen for restore event (primarily for main window)
     const unlistenPromise = listen<SessionData>(
       HOT_EXIT_EVENTS.RESTORE_START,
       async (event) => {
@@ -49,6 +95,8 @@ export function useHotExitRestore() {
         try {
           const session = event.payload;
           await restoreSession(session);
+          // Signal completion for this window
+          await invoke('hot_exit_window_restore_complete', { window_label: windowLabel });
           await emit(HOT_EXIT_EVENTS.RESTORE_COMPLETE, {});
         } catch (error) {
           console.error('[HotExit] Failed to restore session:', error);
@@ -84,6 +132,13 @@ async function restoreSession(session: SessionData): Promise<void> {
     return;
   }
 
+  await restoreWindowState(windowLabel, windowState);
+}
+
+/**
+ * Restore a window from its state (used by both event-driven and pull-based restore)
+ */
+async function restoreWindowState(windowLabel: string, windowState: WindowState): Promise<void> {
   // Restore UI state first (before tabs)
   restoreUiState(windowState);
 

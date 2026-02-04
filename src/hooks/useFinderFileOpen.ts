@@ -8,6 +8,10 @@
  *
  * Also handles cold start files queued during app launch before React mounted.
  *
+ * IMPORTANT: This hook waits for hot exit restore to complete before processing
+ * pending files. This prevents race conditions where Finder-opened files could
+ * be lost if hot exit restore clears tabs after this hook loads a file.
+ *
  * @module hooks/useFinderFileOpen
  */
 import { useEffect, useRef } from "react";
@@ -21,6 +25,7 @@ import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceableTab";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
+import { waitForRestoreComplete } from "@/utils/hotExit/hotExitCoordination";
 
 interface OpenFilePayload {
   path: string;
@@ -121,17 +126,30 @@ export function useFinderFileOpen(): void {
 
     /**
      * IMPORTANT ORDERING:
-     * - Register the event listener FIRST
-     * - Then call get_pending_file_opens (which flips Rust's FRONTEND_READY flag)
+     * 1. Register the event listener FIRST
+     * 2. Wait for hot exit restore to complete (prevents race condition)
+     * 3. Then call get_pending_file_opens (which flips Rust's FRONTEND_READY flag)
      *
-     * Otherwise, there is a cold-start race where Rust emits app:open-file after
-     * FRONTEND_READY becomes true but before this window has registered its listener.
-     * That results in the first Finder-opened file being dropped, leaving the user
-     * in an untitled tab until they open a second file.
+     * The hot exit wait is critical: if we process pending files before hot exit
+     * restore completes, the restore will clear all tabs including the file we
+     * just loaded, causing silent data loss.
+     *
+     * The listener registration must happen before the wait to avoid missing
+     * events that arrive during the restore process.
      */
     (async () => {
       try {
         unlisten = await listen<OpenFilePayload>("app:open-file", handleOpenFile);
+
+        // CRITICAL: Wait for hot exit restore to complete before processing pending files
+        // This prevents the race condition where:
+        // 1. We load a file into a tab
+        // 2. Hot exit restore runs and clears all tabs
+        // 3. User's file is silently lost
+        const restoreCompleted = await waitForRestoreComplete(15000);
+        if (!restoreCompleted) {
+          console.warn("[FinderFileOpen] Hot exit restore timed out, proceeding anyway");
+        }
 
         // Fetch and process any files queued during cold start.
         // This handles the race condition where Finder opens a file before React mounts.

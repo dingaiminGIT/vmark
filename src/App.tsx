@@ -149,8 +149,8 @@ function MainWindowHooks() {
   useMcpBridge(); // Handle MCP bridge requests from AI assistants
   useUpdateChecker(); // Check for updates on startup
   useUpdateBroadcast(); // Broadcast update state to other windows
-  useFinderFileOpen(); // Handle files opened from Finder
-  useHotExitStartup(); // Check for saved session and restore if present
+  useHotExitStartup(); // Check for saved session and restore if present (MUST run before Finder)
+  useFinderFileOpen(); // Handle files opened from Finder (waits for hot exit to complete)
   return null;
 }
 
