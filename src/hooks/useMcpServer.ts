@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { safeUnlistenAsync } from "@/utils/safeUnlisten";
 
 interface McpServerStatus {
   running: boolean;
@@ -118,8 +119,8 @@ export function useMcpServer(): UseMcpServerResult {
     });
 
     return () => {
-      unlistenStarted.then((fn) => fn());
-      unlistenStopped.then((fn) => fn());
+      safeUnlistenAsync(unlistenStarted);
+      safeUnlistenAsync(unlistenStopped);
     };
   }, [refresh]);
 

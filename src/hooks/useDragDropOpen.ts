@@ -23,6 +23,7 @@ import { resolveOpenAction, resolveWorkspaceRootForExternalFile } from "@/utils/
 import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceableTab";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
+import { safeUnlisten } from "@/utils/safeUnlisten";
 
 /**
  * Opens a file in a new tab (or activates existing tab if already open).
@@ -264,7 +265,7 @@ export function useDragDropOpen(): void {
       });
 
       if (cancelled) {
-        unlisten();
+        safeUnlisten(unlisten);
         return;
       }
 
@@ -275,10 +276,8 @@ export function useDragDropOpen(): void {
 
     return () => {
       cancelled = true;
-      if (unlistenRef.current) {
-        unlistenRef.current();
-        unlistenRef.current = null;
-      }
+      safeUnlisten(unlistenRef.current);
+      unlistenRef.current = null;
     };
   }, [windowLabel]);
 }

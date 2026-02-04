@@ -30,6 +30,7 @@ import { joinPath } from "@/utils/pathUtils";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { isWithinRoot, getParentDir } from "@/utils/paths";
 import { saveAllDocuments, type CloseSaveContext } from "@/hooks/closeSave";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 /**
  * Move a tab to a new workspace window if the file is outside current workspace.
@@ -387,8 +388,7 @@ export function useFileOperations() {
 
     const setupListeners = async () => {
       // Clean up any existing listeners first
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -544,9 +544,7 @@ export function useFileOperations() {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [handleNew, handleOpen, handleSave, handleSaveAs, handleMoveTo, handleOpenFile, windowLabel]);

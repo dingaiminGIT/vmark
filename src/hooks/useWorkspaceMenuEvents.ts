@@ -12,6 +12,7 @@ import { useRecentWorkspacesStore } from "@/stores/recentWorkspacesStore";
 import { persistWorkspaceSession } from "@/hooks/workspaceSession";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 /**
  * Hook to handle workspace-related menu events
@@ -25,8 +26,7 @@ export function useWorkspaceMenuEvents() {
 
     const setupListeners = async () => {
       // Clean up any existing listeners first
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -124,9 +124,7 @@ export function useWorkspaceMenuEvents() {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

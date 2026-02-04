@@ -79,7 +79,7 @@ export function useHotExitRestore() {
       try {
         const windowState = await invoke<WindowState | null>(
           'hot_exit_get_window_state',
-          { window_label: windowLabel }
+          { windowLabel }
         );
 
         if (windowState) {
@@ -89,7 +89,7 @@ export function useHotExitRestore() {
           try {
             await restoreWindowState(windowLabel, windowState);
             // Signal completion for this window
-            await invoke('hot_exit_window_restore_complete', { window_label: windowLabel });
+            await invoke('hot_exit_window_restore_complete', { windowLabel });
             console.log(`[HotExit] Secondary window '${windowLabel}' restored successfully`);
           } catch (error) {
             console.error(`[HotExit] Secondary window '${windowLabel}' restore failed:`, error);
@@ -121,7 +121,7 @@ export function useHotExitRestore() {
           const session = event.payload;
           await restoreSession(session);
           // Signal completion for this window and check if all windows done
-          const allDone = await invoke<boolean>('hot_exit_window_restore_complete', { window_label: windowLabel });
+          const allDone = await invoke<boolean>('hot_exit_window_restore_complete', { windowLabel });
           // Only emit RESTORE_COMPLETE when ALL windows have completed
           if (allDone) {
             await emit(HOT_EXIT_EVENTS.RESTORE_COMPLETE, {});

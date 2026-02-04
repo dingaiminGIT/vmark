@@ -23,6 +23,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useTheme } from "@/hooks/useTheme";
 import { useUpdateListener } from "@/hooks/useUpdateSync";
 import { isImeKeyEvent } from "@/utils/imeGuard";
+import { safeUnlistenAsync } from "@/utils/safeUnlisten";
 
 // Settings sections
 import { AppearanceSettings } from "./settings/AppearanceSettings";
@@ -49,7 +50,7 @@ function useSettingsClose() {
     });
 
     return () => {
-      unlistenPromise.then((fn) => fn());
+      safeUnlistenAsync(unlistenPromise);
     };
   }, []);
 }
@@ -161,7 +162,7 @@ export function SettingsPage() {
     });
 
     return () => {
-      unlistenPromise.then((fn) => fn());
+      safeUnlistenAsync(unlistenPromise);
     };
   }, []);
 

@@ -5,6 +5,7 @@ import type { EditorView } from "@tiptap/pm/view";
 import type { Node } from "@tiptap/pm/model";
 import { useUIStore } from "@/stores/uiStore";
 import { getTiptapEditorDom } from "@/utils/tiptapView";
+import { safeUnlisten } from "@/utils/safeUnlisten";
 
 type EditorViewGetter = () => EditorView | null;
 
@@ -117,7 +118,7 @@ export function useOutlineSync(getEditorView: EditorViewGetter) {
 
         // Check if cancelled while awaiting - cleanup immediately
         if (cancelled) {
-          unlisten();
+          safeUnlisten(unlisten);
         } else {
           unlistenRef.current = unlisten;
         }
@@ -130,7 +131,7 @@ export function useOutlineSync(getEditorView: EditorViewGetter) {
 
     return () => {
       cancelled = true;
-      unlistenRef.current?.();
+      safeUnlisten(unlistenRef.current);
       unlistenRef.current = null;
     };
   }, [getEditorView]);

@@ -8,6 +8,7 @@
 import { useEffect, useRef } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { useUpdateStore, type UpdateStatus, type UpdateInfo, type DownloadProgress } from "@/stores/updateStore";
+import { safeUnlistenAsync } from "@/utils/safeUnlisten";
 
 const UPDATE_STATE_EVENT = "update:state-changed";
 const REQUEST_STATE_EVENT = "update:request-state";
@@ -80,7 +81,7 @@ export function useUpdateListener() {
     });
 
     return () => {
-      unlistenPromise.then((fn) => fn());
+      safeUnlistenAsync(unlistenPromise);
     };
   }, [setStatus, setUpdateInfo, setDownloadProgress, setError]);
 

@@ -12,6 +12,7 @@ import { SettingRow, SettingsGroup, Button, Toggle } from "./components";
 import { useUpdateStore } from "@/stores/updateStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useUpdateOperations } from "@/hooks/useUpdateOperations";
+import { safeUnlistenAsync } from "@/utils/safeUnlisten";
 import {
   Loader2,
   CheckCircle2,
@@ -176,7 +177,7 @@ function UpdateAvailableCard() {
     });
 
     return () => {
-      unlistenPromise.then((fn) => fn());
+      safeUnlistenAsync(unlistenPromise);
     };
   }, []);
 

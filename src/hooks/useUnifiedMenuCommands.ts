@@ -34,6 +34,7 @@ import {
 } from "@/plugins/toolbarActions/multiSelectionContext";
 import { shouldBlockMenuAction } from "@/utils/focusGuard";
 import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 /**
  * Map action IDs to the internal adapter action names.
@@ -274,8 +275,7 @@ export function useUnifiedMenuCommands(): void {
 
     const setupListeners = async () => {
       // Clean up any existing listeners
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (disposed) return;
 
@@ -363,9 +363,7 @@ export function useUnifiedMenuCommands(): void {
 
     return () => {
       disposed = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

@@ -18,6 +18,7 @@ import { useSourceCursorContextStore } from "@/stores/sourceCursorContextStore";
 import { runOrQueueCodeMirrorAction } from "@/utils/imeGuard";
 import { convertToHeading, getHeadingInfo, setHeadingLevel } from "@/plugins/sourceContextDetection/headingDetection";
 import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 const ALERT_ACTIONS = [
   { event: "menu:info-note", action: "insertAlertNote" },
@@ -135,8 +136,7 @@ export function useSourceMenuCommands(viewRef: MutableRefObject<EditorView | nul
     let cancelled = false;
 
     const setupListeners = async () => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -302,9 +302,7 @@ export function useSourceMenuCommands(viewRef: MutableRefObject<EditorView | nul
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, [viewRef]);
 }

@@ -11,6 +11,7 @@
 import { useEffect, useRef } from "react";
 import { type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 // Export module is dynamically imported to avoid loading exportStyles.css at startup.
 // This prevents CSS cascade conflicts between dev and prod builds.
 import { getDirectory } from "@/utils/pathUtils";
@@ -27,8 +28,7 @@ export function useExportMenuEvents(): void {
 
     const setupListeners = async () => {
       // Clean up any existing listeners first
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -105,9 +105,7 @@ export function useExportMenuEvents(): void {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

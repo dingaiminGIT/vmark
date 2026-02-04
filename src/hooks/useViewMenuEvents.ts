@@ -11,6 +11,7 @@ import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { normalizeLineEndings } from "@/utils/linebreaks";
 import { toggleSourceModeWithCheckpoint } from "@/hooks/useUnifiedHistory";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 const DEFAULT_FONT_SIZE = 18;
 const MIN_FONT_SIZE = 12;
@@ -28,8 +29,7 @@ export function useViewMenuEvents(): void {
     let cancelled = false;
 
     const setupListeners = async (): Promise<void> => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -157,9 +157,7 @@ export function useViewMenuEvents(): void {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

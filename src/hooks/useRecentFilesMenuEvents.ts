@@ -14,6 +14,7 @@ import { resolveOpenAction } from "@/utils/openPolicy";
 import { getReplaceableTab } from "@/hooks/useReplaceableTab";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 /**
  * Handles recent files menu events: open-recent-file, clear-recent.
@@ -25,8 +26,7 @@ export function useRecentFilesMenuEvents(): void {
     let cancelled = false;
 
     const setupListeners = async (): Promise<void> => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -152,9 +152,7 @@ export function useRecentFilesMenuEvents(): void {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

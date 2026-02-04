@@ -8,6 +8,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { collapseNewlines, formatMarkdown, formatSelection, removeTrailingSpaces } from "@/lib/cjkFormatter";
 import { resolveHardBreakStyle } from "@/utils/linebreaks";
 import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 function getActiveTabIdForWindow(windowLabel: string): string | null {
   try {
@@ -51,8 +52,7 @@ export function useTiptapCJKFormatCommands(editor: TiptapEditor | null) {
     let cancelled = false;
 
     const setupListeners = async () => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -141,9 +141,7 @@ export function useTiptapCJKFormatCommands(editor: TiptapEditor | null) {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

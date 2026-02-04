@@ -9,6 +9,7 @@ import { addColLeft, addColRight, addRowAbove, addRowBelow, alignColumn, deleteC
 import { getEditorView } from "@/types/tiptap";
 import { registerMenuListener } from "@/utils/menuListenerHelper";
 import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 function clearSelectedCells(view: EditorView): boolean {
   const selection = view.state.selection;
@@ -54,8 +55,7 @@ export function useTiptapTableCommands(editor: TiptapEditor | null) {
     const cancelledRef = { current: false };
 
     const setupListeners = async () => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelledRef.current) return;
 
@@ -141,9 +141,7 @@ export function useTiptapTableCommands(editor: TiptapEditor | null) {
 
     return () => {
       cancelledRef.current = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

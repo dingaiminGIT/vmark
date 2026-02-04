@@ -9,6 +9,7 @@ import {
   selectLineInView,
   selectWordInView,
 } from "@/plugins/toolbarActions/tiptapSelectionActions";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 export function useTiptapSelectionCommands(editor: TiptapEditor | null) {
   const editorRef = useRef<TiptapEditor | null>(null);
@@ -25,8 +26,7 @@ export function useTiptapSelectionCommands(editor: TiptapEditor | null) {
     let cancelled = false;
 
     const setupListeners = async () => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -91,9 +91,7 @@ export function useTiptapSelectionCommands(editor: TiptapEditor | null) {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

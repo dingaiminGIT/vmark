@@ -12,6 +12,7 @@ import { historyLog } from "@/utils/debug";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { runOrphanCleanup } from "@/utils/orphanAssetCleanup";
 import { openSettingsWindow } from "@/utils/settingsWindow";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 const HELP_URL = "https://vmark.app/guide/";
 const SHORTCUTS_URL = "https://vmark.app/guide/shortcuts";
@@ -28,8 +29,7 @@ export function useMenuEvents(): void {
     let cancelled = false;
 
     const setupListeners = async (): Promise<void> => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -125,9 +125,7 @@ export function useMenuEvents(): void {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

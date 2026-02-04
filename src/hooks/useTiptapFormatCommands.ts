@@ -20,6 +20,7 @@ import { MultiSelection } from "@/plugins/multiCursor";
 import { readClipboardImagePath } from "@/utils/clipboardImagePath";
 import { encodeMarkdownUrl } from "@/utils/markdownUrl";
 import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 const INSERT_IMAGE_GUARD = "menu-insert-image";
 
@@ -96,8 +97,7 @@ export function useTiptapFormatCommands(editor: TiptapEditor | null) {
     let cancelled = false;
 
     const setupListeners = async () => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -364,9 +364,7 @@ export function useTiptapFormatCommands(editor: TiptapEditor | null) {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

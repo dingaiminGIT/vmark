@@ -18,6 +18,7 @@ import { useTabStore } from "@/stores/tabStore";
 import { useDropZoneStore } from "@/stores/dropZoneStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { saveImageToAssets } from "@/hooks/useImageOperations";
+import { safeUnlisten } from "@/utils/safeUnlisten";
 import { hasImageExtension } from "@/utils/imagePathDetection";
 import { getFilename } from "@/utils/imageUtils";
 import { encodeMarkdownUrl } from "@/utils/markdownUrl";
@@ -231,7 +232,7 @@ export function useImageDragDrop({
       });
 
       if (cancelled) {
-        unlisten();
+        safeUnlisten(unlisten);
         return;
       }
 
@@ -242,10 +243,8 @@ export function useImageDragDrop({
 
     return () => {
       cancelled = true;
-      if (unlistenRef.current) {
-        unlistenRef.current();
-        unlistenRef.current = null;
-      }
+      safeUnlisten(unlistenRef.current);
+      unlistenRef.current = null;
     };
   }, [enabled, isSourceMode, getFilePath, insertImagesInTiptap, insertImagesInCodeMirror]);
 }

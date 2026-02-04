@@ -11,6 +11,7 @@ import { getEditorView } from "@/types/tiptap";
 import { registerMenuListener } from "@/utils/menuListenerHelper";
 import { DEFAULT_MERMAID_DIAGRAM } from "@/plugins/mermaid/constants";
 import { FEATURE_FLAGS } from "@/stores/featureFlagsStore";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 const DEFAULT_MATH_BLOCK = "c = \\pm\\sqrt{a^2 + b^2}";
 
@@ -38,8 +39,7 @@ export function useTiptapParagraphCommands(editor: TiptapEditor | null) {
     const cancelledRef = { current: false };
 
     const setupListeners = async () => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelledRef.current) return;
 
@@ -218,9 +218,7 @@ export function useTiptapParagraphCommands(editor: TiptapEditor | null) {
 
     return () => {
       cancelledRef.current = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }

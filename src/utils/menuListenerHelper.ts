@@ -7,6 +7,7 @@ import { type WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import { type MutableRefObject } from "react";
 import { useEditorStore } from "@/stores/editorStore";
+import { safeUnlisten } from "@/utils/safeUnlisten";
 
 interface MenuListenerContext {
   currentWindow: WebviewWindow;
@@ -37,7 +38,7 @@ export async function createMenuListener(
   });
 
   if (cancelledRef.current) {
-    unlisten();
+    safeUnlisten(unlisten);
     return null;
   }
   return unlisten;

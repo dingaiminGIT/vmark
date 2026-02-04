@@ -11,6 +11,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { withReentryGuard } from "@/utils/reentryGuard";
 import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
+import { safeUnlistenAll } from "@/utils/safeUnlisten";
 
 /**
  * Handles recent workspaces menu events: open-recent-workspace, clear-recent-workspaces.
@@ -22,8 +23,7 @@ export function useRecentWorkspacesMenuEvents(): void {
     let cancelled = false;
 
     const setupListeners = async (): Promise<void> => {
-      unlistenRefs.current.forEach((fn) => fn());
-      unlistenRefs.current = [];
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
 
       if (cancelled) return;
 
@@ -135,9 +135,7 @@ export function useRecentWorkspacesMenuEvents(): void {
 
     return () => {
       cancelled = true;
-      const fns = unlistenRefs.current;
-      unlistenRefs.current = [];
-      fns.forEach((fn) => fn());
+      unlistenRefs.current = safeUnlistenAll(unlistenRefs.current);
     };
   }, []);
 }
