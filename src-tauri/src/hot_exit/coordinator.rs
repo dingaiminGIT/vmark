@@ -19,10 +19,25 @@ use super::{EVENT_CAPTURE_REQUEST, EVENT_CAPTURE_RESPONSE, EVENT_CAPTURE_TIMEOUT
 pub struct PendingRestoreState {
     /// Window states indexed by window label
     pub window_states: HashMap<String, WindowState>,
+    /// Set of window labels that are expected to complete restoration
+    pub expected_labels: HashSet<String>,
     /// Labels of windows that have completed restoration
     pub completed_windows: HashSet<String>,
-    /// Total number of windows expected
-    pub expected_count: usize,
+}
+
+impl PendingRestoreState {
+    /// Check if all expected windows have completed
+    fn all_complete(&self) -> bool {
+        !self.expected_labels.is_empty()
+            && self.expected_labels.iter().all(|label| self.completed_windows.contains(label))
+    }
+
+    /// Clear all state
+    fn clear(&mut self) {
+        self.window_states.clear();
+        self.expected_labels.clear();
+        self.completed_windows.clear();
+    }
 }
 
 /// Global pending restore state
@@ -39,9 +54,7 @@ pub fn get_pending_restore_state() -> Arc<Mutex<PendingRestoreState>> {
 pub async fn clear_pending_restore() {
     let pending = get_pending_restore_state();
     let mut state = pending.lock().await;
-    state.window_states.clear();
-    state.completed_windows.clear();
-    state.expected_count = 0;
+    state.clear();
 }
 
 const CAPTURE_TIMEOUT_SECS: u64 = 5;
@@ -87,7 +100,7 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
     let state_clone = state.clone();
     let unlisten = app.listen(EVENT_CAPTURE_RESPONSE, move |event| {
         match serde_json::from_str::<CaptureResponse>(event.payload()) {
-            Ok(response) => {
+            Ok(mut response) => {
                 let mut state = state_clone.blocking_lock();
 
                 // Only accept responses from expected windows
@@ -108,13 +121,14 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
                     return;
                 }
 
-                // Verify window_label matches state.window_label
+                // Normalize: ensure state.window_label matches the response key
                 if response.window_label != response.state.window_label {
                     eprintln!(
-                        "[HotExit] Warning: response.window_label ({}) != state.window_label ({})",
-                        response.window_label,
-                        response.state.window_label
+                        "[HotExit] Normalizing mismatched window_label: {} -> {}",
+                        response.state.window_label,
+                        response.window_label
                     );
+                    response.state.window_label = response.window_label.clone();
                 }
 
                 state.responses.insert(response.window_label.clone(), response.state);
@@ -129,9 +143,11 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
         }
     });
 
-    // Broadcast capture request
-    app.emit(EVENT_CAPTURE_REQUEST, ())
-        .map_err(|e| format!("Failed to emit capture request: {}", e))?;
+    // Broadcast capture request - ensure unlisten on failure
+    if let Err(e) = app.emit(EVENT_CAPTURE_REQUEST, ()) {
+        app.unlisten(unlisten);
+        return Err(format!("Failed to emit capture request: {}", e));
+    }
 
     // Wait for responses with timeout
     let result = timeout(
@@ -140,13 +156,21 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
     )
     .await;
 
-    // Unlisten
+    // Always unlisten after waiting
     app.unlisten(unlisten);
 
     let final_state = state.lock().await;
 
-    // Build session from collected responses
-    let windows_vec: Vec<WindowState> = final_state.responses.values().cloned().collect();
+    // Build session from collected responses, sorted deterministically
+    let mut windows_vec: Vec<WindowState> = final_state.responses.values().cloned().collect();
+    windows_vec.sort_by(|a, b| {
+        // Main window first, then by label
+        match (a.is_main_window, b.is_main_window) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.window_label.cmp(&b.window_label),
+        }
+    });
 
     let session = SessionData {
         version: SCHEMA_VERSION,
@@ -168,7 +192,9 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
                 final_state.responses.len(),
                 final_state.expected_windows.len()
             );
-            let _ = app.emit(EVENT_CAPTURE_TIMEOUT, ());
+            if let Err(e) = app.emit(EVENT_CAPTURE_TIMEOUT, ()) {
+                eprintln!("[HotExit] Failed to emit capture timeout event: {}", e);
+            }
             Ok(session)
         }
     }
@@ -186,11 +212,8 @@ async fn wait_for_all_responses(state: Arc<Mutex<CaptureState>>, expected: usize
     }
 }
 
-/// Restore session to main window (legacy single-window restore)
-pub async fn restore_session(
-    app: &AppHandle,
-    session: SessionData,
-) -> Result<(), String> {
+/// Prepare session for restoration: migrate if needed, validate version and staleness
+fn prepare_session_for_restore(session: SessionData) -> Result<SessionData, String> {
     // Migrate session if needed
     let session = if needs_migration(&session) {
         eprintln!(
@@ -212,13 +235,56 @@ pub async fn restore_session(
         return Err(format!("Session is too old (>{} days)", MAX_SESSION_AGE_DAYS));
     }
 
-    // Emit restore event to main window
+    Ok(session)
+}
+
+/// Initialize pending restore state with given windows
+async fn init_pending_restore_state(
+    windows: impl IntoIterator<Item = (String, WindowState)>,
+    expected_labels: HashSet<String>,
+) {
+    let pending = get_pending_restore_state();
+    let mut state = pending.lock().await;
+    state.clear();
+    state.expected_labels = expected_labels;
+    for (label, window_state) in windows {
+        state.window_states.insert(label, window_state);
+    }
+}
+
+/// Restore session to main window (legacy single-window restore)
+///
+/// Now uses pull-based approach: stores state in PendingRestoreState,
+/// then emits RESTORE_START signal to trigger main window to pull its state.
+pub async fn restore_session(
+    app: &AppHandle,
+    session: SessionData,
+) -> Result<(), String> {
+    let session = prepare_session_for_restore(session)?;
+
+    // Validate main window exists BEFORE modifying state
     let main_window = app
         .get_webview_window("main")
         .ok_or("Main window not found")?;
 
+    // Find main window state only (single-window restore)
+    let main_state = session
+        .windows
+        .iter()
+        .find(|w| w.window_label == "main")
+        .cloned()
+        .ok_or("No main window state in session")?;
+
+    // Store only main window state for pull-based retrieval
+    let expected = std::iter::once("main".to_string()).collect();
+    init_pending_restore_state(
+        std::iter::once(("main".to_string(), main_state)),
+        expected,
+    ).await;
+
+    // Emit restore signal to main window (signal only, state is pulled)
     main_window
-        .emit(EVENT_RESTORE_START, &session)
+        .emit(EVENT_RESTORE_START, ())
         .map_err(|e| format!("Failed to emit restore event: {}", e))?;
 
     Ok(())
@@ -234,82 +300,72 @@ pub struct RestoreMultiWindowResult {
 ///
 /// Creates secondary windows and stores session state for pull-based restoration.
 /// Each window will call get_window_restore_state on startup to get its state.
+///
+/// CRITICAL: State is stored BEFORE windows are created, and the mutex is held
+/// across window creation to prevent race conditions where a window starts
+/// before its state is available.
 pub async fn restore_session_multi_window(
     app: &AppHandle,
     session: SessionData,
 ) -> Result<RestoreMultiWindowResult, String> {
-    // Migrate session if needed
-    let session = if needs_migration(&session) {
-        eprintln!(
-            "[HotExit] Migrating session from v{} to v{}",
-            session.version, SCHEMA_VERSION
-        );
-        migrate_session(session)?
-    } else if !can_migrate(session.version) {
-        return Err(format!(
-            "Incompatible session version: {} (supported: 1 to {})",
-            session.version, SCHEMA_VERSION
-        ));
-    } else {
-        session
-    };
+    let session = prepare_session_for_restore(session)?;
 
-    // Check if session is stale (>7 days old)
-    if session.is_stale(MAX_SESSION_AGE_DAYS) {
-        return Err(format!("Session is too old (>{} days)", MAX_SESSION_AGE_DAYS));
-    }
+    // Validate main window exists BEFORE modifying state
+    let main_window = app
+        .get_webview_window("main")
+        .ok_or("Main window not found")?;
 
-    // Store session state for each window
+    // Collect secondary windows to create
+    let secondary_windows: Vec<_> = session
+        .windows
+        .iter()
+        .filter(|w| !w.is_main_window)
+        .cloned()
+        .collect();
+
+    // CRITICAL: Hold mutex while creating windows to prevent race conditions.
+    // Windows can start their JS immediately after creation, so state must be
+    // ready BEFORE the window exists.
     let pending = get_pending_restore_state();
+    let mut windows_created = Vec::new();
+
     {
         let mut state = pending.lock().await;
-        state.window_states.clear();
-        state.completed_windows.clear();
-        // Start with 1 for main window - will add successfully created secondary windows
-        state.expected_count = 1;
+        state.clear();
 
-        for window_state in &session.windows {
-            state.window_states.insert(window_state.window_label.clone(), window_state.clone());
-        }
-    }
-
-    // Create secondary windows (not main)
-    let mut windows_created = Vec::new();
-    for window_state in &session.windows {
-        if window_state.is_main_window {
-            continue;
+        // Store main window state first
+        if let Some(main_state) = session.windows.iter().find(|w| w.is_main_window) {
+            state.window_states.insert("main".to_string(), main_state.clone());
+            state.expected_labels.insert("main".to_string());
         }
 
-        // Create document window
-        match crate::window_manager::create_document_window(app, None, None) {
-            Ok(label) => {
-                // Update the window label mapping in pending state
-                let mut state = pending.lock().await;
-                if let Some(ws) = state.window_states.remove(&window_state.window_label) {
-                    // Store with the NEW label (the one we just created)
-                    state.window_states.insert(label.clone(), WindowState {
-                        window_label: label.clone(),
-                        ..ws
-                    });
+        // Create each secondary window while holding the lock
+        for window_state in secondary_windows {
+            match crate::window_manager::create_document_window(app, None, None) {
+                Ok(new_label) => {
+                    // Store state with NEW label BEFORE window's JS can query it
+                    let updated_state = WindowState {
+                        window_label: new_label.clone(),
+                        ..window_state
+                    };
+                    state.window_states.insert(new_label.clone(), updated_state);
+                    state.expected_labels.insert(new_label.clone());
+                    windows_created.push(new_label);
                 }
-                // Increment expected count for successfully created window
-                state.expected_count += 1;
-                windows_created.push(label);
-            }
-            Err(e) => {
-                // Remove failed window's state to prevent orphan entries
-                let mut state = pending.lock().await;
-                state.window_states.remove(&window_state.window_label);
-                eprintln!("[HotExit] Failed to create window for {}: {}", window_state.window_label, e);
+                Err(e) => {
+                    eprintln!(
+                        "[HotExit] Failed to create window for {}: {}",
+                        window_state.window_label, e
+                    );
+                    // Don't add to expected_labels - window doesn't exist
+                }
             }
         }
-    }
+    } // Mutex released here - all state is now ready
 
-    // Emit restore start to main window
-    // Main window should also call get_window_restore_state
-    let main_window = app.get_webview_window("main").ok_or("Main window not found")?;
+    // Emit restore signal to main window (signal only, state is pulled)
     main_window
-        .emit(EVENT_RESTORE_START, &session)
+        .emit(EVENT_RESTORE_START, ())
         .map_err(|e| format!("Failed to emit restore event to main: {}", e))?;
 
     Ok(RestoreMultiWindowResult { windows_created })
@@ -328,17 +384,20 @@ pub async fn get_window_restore_state(window_label: &str) -> Option<WindowState>
 /// Mark a window as having completed restoration
 ///
 /// Returns true if all expected windows have completed.
+/// Only counts windows that were in the expected set.
 pub async fn mark_window_restore_complete(window_label: &str) -> bool {
     let pending = get_pending_restore_state();
     let mut state = pending.lock().await;
-    state.completed_windows.insert(window_label.to_string());
-    state.completed_windows.len() >= state.expected_count
-}
 
-/// Check if all windows have completed restoration
-#[allow(dead_code)]
-pub async fn all_windows_restored() -> bool {
-    let pending = get_pending_restore_state();
-    let state = pending.lock().await;
-    state.expected_count > 0 && state.completed_windows.len() >= state.expected_count
+    // Only track completion for expected windows
+    if state.expected_labels.contains(window_label) {
+        state.completed_windows.insert(window_label.to_string());
+    } else {
+        eprintln!(
+            "[HotExit] Ignoring completion from unexpected window: {}",
+            window_label
+        );
+    }
+
+    state.all_complete()
 }

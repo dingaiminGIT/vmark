@@ -12,12 +12,48 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type { SessionData } from './types';
 import { HOT_EXIT_EVENTS } from './types';
 import { migrateSession, canMigrate, needsMigration, SCHEMA_VERSION } from './schemaMigration';
 
 /** Default timeout for restore operation in milliseconds */
 const DEFAULT_RESTORE_TIMEOUT_MS = 15000;
+
+/** Tauri command names - centralized to avoid typos */
+const HOT_EXIT_COMMANDS = {
+  CAPTURE: 'hot_exit_capture',
+  INSPECT: 'hot_exit_inspect_session',
+  CLEAR: 'hot_exit_clear_session',
+  RESTORE: 'hot_exit_restore',
+  RESTORE_MULTI: 'hot_exit_restore_multi_window',
+} as const;
+
+/**
+ * Safely format a timestamp for logging
+ */
+function formatTimestamp(timestamp: number): string {
+  if (!Number.isFinite(timestamp) || timestamp < 0) {
+    return `invalid(${timestamp})`;
+  }
+  try {
+    return new Date(timestamp * 1000).toISOString();
+  } catch {
+    return `invalid(${timestamp})`;
+  }
+}
+
+/**
+ * Clear session file with error handling
+ */
+async function clearSessionFile(context: string): Promise<void> {
+  try {
+    await invoke<void>(HOT_EXIT_COMMANDS.CLEAR);
+    console.log(`[HotExit] Cleared session file (${context})`);
+  } catch (clearError) {
+    console.warn(`[HotExit] Failed to clear session file (${context}):`, clearError);
+  }
+}
 
 /**
  * Capture session, write to disk, then restart app.
@@ -27,7 +63,7 @@ export async function restartWithHotExit(): Promise<void> {
   try {
     // Capture session from all windows and write atomically to disk
     // This command waits for all windows to respond with 5s timeout
-    const session = await invoke<SessionData>('hot_exit_capture');
+    const session = await invoke<SessionData>(HOT_EXIT_COMMANDS.CAPTURE);
 
     console.log('[HotExit] Session captured and persisted:', {
       windows: session.windows.length,
@@ -62,8 +98,20 @@ export async function restartWithHotExit(): Promise<void> {
 export async function checkAndRestoreSession(
   timeoutMs: number = DEFAULT_RESTORE_TIMEOUT_MS
 ): Promise<boolean> {
+  // Runtime guard: only main window should trigger restore
+  const windowLabel = getCurrentWebviewWindow().label;
+  if (windowLabel !== 'main') {
+    console.warn(`[HotExit] checkAndRestoreSession called from non-main window: ${windowLabel}`);
+    return false;
+  }
+
+  // Sanitize timeout to valid positive number
+  const safeTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? timeoutMs
+    : DEFAULT_RESTORE_TIMEOUT_MS;
+
   try {
-    const session = await invoke<SessionData | null>('hot_exit_inspect_session');
+    const session = await invoke<SessionData | null>(HOT_EXIT_COMMANDS.INSPECT);
 
     if (!session) {
       console.log('[HotExit] No saved session found');
@@ -73,13 +121,7 @@ export async function checkAndRestoreSession(
     // Check if session can be migrated
     if (!canMigrate(session.version)) {
       console.error(`[HotExit] Cannot restore session: incompatible version ${session.version} (current: ${SCHEMA_VERSION})`);
-      // Clear incompatible session to prevent repeated restore attempts on every launch
-      try {
-        await invoke<void>('hot_exit_clear_session');
-        console.log('[HotExit] Cleared incompatible session file');
-      } catch (clearError) {
-        console.warn('[HotExit] Failed to clear incompatible session:', clearError);
-      }
+      await clearSessionFile('incompatible version');
       return false;
     }
 
@@ -95,43 +137,42 @@ export async function checkAndRestoreSession(
     console.log('[HotExit] Found saved session:', {
       windows: migratedSession.windows.length,
       hasSecondaryWindows,
-      timestamp: new Date(migratedSession.timestamp * 1000).toISOString(),
+      timestamp: formatTimestamp(migratedSession.timestamp),
       version: migratedSession.vmark_version,
       schemaVersion: migratedSession.version,
     });
 
-    // CRITICAL: Set up event listeners BEFORE invoking restore commands
-    // This prevents race conditions where fast events could be missed
-    const restorePromise = waitForRestoreEvent(timeoutMs);
+    // CRITICAL: Set up event listeners and WAIT for them to be ready
+    // before invoking restore commands. This prevents race conditions.
+    const { resultPromise, cleanup } = await setupRestoreListeners(safeTimeout);
 
-    // Use multi-window restore if session has secondary windows
-    // Otherwise use legacy single-window restore
-    if (hasSecondaryWindows) {
-      const result = await invoke<{ windows_created: string[] }>(
-        'hot_exit_restore_multi_window',
-        { session: migratedSession }
-      );
-      console.log('[HotExit] Multi-window restore initiated:', {
-        windowsCreated: result.windows_created,
-      });
-    } else {
-      // Legacy single-window restore
-      await invoke<void>('hot_exit_restore', { session: migratedSession });
+    try {
+      // Use multi-window restore if session has secondary windows
+      // Otherwise use legacy single-window restore
+      if (hasSecondaryWindows) {
+        const result = await invoke<{ windows_created: string[] }>(
+          HOT_EXIT_COMMANDS.RESTORE_MULTI,
+          { session: migratedSession }
+        );
+        console.log('[HotExit] Multi-window restore initiated:', {
+          windowsCreated: result.windows_created,
+        });
+      } else {
+        // Legacy single-window restore
+        await invoke<void>(HOT_EXIT_COMMANDS.RESTORE, { session: migratedSession });
+      }
+    } catch (invokeError) {
+      // Invoke failed - clean up listeners and rethrow
+      cleanup();
+      throw invokeError;
     }
 
     // CRITICAL: Wait for restore to complete BEFORE deleting session
     // This prevents data loss if restore fails partway through
-    const restoreResult = await restorePromise;
+    const restoreResult = await resultPromise;
 
     if (restoreResult.success) {
-      // Only delete session file after confirmed successful restore
-      try {
-        await invoke<void>('hot_exit_clear_session');
-        console.log('[HotExit] Session restored and cleared successfully');
-      } catch (clearError) {
-        console.warn('[HotExit] Failed to clear session file:', clearError);
-        // Still return true since restore succeeded
-      }
+      await clearSessionFile('restore success');
       return true;
     } else {
       // Restore failed or timed out - keep session file for retry
@@ -145,57 +186,73 @@ export async function checkAndRestoreSession(
   }
 }
 
+/** Result type for restore listener setup */
+interface RestoreListenerHandle {
+  /** Promise that resolves when restore completes or fails */
+  resultPromise: Promise<{ success: boolean; error?: string }>;
+  /** Cleanup function to call if invoke fails */
+  cleanup: () => void;
+}
+
 /**
- * Wait for restore-complete or restore-failed event.
+ * Set up restore event listeners and wait for them to be ready.
  *
- * @param timeoutMs - Maximum time to wait
- * @returns Object indicating success or failure with optional error
+ * This function AWAITS listener registration before returning, ensuring
+ * no race condition between listener setup and event emission.
+ *
+ * @param timeoutMs - Maximum time to wait for restore completion
+ * @returns Handle with result promise and cleanup function
  */
-async function waitForRestoreEvent(
-  timeoutMs: number
-): Promise<{ success: boolean; error?: string }> {
+async function setupRestoreListeners(timeoutMs: number): Promise<RestoreListenerHandle> {
   let resolved = false;
-  let unlistenComplete: (() => void) | null = null;
-  let unlistenFailed: (() => void) | null = null;
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let resolveResult: (result: { success: boolean; error?: string }) => void;
+  let unlistenComplete: (() => void) | undefined;
+  let unlistenFailed: (() => void) | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const resultPromise = new Promise<{ success: boolean; error?: string }>((resolve) => {
+    resolveResult = resolve;
+  });
 
   const cleanup = () => {
-    if (timeoutId) clearTimeout(timeoutId);
-    unlistenComplete?.();
-    unlistenFailed?.();
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+    }
+    if (unlistenComplete) {
+      unlistenComplete();
+      unlistenComplete = undefined;
+    }
+    if (unlistenFailed) {
+      unlistenFailed();
+      unlistenFailed = undefined;
+    }
   };
 
-  return new Promise((resolve) => {
-    const handleResolve = (result: { success: boolean; error?: string }) => {
-      if (!resolved) {
-        resolved = true;
-        cleanup();
-        resolve(result);
-      }
-    };
+  const handleResolve = (result: { success: boolean; error?: string }) => {
+    if (resolved) return;
+    resolved = true;
+    cleanup();
+    resolveResult(result);
+  };
 
-    // Set up timeout
-    timeoutId = setTimeout(() => {
-      handleResolve({ success: false, error: 'Restore timed out' });
-    }, timeoutMs);
+  // AWAIT listener registration - this is the key fix for the race condition
+  const [completeUnsub, failedUnsub] = await Promise.all([
+    listen(HOT_EXIT_EVENTS.RESTORE_COMPLETE, () => {
+      handleResolve({ success: true });
+    }),
+    listen<{ error: string }>(HOT_EXIT_EVENTS.RESTORE_FAILED, (event) => {
+      handleResolve({ success: false, error: event.payload.error });
+    }),
+  ]);
 
-    // Register both listeners concurrently to avoid race conditions
-    // where an event arrives between sequential awaits
-    void Promise.all([
-      listen(HOT_EXIT_EVENTS.RESTORE_COMPLETE, () => {
-        handleResolve({ success: true });
-      }),
-      listen<{ error: string }>(HOT_EXIT_EVENTS.RESTORE_FAILED, (event) => {
-        handleResolve({ success: false, error: event.payload.error });
-      }),
-    ]).then(([completeUnlisten, failedUnlisten]) => {
-      unlistenComplete = completeUnlisten;
-      unlistenFailed = failedUnlisten;
-    }).catch((error) => {
-      handleResolve({
-        success: false,
-        error: `Failed to set up event listeners: ${error}`,
-      });
-    });
-  });
+  unlistenComplete = completeUnsub;
+  unlistenFailed = failedUnsub;
+
+  // Set up timeout AFTER listeners are confirmed ready
+  timeoutId = setTimeout(() => {
+    handleResolve({ success: false, error: 'Restore timed out' });
+  }, timeoutMs);
+
+  return { resultPromise, cleanup };
 }
