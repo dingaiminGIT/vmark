@@ -187,6 +187,9 @@ async fn wait_for_all_responses(state: Arc<Mutex<CaptureState>>, expected: usize
 }
 
 /// Restore session to main window (legacy single-window restore)
+///
+/// Now uses pull-based approach: stores state in PendingRestoreState,
+/// then emits RESTORE_START signal to trigger main window to pull its state.
 pub async fn restore_session(
     app: &AppHandle,
     session: SessionData,
@@ -212,13 +215,26 @@ pub async fn restore_session(
         return Err(format!("Session is too old (>{} days)", MAX_SESSION_AGE_DAYS));
     }
 
-    // Emit restore event to main window
+    // Store session state for pull-based retrieval
+    let pending = get_pending_restore_state();
+    {
+        let mut state = pending.lock().await;
+        state.window_states.clear();
+        state.completed_windows.clear();
+        state.expected_count = 1; // Only main window
+
+        for window_state in &session.windows {
+            state.window_states.insert(window_state.window_label.clone(), window_state.clone());
+        }
+    }
+
+    // Emit restore signal to main window (signal only, state is pulled)
     let main_window = app
         .get_webview_window("main")
         .ok_or("Main window not found")?;
 
     main_window
-        .emit(EVENT_RESTORE_START, &session)
+        .emit(EVENT_RESTORE_START, ())
         .map_err(|e| format!("Failed to emit restore event: {}", e))?;
 
     Ok(())
@@ -305,11 +321,10 @@ pub async fn restore_session_multi_window(
         }
     }
 
-    // Emit restore start to main window
-    // Main window should also call get_window_restore_state
+    // Emit restore signal to main window (signal only, state is pulled)
     let main_window = app.get_webview_window("main").ok_or("Main window not found")?;
     main_window
-        .emit(EVENT_RESTORE_START, &session)
+        .emit(EVENT_RESTORE_START, ())
         .map_err(|e| format!("Failed to emit restore event to main: {}", e))?;
 
     Ok(RestoreMultiWindowResult { windows_created })

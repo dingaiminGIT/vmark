@@ -154,48 +154,72 @@ export async function checkAndRestoreSession(
 async function waitForRestoreEvent(
   timeoutMs: number
 ): Promise<{ success: boolean; error?: string }> {
-  let resolved = false;
-  let unlistenComplete: (() => void) | null = null;
-  let unlistenFailed: (() => void) | null = null;
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-  const cleanup = () => {
-    if (timeoutId) clearTimeout(timeoutId);
-    unlistenComplete?.();
-    unlistenFailed?.();
-  };
-
   return new Promise((resolve) => {
-    const handleResolve = (result: { success: boolean; error?: string }) => {
-      if (!resolved) {
-        resolved = true;
-        cleanup();
-        resolve(result);
+    let resolved = false;
+    let unlistenComplete: (() => void) | undefined;
+    let unlistenFailed: (() => void) | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = undefined;
+      }
+      // Safe cleanup - functions might not be assigned yet
+      if (unlistenComplete) {
+        unlistenComplete();
+        unlistenComplete = undefined;
+      }
+      if (unlistenFailed) {
+        unlistenFailed();
+        unlistenFailed = undefined;
       }
     };
 
-    // Set up timeout
-    timeoutId = setTimeout(() => {
-      handleResolve({ success: false, error: 'Restore timed out' });
-    }, timeoutMs);
+    const handleResolve = (result: { success: boolean; error?: string }) => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      resolve(result);
+    };
 
-    // Register both listeners concurrently to avoid race conditions
-    // where an event arrives between sequential awaits
-    void Promise.all([
-      listen(HOT_EXIT_EVENTS.RESTORE_COMPLETE, () => {
-        handleResolve({ success: true });
-      }),
-      listen<{ error: string }>(HOT_EXIT_EVENTS.RESTORE_FAILED, (event) => {
-        handleResolve({ success: false, error: event.payload.error });
-      }),
-    ]).then(([completeUnlisten, failedUnlisten]) => {
-      unlistenComplete = completeUnlisten;
-      unlistenFailed = failedUnlisten;
-    }).catch((error) => {
-      handleResolve({
-        success: false,
-        error: `Failed to set up event listeners: ${error}`,
-      });
-    });
+    // Set up listeners FIRST, then timeout
+    // This ensures listeners are ready before any events can arrive
+    const setupListeners = async () => {
+      try {
+        // Register listeners - they're active immediately after await resolves
+        const [completeUnsub, failedUnsub] = await Promise.all([
+          listen(HOT_EXIT_EVENTS.RESTORE_COMPLETE, () => {
+            handleResolve({ success: true });
+          }),
+          listen<{ error: string }>(HOT_EXIT_EVENTS.RESTORE_FAILED, (event) => {
+            handleResolve({ success: false, error: event.payload.error });
+          }),
+        ]);
+
+        // Store unsubscribers for cleanup
+        // Check if already resolved (timeout or error happened during setup)
+        if (resolved) {
+          completeUnsub();
+          failedUnsub();
+          return;
+        }
+
+        unlistenComplete = completeUnsub;
+        unlistenFailed = failedUnsub;
+
+        // Now set up timeout AFTER listeners are ready
+        timeoutId = setTimeout(() => {
+          handleResolve({ success: false, error: 'Restore timed out' });
+        }, timeoutMs);
+      } catch (error) {
+        handleResolve({
+          success: false,
+          error: `Failed to set up event listeners: ${error}`,
+        });
+      }
+    };
+
+    setupListeners();
   });
 }
