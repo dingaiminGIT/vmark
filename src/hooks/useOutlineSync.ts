@@ -10,7 +10,6 @@ import { safeUnlisten } from "@/utils/safeUnlisten";
 type EditorViewGetter = () => EditorView | null;
 
 // Constants
-const SCROLL_OFFSET_PX = 100;
 const EDITOR_POLL_INTERVAL_MS = 100;
 const EDITOR_POLL_MAX_ATTEMPTS = 50; // 5 seconds max
 
@@ -84,30 +83,14 @@ export function useOutlineSync(getEditorView: EditorViewGetter) {
 
             const { headingIndex } = event.payload;
             const view = getEditorView();
-            const dom = getTiptapEditorDom(view);
-            if (!view || !dom) return;
+            if (!view) return;
 
             const { doc } = view.state;
 
             const pos = findHeadingPosition(doc, headingIndex);
             if (pos === -1) return;
 
-            const scrollContainer = dom.closest(".editor-content") as HTMLElement | null;
-            try {
-              const coords = view.coordsAtPos(pos);
-              if (scrollContainer) {
-                const containerRect = scrollContainer.getBoundingClientRect();
-                const scrollTop = coords.top - containerRect.top - SCROLL_OFFSET_PX;
-
-                scrollContainer.scrollTo({
-                  top: Math.max(0, scrollContainer.scrollTop + scrollTop),
-                  behavior: "smooth",
-                });
-              }
-            } catch {
-              // Ignore coords errors
-            }
-
+            // Use only scrollIntoView() to avoid double-scroll
             const tr = view.state.tr
               .setSelection(Selection.near(doc.resolve(pos + 1)))
               .setMeta("addToHistory", false); // Navigation shouldn't add to undo history
