@@ -10,6 +10,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { checkAndRestoreSession } from './restartWithHotExit';
 import { HOT_EXIT_EVENTS } from './types';
+import { restoreMainWindowState } from './useHotExitRestore';
 
 // Mock Tauri APIs
 vi.mock('@tauri-apps/api/core', () => ({
@@ -25,15 +26,23 @@ vi.mock('@tauri-apps/plugin-process', () => ({
   relaunch: vi.fn(),
 }));
 
+// Mock restoreMainWindowState to avoid store dependencies
+// The actual restore logic is tested in useHotExitRestore.test.ts
+vi.mock('./useHotExitRestore', () => ({
+  restoreMainWindowState: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('checkAndRestoreSession', () => {
   let mockInvoke: Mock;
   let mockListen: Mock;
+  let mockRestoreMainWindow: Mock;
   let eventListeners: Map<string, (event: { payload: unknown }) => void>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockInvoke = invoke as Mock;
     mockListen = listen as Mock;
+    mockRestoreMainWindow = restoreMainWindowState as Mock;
     eventListeners = new Map();
 
     // Mock listen to capture event handlers
@@ -204,5 +213,35 @@ describe('checkAndRestoreSession', () => {
 
     // Verify listeners were cleaned up
     expect(unlistenCalls).toBeGreaterThan(0);
+  });
+
+  it('should call restoreMainWindowState directly after invoke returns', async () => {
+    const mockSession = {
+      version: 2,
+      timestamp: Date.now() / 1000,
+      vmark_version: '0.3.30',
+      windows: [{ window_label: 'main', is_main_window: true, tabs: [] }],
+    };
+
+    mockInvoke
+      .mockResolvedValueOnce(mockSession) // hot_exit_inspect_session
+      .mockResolvedValueOnce(undefined)   // hot_exit_restore
+      .mockResolvedValueOnce(undefined);  // hot_exit_clear_session
+
+    const restorePromise = checkAndRestoreSession();
+
+    // Wait for invoke to complete
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Verify restoreMainWindowState was called (bypasses RESTORE_START event race)
+    expect(mockRestoreMainWindow).toHaveBeenCalled();
+
+    // Emit complete to finish the test
+    const completeHandler = eventListeners.get(HOT_EXIT_EVENTS.RESTORE_COMPLETE);
+    if (completeHandler) {
+      completeHandler({ payload: {} });
+    }
+
+    await restorePromise;
   });
 });

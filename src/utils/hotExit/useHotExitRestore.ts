@@ -5,8 +5,12 @@
  * for reliability — windows pull their state from Rust coordinator
  * rather than waiting for events (which can be missed due to timing).
  *
- * For main window: Receives RESTORE_START signal, then pulls state
- * For secondary windows: Pulls pending state via invoke on mount
+ * For main window: restoreMainWindowState() is called directly by
+ *   checkAndRestoreSession() after Rust invoke returns (bypasses event race).
+ * For secondary windows: Pulls pending state via invoke on mount.
+ *
+ * The RESTORE_START listener in the hook is kept as a fallback but
+ * is guarded against double-restore.
  */
 
 import { useEffect, useRef } from 'react';
@@ -37,6 +41,9 @@ const DEFAULT_SIDEBAR_WIDTH = 260;
 
 /** Simple sleep helper */
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/** Module-level flag to prevent double-restore of main window */
+let mainWindowRestoreStarted = false;
 
 /**
  * Convert hot exit line ending format back to store format
@@ -95,6 +102,88 @@ function fromHotExitCheckpoint(checkpoint: HistoryCheckpoint): StoreHistoryCheck
   };
 }
 
+/**
+ * Pull main window state from Rust and restore it.
+ * This is called directly by checkAndRestoreSession after Rust invoke returns
+ * (bypasses RESTORE_START event to avoid listener race conditions).
+ *
+ * Uses a module-level flag to prevent double-restore if the RESTORE_START
+ * event listener also fires.
+ */
+export async function restoreMainWindowState(): Promise<void> {
+  const windowLabel = getCurrentWebviewWindow().label;
+  if (windowLabel !== 'main') {
+    console.warn('[HotExit] restoreMainWindowState called from non-main window');
+    return;
+  }
+
+  // Guard against double-restore
+  if (mainWindowRestoreStarted) {
+    console.log('[HotExit] Main window restore already in progress or completed, skipping');
+    return;
+  }
+  mainWindowRestoreStarted = true;
+
+  try {
+    const windowState = await pullWindowStateWithRetry(windowLabel);
+
+    if (!windowState) {
+      console.error('[HotExit] No state found for main window after retries');
+      void emit(HOT_EXIT_EVENTS.RESTORE_FAILED, {
+        error: `No restore state found for window '${windowLabel}'`,
+      }).catch((e) => console.error('[HotExit] Failed to emit restore failed:', e));
+      return;
+    }
+
+    console.log('[HotExit] Main window found pending state, restoring...');
+    await restoreWindowState(windowLabel, windowState);
+
+    // Signal completion for this window and check if all windows done
+    const allDone = await invoke<boolean>('hot_exit_window_restore_complete', { windowLabel });
+    console.log(`[HotExit] Main window restored successfully (allDone: ${allDone})`);
+
+    // Only emit RESTORE_COMPLETE when ALL windows have completed
+    if (allDone) {
+      await emit(HOT_EXIT_EVENTS.RESTORE_COMPLETE, {});
+    }
+  } catch (error) {
+    console.error('[HotExit] Main window restore failed:', error);
+    void emit(HOT_EXIT_EVENTS.RESTORE_FAILED, {
+      error: error instanceof Error ? error.message : String(error),
+    }).catch((e) => console.error('[HotExit] Failed to emit restore failed:', e));
+  }
+}
+
+/**
+ * Pull window state from Rust coordinator with retry logic.
+ */
+async function pullWindowStateWithRetry(windowLabel: string, retries = MAX_STATE_RETRIES): Promise<WindowState | null> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const windowState = await invoke<WindowState | null>(
+        'hot_exit_get_window_state',
+        { windowLabel }
+      );
+
+      if (windowState) {
+        return windowState;
+      }
+
+      // State not found - wait and retry (might not be stored yet)
+      if (attempt < retries) {
+        console.log(`[HotExit] Window '${windowLabel}' state not ready, retry ${attempt}/${retries}`);
+        await sleep(RETRY_DELAY_MS);
+      }
+    } catch (error) {
+      console.error(`[HotExit] Failed to pull state for '${windowLabel}' (attempt ${attempt}):`, error);
+      if (attempt < retries) {
+        await sleep(RETRY_DELAY_MS);
+      }
+    }
+  }
+  return null;
+}
+
 export function useHotExitRestore() {
   // Prevent concurrent restore attempts
   const isRestoring = useRef(false);
@@ -105,37 +194,6 @@ export function useHotExitRestore() {
   useEffect(() => {
     const windowLabel = getCurrentWebviewWindow().label;
     const isMainWindow = windowLabel === 'main';
-
-    /**
-     * Pull window state from Rust coordinator with retry logic.
-     * Handles timing issues where state might not be stored yet.
-     */
-    const pullWindowState = async (retries = MAX_STATE_RETRIES): Promise<WindowState | null> => {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          const windowState = await invoke<WindowState | null>(
-            'hot_exit_get_window_state',
-            { windowLabel }
-          );
-
-          if (windowState) {
-            return windowState;
-          }
-
-          // State not found - wait and retry (might not be stored yet)
-          if (attempt < retries) {
-            console.log(`[HotExit] Window '${windowLabel}' state not ready, retry ${attempt}/${retries}`);
-            await sleep(RETRY_DELAY_MS);
-          }
-        } catch (error) {
-          console.error(`[HotExit] Failed to pull state for '${windowLabel}' (attempt ${attempt}):`, error);
-          if (attempt < retries) {
-            await sleep(RETRY_DELAY_MS);
-          }
-        }
-      }
-      return null;
-    };
 
     /**
      * Restore this window's state by pulling from Rust coordinator.
@@ -152,7 +210,7 @@ export function useHotExitRestore() {
       isRestoring.current = true;
 
       try {
-        const windowState = await pullWindowState();
+        const windowState = await pullWindowStateWithRetry(windowLabel);
 
         if (!windowState) {
           console.warn(`[HotExit] No state found for window '${windowLabel}' after ${MAX_STATE_RETRIES} retries`);
@@ -205,13 +263,20 @@ export function useHotExitRestore() {
 
     void checkPendingState();
 
-    // Listen for RESTORE_START signal (primarily for main window)
-    // This is just a trigger — actual state is pulled, not passed in event
+    // Listen for RESTORE_START signal (fallback for main window)
+    // Primary restore is now triggered directly by checkAndRestoreSession()
+    // This listener is kept as a fallback but guarded against double-restore.
     const unlistenPromise = listen(
       HOT_EXIT_EVENTS.RESTORE_START,
       async () => {
-        // Main window receives this signal and pulls its state
+        // Main window: check if already restored via direct call
         if (isMainWindow) {
+          if (mainWindowRestoreStarted) {
+            console.log('[HotExit] RESTORE_START received but restore already started, ignoring');
+            return;
+          }
+          // Set flag to prevent double-restore via direct call
+          mainWindowRestoreStarted = true;
           restoreWasRequested.current = true;
           await restoreFromPulledState(true);
         }

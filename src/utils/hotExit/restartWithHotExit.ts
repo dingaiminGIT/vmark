@@ -16,6 +16,7 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import type { SessionData } from './types';
 import { HOT_EXIT_EVENTS } from './types';
 import { migrateSession, canMigrate, needsMigration, SCHEMA_VERSION } from './schemaMigration';
+import { restoreMainWindowState } from './useHotExitRestore';
 
 /** Default timeout for restore operation in milliseconds */
 const DEFAULT_RESTORE_TIMEOUT_MS = 15000;
@@ -161,6 +162,13 @@ export async function checkAndRestoreSession(
         // Legacy single-window restore
         await invoke<void>(HOT_EXIT_COMMANDS.RESTORE, { session: migratedSession });
       }
+
+      // CRITICAL: Directly trigger main window restore after Rust invoke returns.
+      // This bypasses the RESTORE_START event listener race condition where
+      // useHotExitRestore's listener may not be registered when Rust emits the event.
+      // By the time invoke returns, Rust has already stored state in PendingRestoreState.
+      console.log('[HotExit] Invoking main window restore directly (bypassing event)');
+      await restoreMainWindowState();
     } catch (invokeError) {
       // Invoke failed - clean up listeners and rethrow
       cleanup();
