@@ -9,6 +9,7 @@ import {
   extractFirstH1,
   sanitizeFileName,
   getExportFolderName,
+  getSaveFileName,
 } from "./exportNaming";
 
 describe("extractFirstH1", () => {
@@ -531,6 +532,114 @@ Welcome...`;
     it("handles untitled new document", () => {
       const md = "Just started typing some notes...";
       expect(getExportFolderName(md, null)).toBe("Untitled");
+    });
+  });
+});
+
+describe("getSaveFileName", () => {
+  describe("H1 extraction priority", () => {
+    it("uses H1 when available in content", () => {
+      expect(getSaveFileName("# My Document", "Untitled")).toBe("My Document");
+    });
+
+    it("sanitizes H1 for filesystem", () => {
+      expect(getSaveFileName("# What/Why?", "Untitled")).toBe("What-Why");
+    });
+
+    it("handles H1 with special characters", () => {
+      expect(getSaveFileName("# Title: Subtitle", "Untitled")).toBe("Title- Subtitle");
+    });
+
+    it("handles CJK H1", () => {
+      expect(getSaveFileName("# 我的文档", "Untitled")).toBe("我的文档");
+    });
+  });
+
+  describe("inline markdown stripping", () => {
+    it("strips bold formatting", () => {
+      expect(getSaveFileName("# **Bold** Title", "Untitled")).toBe("Bold Title");
+    });
+
+    it("strips italic formatting with asterisks", () => {
+      expect(getSaveFileName("# *Italic* Title", "Untitled")).toBe("Italic Title");
+    });
+
+    it("strips italic formatting with underscores", () => {
+      expect(getSaveFileName("# _Italic_ Title", "Untitled")).toBe("Italic Title");
+    });
+
+    it("strips bold with underscores", () => {
+      expect(getSaveFileName("# __Bold__ Title", "Untitled")).toBe("Bold Title");
+    });
+
+    it("strips inline code", () => {
+      expect(getSaveFileName("# `Code` Title", "Untitled")).toBe("Code Title");
+    });
+
+    it("strips strikethrough", () => {
+      expect(getSaveFileName("# ~~Struck~~ Title", "Untitled")).toBe("Struck Title");
+    });
+
+    it("strips links but keeps text", () => {
+      expect(getSaveFileName("# [Click Here](url)", "Untitled")).toBe("Click Here");
+    });
+
+    it("strips images but keeps alt text", () => {
+      expect(getSaveFileName("# ![Alt](image.png) Title", "Untitled")).toBe("Alt Title");
+    });
+
+    it("handles complex mixed formatting", () => {
+      expect(getSaveFileName("# My **Bold** and _Italic_ Title", "Untitled")).toBe("My Bold and Italic Title");
+    });
+  });
+
+  describe("fallback to tab title", () => {
+    it("uses tab title when no H1", () => {
+      expect(getSaveFileName("No heading here", "My Tab")).toBe("My Tab");
+    });
+
+    it("uses tab title when H1 is empty", () => {
+      expect(getSaveFileName("# ", "My Tab")).toBe("My Tab");
+    });
+
+    it("uses tab title when H1 sanitizes to empty", () => {
+      expect(getSaveFileName("# ???", "My Tab")).toBe("My Tab");
+    });
+  });
+
+  describe("final fallback", () => {
+    it("returns 'Untitled' when no H1 and no tab title", () => {
+      expect(getSaveFileName("No heading", "")).toBe("Untitled");
+    });
+
+    it("returns 'Untitled' when content is empty and no tab title", () => {
+      expect(getSaveFileName("", "")).toBe("Untitled");
+    });
+
+    it("returns tab title even if it's 'Untitled'", () => {
+      expect(getSaveFileName("No heading", "Untitled")).toBe("Untitled");
+    });
+  });
+
+  describe("real-world scenarios", () => {
+    it("extracts title from typical new document", () => {
+      const content = `# My New Document
+
+This is my new document content.`;
+      expect(getSaveFileName(content, "Untitled-1")).toBe("My New Document");
+    });
+
+    it("falls back for document without H1", () => {
+      const content = `Just some notes here...
+
+## Section 1
+
+More content.`;
+      expect(getSaveFileName(content, "Untitled-2")).toBe("Untitled-2");
+    });
+
+    it("handles blank new document", () => {
+      expect(getSaveFileName("", "Untitled-1")).toBe("Untitled-1");
     });
   });
 });

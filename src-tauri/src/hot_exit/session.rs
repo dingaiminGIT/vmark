@@ -1,6 +1,6 @@
-/// Session data structures for hot exit
-///
-/// These structs mirror the TypeScript types in src/utils/hotExit/types.ts
+//! Session data structures for hot exit
+//!
+//! These structs mirror the TypeScript types in src/utils/hotExit/types.ts
 
 use serde::{Deserialize, Serialize};
 

@@ -35,7 +35,9 @@ export function useWindowFileWatcher(): void {
 
   useEffect(() => {
     if (!watchPath) {
-      invoke("stop_watching", { watchId: windowLabel }).catch(() => {});
+      invoke("stop_watching", { watchId: windowLabel }).catch((err) => {
+        console.warn("[Watcher] Failed to stop watcher:", err);
+      });
       return;
     }
 
@@ -46,7 +48,9 @@ export function useWindowFileWatcher(): void {
     );
 
     return () => {
-      invoke("stop_watching", { watchId: windowLabel }).catch(() => {});
+      invoke("stop_watching", { watchId: windowLabel }).catch((err) => {
+        console.warn("[Watcher] Failed to stop watcher on cleanup:", err);
+      });
     };
   }, [windowLabel, watchPath]);
 }

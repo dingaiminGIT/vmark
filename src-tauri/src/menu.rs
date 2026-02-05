@@ -573,11 +573,9 @@ pub fn update_recent_files_menu(app: &AppHandle, files: Vec<String>) -> tauri::R
     let mut submenu_opt = None;
     for item in menu.items()? {
         if let MenuItemKind::Submenu(sub) = item {
-            if let Some(found) = sub.get(RECENT_FILES_SUBMENU_ID) {
-                if let MenuItemKind::Submenu(recent) = found {
-                    submenu_opt = Some(recent);
-                    break;
-                }
+            if let Some(MenuItemKind::Submenu(recent)) = sub.get(RECENT_FILES_SUBMENU_ID) {
+                submenu_opt = Some(recent);
+                break;
             }
         }
     }
@@ -636,11 +634,9 @@ pub fn update_recent_workspaces_menu(app: &AppHandle, workspaces: Vec<String>) -
     let mut submenu_opt = None;
     for item in menu.items()? {
         if let MenuItemKind::Submenu(sub) = item {
-            if let Some(found) = sub.get(RECENT_WORKSPACES_SUBMENU_ID) {
-                if let MenuItemKind::Submenu(recent) = found {
-                    submenu_opt = Some(recent);
-                    break;
-                }
+            if let Some(MenuItemKind::Submenu(recent)) = sub.get(RECENT_WORKSPACES_SUBMENU_ID) {
+                submenu_opt = Some(recent);
+                break;
             }
         }
     }

@@ -1,6 +1,6 @@
-/// Atomic storage operations for hot exit sessions
-///
-/// Uses tmp + rename pattern to ensure atomic writes and data durability.
+//! Atomic storage operations for hot exit sessions
+//!
+//! Uses tmp + rename pattern to ensure atomic writes and data durability.
 
 use std::fs::File;
 use std::io::Write;

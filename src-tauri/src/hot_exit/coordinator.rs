@@ -1,7 +1,7 @@
-/// Coordinator for hot exit capture and restore
-///
-/// Orchestrates multi-window capture with timeout and restore logic.
-/// Supports multi-window restoration with pull-based state retrieval.
+//! Coordinator for hot exit capture and restore
+//!
+//! Orchestrates multi-window capture with timeout and restore logic.
+//! Supports multi-window restoration with pull-based state retrieval.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, OnceLock};

@@ -9,7 +9,7 @@
 use chrono::Local;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Status of a single AI provider configuration
 #[derive(Clone, Serialize, Deserialize)]
@@ -358,7 +358,7 @@ fn remove_vmark_from_config(provider_id: &str, content: &str) -> Result<String, 
     }
 }
 
-fn generate_backup_path(config_path: &PathBuf) -> PathBuf {
+fn generate_backup_path(config_path: &Path) -> PathBuf {
     let timestamp = Local::now().format("%Y%m%d_%H%M%S");
     let file_name = config_path
         .file_name()

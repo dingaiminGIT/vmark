@@ -326,12 +326,11 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
 
     // "new" creates a tab in current window, but if no windows exist, create a new window
     // (Cmd+N when last window closed should open a new window)
-    if id == "new" {
-        if !has_document_windows(app) {
+    if id == "new"
+        && !has_document_windows(app) {
             let _ = crate::window_manager::create_document_window(app, None, None);
             return;
         }
-    }
 
     // "close" (Cmd+W) should only affect the focused window
     // Note: window.emit() broadcasts to all windows, so include target label in payload

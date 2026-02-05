@@ -27,6 +27,7 @@ import { openWorkspaceWithConfig } from "@/hooks/openWorkspaceWithConfig";
 import { getReplaceableTab, findExistingTabForPath } from "@/hooks/useReplaceableTab";
 import { createUntitledTab } from "@/utils/newFile";
 import { joinPath } from "@/utils/pathUtils";
+import { getSaveFileName } from "@/utils/exportNaming";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
 import { isWithinRoot, getParentDir } from "@/utils/paths";
 import { saveAllDocuments, type CloseSaveContext } from "@/hooks/closeSave";
@@ -225,9 +226,10 @@ export function useFileOperations() {
 
       // If file is missing, force Save As flow instead of normal save
       if (saveAction === "save_as_required" || !doc.filePath) {
-        // Build default path with suggested filename from tab title
+        // Build default path with suggested filename from H1 or tab title
         const tab = useTabStore.getState().tabs[windowLabel]?.find(t => t.id === tabId);
-        const filename = tab?.title ? `${tab.title}.md` : "Untitled.md";
+        const suggestedName = getSaveFileName(doc.content, tab?.title ?? "");
+        const filename = `${suggestedName}.md`;
         const folder = await getDefaultSaveFolderWithFallback(windowLabel);
         const defaultPath = joinPath(folder, filename);
 
@@ -281,16 +283,17 @@ export function useFileOperations() {
       const doc = useDocumentStore.getState().getDocument(tabId);
       if (!doc) return;
 
-      // Pre-fill with current filename or use tab title for untitled files.
+      // Pre-fill with current filename or use H1/tab title for untitled files.
       // Tauri dialog: if defaultPath is a file path, it pre-fills the filename input.
       let defaultPath: string;
       if (doc.filePath) {
         // Use full path - dialog will extract filename and folder
         defaultPath = doc.filePath;
       } else {
-        // For untitled files, construct path from tab title
+        // For untitled files, construct path from H1 or tab title
         const tab = useTabStore.getState().tabs[windowLabel]?.find(t => t.id === tabId);
-        const filename = tab?.title ? `${tab.title}.md` : "Untitled.md";
+        const suggestedName = getSaveFileName(doc.content, tab?.title ?? "");
+        const filename = `${suggestedName}.md`;
         const folder = await getDefaultSaveFolderWithFallback(windowLabel);
         defaultPath = joinPath(folder, filename);
       }
@@ -326,9 +329,10 @@ export function useFileOperations() {
       if (oldPath) {
         defaultPath = oldPath;
       } else {
-        // Untitled file - use tab title as suggested filename
+        // Untitled file - use H1 or tab title as suggested filename
         const tab = useTabStore.getState().tabs[windowLabel]?.find(t => t.id === tabId);
-        const filename = tab?.title ? `${tab.title}.md` : "Untitled.md";
+        const suggestedName = getSaveFileName(doc.content, tab?.title ?? "");
+        const filename = `${suggestedName}.md`;
         const folder = await getDefaultSaveFolderWithFallback(windowLabel);
         defaultPath = joinPath(folder, filename);
       }

@@ -1,7 +1,7 @@
-/// Hot Exit Module
-///
-/// Provides session capture and restore functionality for update restarts.
-/// The Rust coordinator ensures atomic file writes and multi-window coordination.
+//! Hot Exit Module
+//!
+//! Provides session capture and restore functionality for update restarts.
+//! The Rust coordinator ensures atomic file writes and multi-window coordination.
 
 pub mod session;
 pub mod storage;

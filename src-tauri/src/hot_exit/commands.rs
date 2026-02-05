@@ -1,7 +1,7 @@
-/// Tauri commands for hot exit
-///
-/// These commands provide session capture, restore, and management for the hot exit feature.
-/// They are used both in production (update restart flow) and for developer testing.
+//! Tauri commands for hot exit
+//!
+//! These commands provide session capture, restore, and management for the hot exit feature.
+//! They are used both in production (update restart flow) and for developer testing.
 
 use tauri::AppHandle;
 use super::session::{SessionData, WindowState};

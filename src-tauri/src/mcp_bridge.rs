@@ -1,16 +1,14 @@
-/**
- * MCP Bridge - WebSocket server for AI assistant communication.
- *
- * Provides a WebSocket server that MCP sidecars connect to.
- * Access model:
- * - Read operations: All clients can execute simultaneously
- * - Write operations: Serialized via write lock, released after each write
- *
- * Port discovery:
- * - Server binds to port 0 (OS assigns available port)
- * - Actual port written to Tauri's app data directory (platform-specific)
- * - MCP sidecar reads app data path from ~/.vmark/app-data-path bootstrap file
- */
+//! MCP Bridge - WebSocket server for AI assistant communication.
+//!
+//! Provides a WebSocket server that MCP sidecars connect to.
+//! Access model:
+//! - Read operations: All clients can execute simultaneously
+//! - Write operations: Serialized via write lock, released after each write
+//!
+//! Port discovery:
+//! - Server binds to port 0 (OS assigns available port)
+//! - Actual port written to Tauri's app data directory (platform-specific)
+//! - MCP sidecar reads app data path from ~/.vmark/app-data-path bootstrap file
 
 use crate::app_paths;
 use futures_util::{SinkExt, StreamExt};
@@ -442,7 +440,7 @@ async fn handle_connection(stream: TcpStream, addr: SocketAddr, app: AppHandle) 
     // Spawn task to forward messages from channel to WebSocket
     let send_task = tauri::async_runtime::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            if ws_sender.send(Message::Text(msg.into())).await.is_err() {
+            if ws_sender.send(Message::Text(msg)).await.is_err() {
                 break;
             }
         }

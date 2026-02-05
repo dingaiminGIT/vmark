@@ -1,13 +1,13 @@
-/// Schema Migration for Hot Exit Sessions
-///
-/// Provides migration functions to upgrade old session formats to the current schema.
-/// This ensures users don't lose their session data when the app updates.
-///
-/// Migration Strategy:
-/// - Sessions at current version pass through unchanged
-/// - Older sessions are migrated step-by-step (v1 -> v2 -> v3 -> current)
-/// - Future sessions (higher version) cannot be migrated (fail gracefully)
-/// - Version 0 is invalid and rejected
+//! Schema Migration for Hot Exit Sessions
+//!
+//! Provides migration functions to upgrade old session formats to the current schema.
+//! This ensures users don't lose their session data when the app updates.
+//!
+//! Migration Strategy:
+//! - Sessions at current version pass through unchanged
+//! - Older sessions are migrated step-by-step (v1 -> v2 -> v3 -> current)
+//! - Future sessions (higher version) cannot be migrated (fail gracefully)
+//! - Version 0 is invalid and rejected
 
 use super::session::{SessionData, SCHEMA_VERSION};
 

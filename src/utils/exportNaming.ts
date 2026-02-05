@@ -247,3 +247,77 @@ function getFileNameWithoutExtension(filePath: string): string {
 
   return fileName;
 }
+
+/**
+ * Strip inline markdown formatting from text.
+ * Converts markdown to plain text for use in filenames.
+ *
+ * Handles: **bold**, *italic*, __bold__, _italic_, ~~strikethrough~~,
+ * `code`, [links](url), ![images](url)
+ *
+ * @param text - Text potentially containing markdown formatting
+ * @returns Plain text with formatting removed
+ */
+function stripInlineMarkdown(text: string): string {
+  return text
+    // Remove images first (before links) ![alt](url) or ![alt][ref]
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/!\[([^\]]*)\]\[[^\]]*\]/g, "$1")
+    // Remove links [text](url) or [text][ref] - keep the text
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\[[^\]]*\]/g, "$1")
+    // Remove inline code `code`
+    .replace(/`([^`]+)`/g, "$1")
+    // Remove bold/italic (order matters: ** before *, __ before _)
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    // Remove strikethrough ~~text~~
+    .replace(/~~([^~]+)~~/g, "$1")
+    // Clean up any double spaces left behind
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Get the default filename for the save dialog.
+ *
+ * Used when saving a new/untitled file. Tries to derive a meaningful
+ * filename from the document content's H1 heading.
+ *
+ * Priority:
+ * 1. First H1 heading from content (markdown stripped, then sanitized)
+ * 2. Tab title (if provided and non-empty)
+ * 3. "Untitled"
+ *
+ * @param content - The document's markdown content
+ * @param tabTitle - The current tab title (e.g., "Untitled-1")
+ * @returns A filesystem-safe filename (without extension)
+ *
+ * @example
+ * getSaveFileName("# My Document", "Untitled-1") // "My Document"
+ * getSaveFileName("# **Bold** Title", "Untitled-1") // "Bold Title"
+ * getSaveFileName("No heading", "Untitled-1") // "Untitled-1"
+ * getSaveFileName("No heading", "") // "Untitled"
+ */
+export function getSaveFileName(content: string, tabTitle: string): string {
+  // Try H1 first
+  const h1 = extractFirstH1(content);
+  if (h1) {
+    // Strip inline markdown formatting before sanitizing for filesystem
+    const plainText = stripInlineMarkdown(h1);
+    const sanitized = sanitizeFileName(plainText);
+    if (sanitized) {
+      return sanitized;
+    }
+  }
+
+  // Fall back to tab title
+  if (tabTitle) {
+    return tabTitle;
+  }
+
+  // Final fallback
+  return "Untitled";
+}

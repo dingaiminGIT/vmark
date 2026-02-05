@@ -241,15 +241,17 @@ pub fn run() {
                     if has_doc_windows {
                         #[cfg(debug_assertions)]
                         eprintln!("[Tauri] ExitRequested: starting quit flow");
-                        quit::start_quit(&app);
+                        quit::start_quit(app);
                     }
                     // If no document windows, just stay alive (macOS dock behavior)
                 }
-                tauri::RunEvent::WindowEvent { label, event, .. } => {
-                    if let tauri::WindowEvent::Destroyed = event {
-                        quit::handle_window_destroyed(&app, &label);
-                        menu_events::clear_window_ready(&label);
-                    }
+                tauri::RunEvent::WindowEvent {
+                    label,
+                    event: tauri::WindowEvent::Destroyed,
+                    ..
+                } => {
+                    quit::handle_window_destroyed(app, &label);
+                    menu_events::clear_window_ready(&label);
                 }
                 // macOS: Clicking dock icon when no windows visible -> create new window
                 #[cfg(target_os = "macos")]

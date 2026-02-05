@@ -43,18 +43,19 @@ async function runHealthCheck(): Promise<void> {
     const { createVMarkMcpServer } = await import('./index.js');
     const { isWriterModeTool } = await import('./writerModeTools.js');
 
-    // 2. Create a mock bridge that doesn't connect
+    // 2. Create a mock bridge that doesn't connect (implements Bridge interface)
     const mockBridge = {
-      request: async () => {
+      send: async (): Promise<never> => {
         throw new Error('Health check mode - no VMark connection');
       },
-      isConnected: () => false,
-      on: () => {},
-      off: () => {},
+      isConnected: (): boolean => false,
+      connect: async (): Promise<void> => {},
+      disconnect: async (): Promise<void> => {},
+      onConnectionChange: (): (() => void) => () => {},
     };
 
     // 3. Can we instantiate the server and list tools?
-    const server = createVMarkMcpServer(mockBridge as any);
+    const server = createVMarkMcpServer(mockBridge);
     const allTools = server.listTools();
     const resources = server.listResources();
 
