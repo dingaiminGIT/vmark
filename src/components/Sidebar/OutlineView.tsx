@@ -4,7 +4,7 @@
  * Displays document heading structure as a tree.
  */
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
 import { useUIStore } from "@/stores/uiStore";
@@ -101,12 +101,23 @@ function OutlineItem({
   return (
     <li className="outline-tree-item">
       <div
+        role="treeitem"
+        tabIndex={0}
+        aria-selected={isActive}
+        aria-expanded={hasChildren ? !isCollapsed : undefined}
         className={`outline-item outline-level-${node.level} ${isActive ? "active" : ""}`}
         onClick={() => onClick(node.index)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick(node.index);
+          }
+        }}
       >
         {hasChildren ? (
           <button
             className="outline-toggle"
+            aria-label={isCollapsed ? "Expand section" : "Collapse section"}
             onClick={(e) => {
               e.stopPropagation();
               onToggle(node.index);
@@ -120,7 +131,7 @@ function OutlineItem({
         <span className="outline-text">{node.text}</span>
       </div>
       {hasChildren && !isCollapsed && (
-        <ul className="outline-children">
+        <ul className="outline-children" role="group">
           {node.children.map((child) => (
             <OutlineItem
               key={child.index}
@@ -183,21 +194,28 @@ export function OutlineView() {
 
   const activeIndex = activeHeadingIndex ?? -1;
 
-  // Track collapsed state locally
-  const [collapsedSet, setCollapsedSet] = useState<Set<number>>(new Set());
+  // Track collapsed state by heading text (preserves state across edits)
+  const [collapsedTexts, setCollapsedTexts] = useState<Set<string>>(new Set());
 
-  // Reset collapsed state when headings change (indices become invalid)
-  useEffect(() => {
-    setCollapsedSet(new Set());
-  }, [headings]);
+  // Convert text-based collapsed state to index-based for rendering
+  const collapsedSet = useMemo(() => {
+    const set = new Set<number>();
+    headings.forEach((h, i) => {
+      if (collapsedTexts.has(h.text)) set.add(i);
+    });
+    return set;
+  }, [headings, collapsedTexts]);
 
   const handleToggle = (index: number) => {
-    setCollapsedSet((prev) => {
+    const heading = headings[index];
+    if (!heading) return;
+
+    setCollapsedTexts((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
+      if (next.has(heading.text)) {
+        next.delete(heading.text);
       } else {
-        next.add(index);
+        next.add(heading.text);
       }
       return next;
     });
@@ -226,7 +244,7 @@ export function OutlineView() {
     <div className="sidebar-view outline-view">
       {headings.length > 0 ? (
         <>
-          <ul className="outline-tree">
+          <ul className="outline-tree" role="tree" aria-label="Document outline">
             {limitedTree.map((node) => (
               <OutlineItem
                 key={node.index}

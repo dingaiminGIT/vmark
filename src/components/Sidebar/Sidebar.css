@@ -225,7 +225,8 @@
 }
 
 .outline-item.active {
-  background-color: var(--hover-bg);
+  background-color: var(--accent-bg);
+  color: var(--accent-primary);
 }
 
 .outline-toggle {
@@ -275,6 +276,40 @@
 .outline-level-5 .outline-text,
 .outline-level-6 .outline-text {
   color: var(--text-secondary);
+}
+
+/* Outline truncation message */
+.outline-truncated {
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-style: italic;
+}
+
+/* Outline focus indicators */
+.outline-item:focus-visible {
+  outline: none;
+  background-color: var(--accent-bg);
+}
+
+.outline-toggle {
+  position: relative;
+}
+
+.outline-toggle:focus-visible {
+  outline: none;
+}
+
+.outline-toggle:focus-visible::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
 }
 
 /* History view */
