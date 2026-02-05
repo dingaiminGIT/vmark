@@ -169,24 +169,6 @@ export function countTreeNodes(tree: HeadingNode[]): number {
 }
 
 /**
- * Flatten a tree to get first N nodes in document order.
- */
-export function flattenTreeToLimit(tree: HeadingNode[], limit: number): HeadingNode[] {
-  const result: HeadingNode[] = [];
-
-  function collect(nodes: HeadingNode[]) {
-    for (const node of nodes) {
-      if (result.length >= limit) return;
-      result.push(node);
-      collect(node.children);
-    }
-  }
-
-  collect(tree);
-  return result;
-}
-
-/**
  * Build a limited tree that includes only the first N nodes in document order.
  * Preserves tree structure but truncates at the limit.
  */
