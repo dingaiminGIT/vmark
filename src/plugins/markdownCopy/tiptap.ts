@@ -47,6 +47,33 @@ function createDocFromSlice(schema: Schema, slice: Slice): PMNode {
 }
 
 /**
+ * Clean up markdown for clipboard use.
+ *
+ * The serializer produces round-trip-safe markdown with backslash escapes
+ * for special characters ($, ~, @, [, *, _, :, & …). This is correct for
+ * file saving but produces noisy clipboard text.  Strip them here so
+ * users get clean, readable output.
+ *
+ * Also collapses autolink expansions:
+ *   [https://example.com](https://example.com) → https://example.com
+ *   [user@host.com](mailto:user@host.com)      → user@host.com
+ */
+export function cleanMarkdownForClipboard(md: string): string {
+  let result = md;
+
+  // 1. Strip backslash escapes first (e.g. \$ → $, \~ → ~, \\ → \)
+  //    Must run before autolink collapsing because link text has escapes
+  //    (e.g. user\@host) but the URL does not — back-reference won't match
+  //    unless we clean escapes first.
+  result = result.replace(/\\([^\n])/g, "$1");
+
+  // 2. Collapse redundant autolinks where text equals URL
+  result = result.replace(/\[([^\]]+)\]\((?:mailto:)?\1\)/g, "$1");
+
+  return result;
+}
+
+/**
  * Serialize a Slice to markdown with blank-line collapsing.
  * Returns null on failure (caller decides fallback).
  */
@@ -54,7 +81,7 @@ function serializeSliceAsMarkdown(schema: Schema, slice: Slice): string | null {
   try {
     const doc = createDocFromSlice(schema, slice);
     const md = serializeMarkdown(schema, doc);
-    return md.replace(/\n{3,}/g, "\n\n");
+    return cleanMarkdownForClipboard(md.replace(/\n{3,}/g, "\n\n"));
   } catch (error) {
     if (import.meta.env.DEV) {
       console.warn("[markdownCopy] Serialization failed:", error);
