@@ -1,0 +1,45 @@
+.terminal-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-color);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.terminal-resize-handle {
+  height: 4px;
+  background: transparent;
+  cursor: row-resize;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.terminal-resize-handle:hover {
+  background: var(--border-color);
+}
+
+.terminal-container {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0 0 8px;
+}
+
+/* Override xterm scrollbar to match app style */
+.terminal-container .xterm-viewport::-webkit-scrollbar {
+  width: 4px;
+}
+
+.terminal-container .xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-container .xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+.terminal-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: var(--md-char-color);
+}

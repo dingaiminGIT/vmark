@@ -98,6 +98,13 @@ export function useViewMenuEvents(): void {
       if (cancelled) { unlistenDiagramPreview(); return; }
       unlistenRefs.current.push(unlistenDiagramPreview);
 
+      const unlistenToggleTerminal = await currentWindow.listen<string>("menu:toggle-terminal", (event) => {
+        if (event.payload !== windowLabel) return;
+        useUIStore.getState().toggleTerminal();
+      });
+      if (cancelled) { unlistenToggleTerminal(); return; }
+      unlistenRefs.current.push(unlistenToggleTerminal);
+
       const convertLineEndings = (target: "lf" | "crlf"): void => {
         const tabId = useTabStore.getState().activeTabId[windowLabel];
         if (!tabId) return;

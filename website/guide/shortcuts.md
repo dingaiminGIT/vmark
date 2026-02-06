@@ -147,6 +147,7 @@ If you prefer keeping system functions on F-keys, you can customize VMark shortc
 | Toggle Sidebar | `Mod + Shift + B` |
 | Toggle Outline | `Alt + Mod + 1` |
 | Toggle Line Numbers | `Alt + Mod + L` |
+| Toggle Terminal | `Ctrl + `` ` |
 | Toggle Diagram Preview | `Alt + Mod + P` |
 | Universal Toolbar | `Mod + Shift + P` |
 | Source Peek | `F5` |

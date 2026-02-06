@@ -8,6 +8,7 @@
 import { useEffect } from "react";
 import { useEditorStore } from "@/stores/editorStore";
 import { useShortcutsStore } from "@/stores/shortcutsStore";
+import { useUIStore } from "@/stores/uiStore";
 import { useImagePasteToastStore } from "@/stores/imagePasteToastStore";
 import { flushActiveWysiwygNow } from "@/utils/wysiwygFlush";
 import { isImeKeyEvent } from "@/utils/imeGuard";
@@ -19,13 +20,22 @@ export function useViewShortcuts() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isImeKeyEvent(e)) return;
+
+      const shortcuts = useShortcutsStore.getState();
+
+      // Toggle terminal — must fire even from terminal's textarea
+      const toggleTerminalKey = shortcuts.getShortcut("toggleTerminal");
+      if (matchesShortcutEvent(e, toggleTerminalKey)) {
+        e.preventDefault();
+        useUIStore.getState().toggleTerminal();
+        return;
+      }
+
       // Ignore if in input/textarea
       const target = e.target as HTMLElement;
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") {
         return;
       }
-
-      const shortcuts = useShortcutsStore.getState();
 
       // Source mode
       const sourceModeKey = shortcuts.getShortcut("sourceMode");

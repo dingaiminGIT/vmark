@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useCallback, type MouseEvent, type Keyboa
 
 // Stable empty array to avoid creating new reference on each render
 const EMPTY_TABS: never[] = [];
-import { Code2, Type, Save, Plus, AlertTriangle, GitFork, Satellite } from "lucide-react";
+import { Code2, Type, Save, Plus, AlertTriangle, GitFork, Satellite, Terminal } from "lucide-react";
 import { countWords as alfaazCount } from "alfaaz";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -89,7 +89,9 @@ export function StatusBar() {
   const autoSaveEnabled = useSettingsStore((s) => s.general.autoSaveEnabled);
   const sourceMode = useEditorStore((state) => state.sourceMode);
   const statusBarVisible = useUIStore((state) => state.statusBarVisible);
+  const terminalVisible = useUIStore((state) => state.terminalVisible);
   const sourceModeShortcut = useShortcutsStore((state) => state.getShortcut("sourceMode"));
+  const terminalShortcut = useShortcutsStore((state) => state.getShortcut("toggleTerminal"));
 
   // MCP server status
   const { running: mcpRunning, loading: mcpLoading, port: mcpPort, error: mcpError } = useMcpServer();
@@ -274,6 +276,13 @@ export function StatusBar() {
             )}
             <span className="status-item">{wordCount} words</span>
             <span className="status-item">{charCount} chars</span>
+            <button
+              className={`status-terminal ${terminalVisible ? "active" : ""}`}
+              title={`Toggle Terminal (${formatKeyForDisplay(terminalShortcut)})`}
+              onClick={() => useUIStore.getState().toggleTerminal()}
+            >
+              <Terminal size={12} />
+            </button>
             <button
               className="status-mode"
               title={sourceMode ? `Source Mode (${formatKeyForDisplay(sourceModeShortcut)})` : `Rich Text Mode (${formatKeyForDisplay(sourceModeShortcut)})`}

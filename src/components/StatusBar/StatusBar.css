@@ -305,6 +305,36 @@
 }
 
 /* ========================================
+   Terminal Toggle
+   ======================================== */
+
+.status-terminal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.status-terminal:hover {
+  background-color: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.status-terminal:active {
+  background-color: var(--hover-bg-strong);
+}
+
+.status-terminal.active {
+  color: var(--accent-primary);
+}
+
+/* ========================================
    Update Status Indicator
    ======================================== */
 

@@ -7,6 +7,11 @@ const SIDEBAR_MIN_WIDTH = 180;
 const SIDEBAR_MAX_WIDTH = 480;
 const SIDEBAR_DEFAULT_WIDTH = 260;
 
+// Terminal height constraints
+const TERMINAL_MIN_HEIGHT = 100;
+const TERMINAL_MAX_HEIGHT = 600;
+const TERMINAL_DEFAULT_HEIGHT = 250;
+
 interface UIState {
   settingsOpen: boolean;
   sidebarVisible: boolean;
@@ -20,6 +25,8 @@ interface UIState {
   toolbarSessionFocusIndex: number; // Session-only focus index (cleared on toolbar close)
   toolbarDropdownOpen: boolean; // Whether a dropdown menu is currently open
   isDraggingFiles: boolean; // Files are being dragged over the window
+  terminalVisible: boolean;
+  terminalHeight: number;
 }
 
 interface UIActions {
@@ -41,6 +48,8 @@ interface UIActions {
   /** Clear session memory when toolbar closes */
   clearToolbarSession: () => void;
   setDraggingFiles: (dragging: boolean) => void;
+  toggleTerminal: () => void;
+  setTerminalHeight: (height: number) => void;
 }
 
 export const useUIStore = create<UIState & UIActions>((set) => ({
@@ -56,6 +65,8 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   toolbarSessionFocusIndex: -1, // Session-only, -1 = use smart focus
   toolbarDropdownOpen: false,
   isDraggingFiles: false,
+  terminalVisible: false,
+  terminalHeight: TERMINAL_DEFAULT_HEIGHT,
 
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
@@ -110,4 +121,9 @@ export const useUIStore = create<UIState & UIActions>((set) => ({
   }),
 
   setDraggingFiles: (dragging) => set({ isDraggingFiles: dragging }),
+
+  toggleTerminal: () => set((state) => ({ terminalVisible: !state.terminalVisible })),
+  setTerminalHeight: (h) => set({
+    terminalHeight: Math.min(TERMINAL_MAX_HEIGHT, Math.max(TERMINAL_MIN_HEIGHT, h)),
+  }),
 }));
