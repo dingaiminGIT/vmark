@@ -6,13 +6,15 @@ import {
   createTerminalInstance,
   type TerminalInstance,
 } from "./createTerminalInstance";
-import { spawnPty } from "./spawnPty";
+import { spawnPty, resolveTerminalCwd } from "./spawnPty";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import type { SearchAddon } from "@xterm/addon-search";
 
 interface SessionEntry {
   instance: TerminalInstance;
   pty: IPty | null;
   ptyRefForKeys: React.RefObject<IPty | null>;
+  spawnedCwd: string | undefined;
   shellStarted: boolean;
   shellExited: boolean;
   disposed: boolean;
@@ -81,6 +83,7 @@ export function useTerminalSessions(
     if (!entry || entry.disposed) return;
 
     entry.shellExited = false;
+    const cwd = resolveTerminalCwd();
 
     try {
       const pty = await spawnPty({
@@ -109,6 +112,7 @@ export function useTerminalSessions(
         return;
       }
       currentEntry.pty = pty;
+      currentEntry.spawnedCwd = cwd;
     } catch (err) {
       const e = sessionsRef.current.get(sessionId);
       if (e && !e.disposed) {
@@ -170,6 +174,7 @@ export function useTerminalSessions(
         instance,
         pty: null,
         ptyRefForKeys,
+        spawnedCwd: undefined,
         shellStarted: false,
         shellExited: false,
         disposed: false,
@@ -337,6 +342,28 @@ export function useTerminalSessions(
       };
       for (const [, entry] of sessionsRef.current) {
         entry.instance.term.options.theme = newTheme;
+      }
+    });
+  }, []);
+
+  // cd running sessions when workspace root changes
+  useEffect(() => {
+    let prevRoot = useWorkspaceStore.getState().rootPath;
+    return useWorkspaceStore.subscribe((state) => {
+      const newRoot = state.rootPath;
+      if (!newRoot || newRoot === prevRoot) {
+        prevRoot = newRoot;
+        return;
+      }
+      prevRoot = newRoot;
+
+      const escaped = newRoot.replace(/'/g, "'\\''");
+      for (const [, entry] of sessionsRef.current) {
+        if (entry.pty && !entry.shellExited && entry.spawnedCwd !== newRoot) {
+          // Ctrl+U clears any partial input, then cd to new workspace
+          entry.pty.write(`\x15cd '${escaped}'\n`);
+          entry.spawnedCwd = newRoot;
+        }
       }
     });
   }, []);
