@@ -347,6 +347,14 @@ function restoreUiState(windowState: WindowState): void {
   if (ui_state.typewriter_mode_enabled !== editorStore.typewriterModeEnabled) {
     editorStore.toggleTypewriterMode();
   }
+
+  // Restore terminal visibility and height (if saved)
+  if (ui_state.terminal_visible != null && ui_state.terminal_visible !== uiStore.terminalVisible) {
+    uiStore.toggleTerminal();
+  }
+  if (ui_state.terminal_height != null && Number.isFinite(ui_state.terminal_height)) {
+    uiStore.setTerminalHeight(ui_state.terminal_height);
+  }
 }
 
 /**

@@ -254,6 +254,22 @@ When editing a math block:
 | Commit & Exit | `Mod + Enter` |
 | Cancel & Exit | `Escape` |
 
+## Terminal
+
+When the integrated terminal is focused:
+
+| Action | Shortcut |
+|--------|----------|
+| Copy | `Mod + C` (with selection) |
+| Paste | `Mod + V` |
+| Clear | `Mod + K` |
+| Search | `Mod + F` |
+| Toggle Terminal | `Ctrl + `` ` |
+
+::: tip
+Terminal shortcuts only activate when the terminal panel is focused. `Mod + C` without a selection sends SIGINT to the running process.
+:::
+
 ## Customizing Shortcuts
 
 1. Open Settings with `Mod + ,`

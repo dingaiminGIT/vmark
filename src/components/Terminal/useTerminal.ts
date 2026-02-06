@@ -3,14 +3,15 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { spawn, type IPty } from "tauri-pty";
-import { invoke } from "@tauri-apps/api/core";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
+import type { IPty } from "tauri-pty";
 import { useSettingsStore, themes } from "@/stores/settingsStore";
-import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
 import { getCurrentWindowLabel } from "@/utils/workspaceStorage";
 import { createFileLinkProvider } from "./fileLinkProvider";
+import { createTerminalKeyHandler } from "./terminalKeyHandler";
+import { spawnPty } from "./spawnPty";
 
 import "@xterm/xterm/css/xterm.css";
 
@@ -34,27 +35,8 @@ function buildXtermTheme() {
   };
 }
 
-/**
- * Resolve terminal working directory:
- * 1. Workspace root (if open)
- * 2. Active file's parent directory (if saved)
- * 3. undefined — lets the shell start in its default ($HOME)
- */
-function resolveTerminalCwd(): string | undefined {
-  const workspaceRoot = useWorkspaceStore.getState().rootPath;
-  if (workspaceRoot) return workspaceRoot;
-
-  const windowLabel = getCurrentWindowLabel();
-  const activeTabId = useTabStore.getState().activeTabId[windowLabel];
-  if (activeTabId) {
-    const doc = useDocumentStore.getState().getDocument(activeTabId);
-    if (doc?.filePath) {
-      const lastSlash = doc.filePath.lastIndexOf("/");
-      if (lastSlash > 0) return doc.filePath.substring(0, lastSlash);
-    }
-  }
-
-  return undefined;
+export interface UseTerminalCallbacks {
+  onSearch?: () => void;
 }
 
 /**
@@ -62,11 +44,15 @@ function resolveTerminalCwd(): string | undefined {
  * The terminal instance persists across hide/show toggles because
  * TerminalPanel keeps its DOM alive (display:none when hidden).
  */
-export function useTerminal(containerRef: React.RefObject<HTMLDivElement | null>) {
+export function useTerminal(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  callbacks?: UseTerminalCallbacks,
+) {
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const ptyRef = useRef<IPty | null>(null);
   const initializedRef = useRef(false);
+  const shellExitedRef = useRef(false);
 
   // Fit the terminal to its container
   const fit = useCallback(() => {
@@ -108,6 +94,11 @@ export function useTerminal(containerRef: React.RefObject<HTMLDivElement | null>
     // Open terminal in container
     term.open(container);
 
+    // Unicode 11 support
+    const unicode11 = new Unicode11Addon();
+    term.loadAddon(unicode11);
+    term.unicode.activeVersion = "11";
+
     // Try WebGL renderer for performance
     try {
       const webglAddon = new WebglAddon();
@@ -139,50 +130,64 @@ export function useTerminal(containerRef: React.RefObject<HTMLDivElement | null>
       });
     }));
 
+    // Custom key handler for copy/paste/clear/search
+    term.attachCustomKeyEventHandler(
+      createTerminalKeyHandler(term, ptyRef, {
+        onSearch: () => callbacks?.onSearch?.(),
+      }),
+    );
+
     // Initial fit (after layout settles)
     requestAnimationFrame(() => fit());
 
     // Track disposal so async PTY callbacks don't write to a dead terminal
     let disposed = false;
 
-    // Spawn PTY (async — resolves shell from $SHELL env var via Tauri)
-    (async () => {
+    /** Spawn a new shell and wire xterm → PTY data flow. */
+    async function startShell() {
+      shellExitedRef.current = false;
       try {
-        const shell = await invoke<string>("get_default_shell");
-        if (disposed) return;
-
-        const pty = spawn(shell, [], {
-          cols: term.cols || 80,
-          rows: term.rows || 24,
-          cwd: resolveTerminalCwd(),
+        const pty = await spawnPty({
+          term,
+          onExit: (exitCode) => {
+            if (!disposed) {
+              term.write(`\r\n[Process exited with code ${exitCode}]\r\n`);
+              term.write("Press any key to restart...\r\n");
+            }
+            ptyRef.current = null;
+            shellExitedRef.current = true;
+          },
+          disposed: () => disposed,
         });
+        if (disposed) {
+          try { pty.kill(); } catch { /* ignore */ }
+          return;
+        }
         ptyRef.current = pty;
-
-        // PTY → xterm (onData sends Uint8Array)
-        pty.onData((data) => {
-          if (!disposed) term.write(data);
-        });
-
-        // PTY exit
-        pty.onExit(({ exitCode }) => {
-          if (!disposed) {
-            term.write(`\r\n[Process exited with code ${exitCode}]\r\n`);
-          }
-          ptyRef.current = null;
-        });
-
-        // xterm → PTY
-        term.onData((data) => {
-          if (ptyRef.current) {
-            ptyRef.current.write(data);
-          }
-        });
       } catch (err) {
         if (!disposed) {
           term.write(`\r\nFailed to start shell: ${err}\r\n`);
+          term.write("Press any key to retry...\r\n");
+          shellExitedRef.current = true;
         }
       }
-    })();
+    }
+
+    // xterm → PTY (or restart if shell exited)
+    term.onData((data) => {
+      if (shellExitedRef.current && !ptyRef.current) {
+        shellExitedRef.current = false;
+        term.clear();
+        startShell();
+        return;
+      }
+      if (ptyRef.current) {
+        ptyRef.current.write(data);
+      }
+    });
+
+    // Initial spawn
+    startShell();
 
     return () => {
       disposed = true;
@@ -195,7 +200,7 @@ export function useTerminal(containerRef: React.RefObject<HTMLDivElement | null>
       fitAddonRef.current = null;
       initializedRef.current = false;
     };
-  }, [containerRef, fit]);
+  }, [containerRef, fit, callbacks]);
 
   // Sync theme when settings change
   useEffect(() => {
@@ -216,5 +221,5 @@ export function useTerminal(containerRef: React.RefObject<HTMLDivElement | null>
     });
   }, []);
 
-  return { fit, termRef };
+  return { fit, termRef, ptyRef };
 }

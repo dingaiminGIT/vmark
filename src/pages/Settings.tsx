@@ -15,6 +15,7 @@ import {
   FileText,
   Keyboard,
   Plug,
+  SquareTerminal,
   Info,
 } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
@@ -34,6 +35,7 @@ import { LanguageSettings } from "./settings/LanguageSettings";
 import { MarkdownSettings } from "./settings/MarkdownSettings";
 import { ShortcutsSettings } from "./settings/ShortcutsSettings";
 import { AboutSettings } from "./settings/AboutSettings";
+import { TerminalSettings } from "./settings/TerminalSettings";
 import { AdvancedSettings } from "./settings/AdvancedSettings";
 
 // Hook to handle Cmd+W for settings window
@@ -80,6 +82,7 @@ type Section =
   | "language"
   | "markdown"
   | "shortcuts"
+  | "terminal"
   | "advanced";
 
 interface NavItemProps {
@@ -116,13 +119,14 @@ const navConfig = [
   { id: "language" as const, icon: Languages, label: "Language" },
   { id: "markdown" as const, icon: FileText, label: "Markdown" },
   { id: "shortcuts" as const, icon: Keyboard, label: "Shortcuts" },
+  { id: "terminal" as const, icon: SquareTerminal, label: "Terminal" },
   { id: "about" as const, icon: Info, label: "About" },
 ] as const;
 
 // Valid section IDs for URL param validation
 const validSections = new Set<string>([
   "about", "appearance", "editor", "files", "integrations", "language",
-  "markdown", "shortcuts", "advanced"
+  "markdown", "shortcuts", "terminal", "advanced"
 ]);
 
 function isValidSection(value: string): value is Section {
@@ -231,6 +235,7 @@ export function SettingsPage() {
           {section === "language" && <LanguageSettings />}
           {section === "markdown" && <MarkdownSettings />}
           {section === "shortcuts" && <ShortcutsSettings />}
+          {section === "terminal" && <TerminalSettings />}
           {section === "advanced" && <AdvancedSettings />}
         </div>
       </div>

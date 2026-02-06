@@ -82,6 +82,8 @@ function getUiStateSafe() {
       source_mode_enabled: editorStore.sourceMode,
       focus_mode_enabled: editorStore.focusModeEnabled,
       typewriter_mode_enabled: editorStore.typewriterModeEnabled,
+      terminal_visible: uiStore.terminalVisible,
+      terminal_height: uiStore.terminalHeight,
     };
   } catch {
     // Return defaults if store access fails

@@ -1,0 +1,56 @@
+/**
+ * Terminal Settings Section
+ *
+ * Font size and line height for the integrated terminal.
+ */
+
+import { useSettingsStore } from "@/stores/settingsStore";
+import { SettingRow, SettingsGroup, Select } from "./components";
+
+const fontSizeOptions = [
+  { value: "10", label: "10px" },
+  { value: "11", label: "11px" },
+  { value: "12", label: "12px" },
+  { value: "13", label: "13px" },
+  { value: "14", label: "14px" },
+  { value: "16", label: "16px" },
+  { value: "18", label: "18px" },
+  { value: "20", label: "20px" },
+  { value: "24", label: "24px" },
+];
+
+const lineHeightOptions = [
+  { value: "1.0", label: "1.0 (Tight)" },
+  { value: "1.2", label: "1.2 (Compact)" },
+  { value: "1.4", label: "1.4 (Normal)" },
+  { value: "1.6", label: "1.6 (Relaxed)" },
+  { value: "1.8", label: "1.8 (Spacious)" },
+  { value: "2.0", label: "2.0 (Extra)" },
+];
+
+export function TerminalSettings() {
+  const terminal = useSettingsStore((state) => state.terminal);
+  const updateTerminalSetting = useSettingsStore((state) => state.updateTerminalSetting);
+
+  return (
+    <div className="space-y-6">
+      <SettingsGroup title="Terminal">
+        <SettingRow label="Font Size" description="Text size in the terminal">
+          <Select
+            value={String(terminal.fontSize)}
+            options={fontSizeOptions}
+            onChange={(v) => updateTerminalSetting("fontSize", Number(v))}
+          />
+        </SettingRow>
+
+        <SettingRow label="Line Height" description="Spacing between terminal lines">
+          <Select
+            value={String(terminal.lineHeight)}
+            options={lineHeightOptions}
+            onChange={(v) => updateTerminalSetting("lineHeight", Number(v))}
+          />
+        </SettingRow>
+      </SettingsGroup>
+    </div>
+  );
+}

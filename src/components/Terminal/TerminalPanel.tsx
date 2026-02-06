@@ -1,7 +1,10 @@
-import { useRef, useEffect, useState, type RefObject } from "react";
+import { useRef, useEffect, useState, useCallback, type RefObject } from "react";
 import { useUIStore } from "@/stores/uiStore";
-import { useTerminal } from "./useTerminal";
+import { useTerminalSessions } from "./useTerminalSessions";
 import { useTerminalResize } from "./useTerminalResize";
+import { TerminalTabBar } from "./TerminalTabBar";
+import { TerminalContextMenu } from "./TerminalContextMenu";
+import { TerminalSearchBar } from "./TerminalSearchBar";
 import "./terminal-panel.css";
 
 const NULL_REF: RefObject<HTMLDivElement | null> = { current: null };
@@ -17,7 +20,17 @@ export function TerminalPanel() {
     if (visible && !activated) setActivated(true);
   }, [visible, activated]);
 
-  const { fit } = useTerminal(activated ? containerRef : NULL_REF);
+  // Search bar state
+  const [searchVisible, setSearchVisible] = useState(false);
+
+  const onSearch = useCallback(() => {
+    setSearchVisible((v) => !v);
+  }, []);
+
+  const { fit, getActiveTerminal, getActiveSearchAddon } = useTerminalSessions(
+    activated ? containerRef : NULL_REF,
+    { onSearch },
+  );
 
   // Refit when shown or resized
   useEffect(() => {
@@ -29,18 +42,65 @@ export function TerminalPanel() {
     requestAnimationFrame(() => fit());
   });
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  // Tab bar actions
+  const handleClear = useCallback(() => {
+    const active = getActiveTerminal();
+    if (active) active.term.clear();
+  }, [getActiveTerminal]);
+
+  const handleRestart = useCallback(() => {
+    // Send SIGTERM-like reset — write exit to the PTY
+    const active = getActiveTerminal();
+    if (active?.pty) {
+      active.pty.write("exit\n");
+    }
+  }, [getActiveTerminal]);
+
   // Not yet activated — render nothing
   if (!activated) return null;
 
-  // Once activated, always keep the DOM alive (display:none when hidden)
-  // so xterm stays attached to its container element.
+  const active = getActiveTerminal();
+
   return (
     <div
       className="terminal-panel"
       style={{ height, display: visible ? "flex" : "none" }}
     >
       <div className="terminal-resize-handle" onMouseDown={handleResize} />
-      <div ref={containerRef} className="terminal-container" />
+      <TerminalTabBar onClear={handleClear} onRestart={handleRestart} />
+      <div className="terminal-sessions-container">
+        <div
+          ref={containerRef}
+          className="terminal-container"
+          onContextMenu={handleContextMenu}
+        />
+        {searchVisible && (
+          <TerminalSearchBar
+            getSearchAddon={getActiveSearchAddon}
+            onClose={() => setSearchVisible(false)}
+          />
+        )}
+      </div>
+      {contextMenu && active && (
+        <TerminalContextMenu
+          position={contextMenu}
+          term={active.term}
+          ptyRef={{ current: active.pty }}
+          onClose={closeContextMenu}
+        />
+      )}
     </div>
   );
 }

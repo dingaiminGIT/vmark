@@ -188,6 +188,11 @@ export interface McpServerSettings {
   toolMode: McpToolMode; // Which tools to expose to AI (writer = ~15 tools, full = all 76)
 }
 
+export interface TerminalSettings {
+  fontSize: number;    // Default: 13 (range: 10–24)
+  lineHeight: number;  // Default: 1.4 (range: 1.0–2.0)
+}
+
 export interface AdvancedSettingsState {
   mcpServer: McpServerSettings;
   customLinkProtocols: string[]; // Custom URL protocols to recognize (e.g., "obsidian", "vscode")
@@ -257,6 +262,7 @@ interface SettingsState {
   cjkFormatting: CJKFormattingSettings;
   markdown: MarkdownSettings;
   image: ImageSettings;
+  terminal: TerminalSettings;
   advanced: AdvancedSettingsState;
   update: UpdateSettings;
   // UI state
@@ -283,6 +289,10 @@ interface SettingsActions {
   updateImageSetting: <K extends keyof ImageSettings>(
     key: K,
     value: ImageSettings[K]
+  ) => void;
+  updateTerminalSetting: <K extends keyof TerminalSettings>(
+    key: K,
+    value: TerminalSettings[K]
   ) => void;
   updateAdvancedSetting: <K extends keyof AdvancedSettingsState>(
     key: K,
@@ -371,6 +381,10 @@ const initialState: SettingsState = {
     copyToAssets: true,
     cleanupOrphansOnClose: false, // Off by default - user must opt in
   },
+  terminal: {
+    fontSize: 13,
+    lineHeight: 1.4,
+  },
   advanced: {
     mcpServer: {
       port: 9223,
@@ -391,7 +405,7 @@ const initialState: SettingsState = {
 };
 
 // Object sections that can be updated with createSectionUpdater
-type ObjectSections = "general" | "appearance" | "cjkFormatting" | "markdown" | "image" | "advanced" | "update";
+type ObjectSections = "general" | "appearance" | "cjkFormatting" | "markdown" | "image" | "terminal" | "advanced" | "update";
 
 // Helper to create section updaters - reduces duplication
 const createSectionUpdater = <T extends ObjectSections>(
@@ -412,6 +426,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
       updateCJKFormattingSetting: createSectionUpdater(set, "cjkFormatting"),
       updateMarkdownSetting: createSectionUpdater(set, "markdown"),
       updateImageSetting: createSectionUpdater(set, "image"),
+      updateTerminalSetting: createSectionUpdater(set, "terminal"),
       updateAdvancedSetting: createSectionUpdater(set, "advanced"),
       updateUpdateSetting: createSectionUpdater(set, "update"),
 

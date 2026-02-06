@@ -79,6 +79,12 @@ export interface CursorInfo {
   block_anchor?: unknown; // Block-specific anchor (table/code block)
 }
 
+export interface TerminalSessionState {
+  id: string;
+  label: string;
+  buffer: string;
+}
+
 export interface UiState {
   sidebar_visible: boolean;
   sidebar_width: number;
@@ -88,6 +94,9 @@ export interface UiState {
   source_mode_enabled: boolean;
   focus_mode_enabled: boolean;
   typewriter_mode_enabled: boolean;
+  terminal_visible?: boolean;
+  terminal_height?: number;
+  terminal_sessions?: TerminalSessionState[];
 }
 
 export interface WindowGeometry {

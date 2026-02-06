@@ -242,6 +242,29 @@ Built-in Chinese/Japanese/Korean text formatting tools. [Learn more →](/guide/
 
 Find and remove orphaned images from your assets folder.
 
+## Integrated Terminal
+
+VMark includes a built-in terminal panel for running commands without leaving the editor.
+
+### Features
+
+- **Multiple sessions** — up to 5 terminal tabs, each with its own shell process
+- **Copy/paste** — `Mod + C` copies selection (or sends SIGINT), `Mod + V` pastes
+- **Clear/search** — `Mod + K` clears the terminal, `Mod + F` opens search
+- **Clickable paths** — file paths in terminal output open directly in the editor
+- **Clickable URLs** — web links open in your default browser
+- **Context menu** — right-click for Copy, Paste, Select All, Clear
+- **Auto-restart** — press any key to restart after the shell exits
+- **Theme sync** — terminal colors follow your VMark theme
+- **Unicode support** — full Unicode 11 rendering for CJK and emoji
+- **Shell environment** — sets `TERM_PROGRAM=vmark`, `EDITOR=vmark`, and `VMARK_WORKSPACE`
+- **Font customization** — configure terminal font size and line height in Settings
+- **Session persistence** — terminal visibility and height are restored on hot-exit restart
+
+### Toggle
+
+Press `` Ctrl + ` `` to show or hide the terminal panel.
+
 ## Auto-Update
 
 VMark automatically checks for updates and can download and install them in-app:
