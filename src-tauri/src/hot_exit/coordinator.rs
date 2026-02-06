@@ -4,8 +4,7 @@
 //! Supports multi-window restoration with pull-based state retrieval.
 
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, OnceLock};
-use tokio::sync::Mutex;
+use std::sync::{Arc, Mutex, OnceLock};
 use tokio::time::{timeout, Duration};
 use tauri::{AppHandle, Emitter, Listener, Manager};
 use serde::{Deserialize, Serialize};
@@ -53,7 +52,7 @@ pub fn get_pending_restore_state() -> Arc<Mutex<PendingRestoreState>> {
 /// Clear pending restore state
 pub async fn clear_pending_restore() {
     let pending = get_pending_restore_state();
-    let mut state = pending.lock().await;
+    let mut state = pending.lock().unwrap();
     state.clear();
 }
 
@@ -74,7 +73,7 @@ struct CaptureState {
 
 /// Capture session from all windows
 pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
-    // Get all document windows
+    // Get all document windows (main + doc-*)
     let windows: Vec<String> = app
         .webview_windows()
         .into_iter()
@@ -91,6 +90,8 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
         return Err("No document windows to capture".to_string());
     }
 
+    // Use std::sync::Mutex (not tokio::sync::Mutex) because the listener callback
+    // runs on the tokio runtime and blocking_lock() would panic
     let state = Arc::new(Mutex::new(CaptureState {
         expected_windows: windows.iter().cloned().collect(),
         responses: HashMap::new(),
@@ -101,7 +102,7 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
     let unlisten = app.listen(EVENT_CAPTURE_RESPONSE, move |event| {
         match serde_json::from_str::<CaptureResponse>(event.payload()) {
             Ok(mut response) => {
-                let mut state = state_clone.blocking_lock();
+                let mut state = state_clone.lock().unwrap();
 
                 // Only accept responses from expected windows
                 if !state.expected_windows.contains(&response.window_label) {
@@ -159,7 +160,7 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
     // Always unlisten after waiting
     app.unlisten(unlisten);
 
-    let final_state = state.lock().await;
+    let final_state = state.lock().unwrap();
 
     // Build session from collected responses, sorted deterministically
     let mut windows_vec: Vec<WindowState> = final_state.responses.values().cloned().collect();
@@ -203,7 +204,7 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
 async fn wait_for_all_responses(state: Arc<Mutex<CaptureState>>, expected: usize) {
     loop {
         {
-            let current = state.lock().await;
+            let current = state.lock().unwrap();
             if current.responses.len() >= expected {
                 break;
             }
@@ -244,7 +245,7 @@ async fn init_pending_restore_state(
     expected_labels: HashSet<String>,
 ) {
     let pending = get_pending_restore_state();
-    let mut state = pending.lock().await;
+    let mut state = pending.lock().unwrap();
     state.clear();
     state.expected_labels = expected_labels;
     for (label, window_state) in windows {
@@ -262,28 +263,40 @@ pub async fn restore_session(
 ) -> Result<(), String> {
     let session = prepare_session_for_restore(session)?;
 
-    // Validate main window exists BEFORE modifying state
-    let main_window = app
+    // Find the target window: prefer "main" label, fall back to first document window
+    let target_window = app
         .get_webview_window("main")
-        .ok_or("Main window not found")?;
+        .or_else(|| {
+            app.webview_windows()
+                .into_iter()
+                .find(|(label, _)| label.starts_with("doc-"))
+                .map(|(_, w)| w)
+        })
+        .ok_or("No document window found for restore")?;
+    let target_label = target_window.label().to_string();
 
-    // Find main window state only (single-window restore)
+    // Find main window state: prefer is_main_window, fall back to first window
     let main_state = session
         .windows
         .iter()
-        .find(|w| w.window_label == "main")
+        .find(|w| w.is_main_window)
+        .or_else(|| session.windows.first())
         .cloned()
-        .ok_or("No main window state in session")?;
+        .ok_or("No window state in session")?;
 
-    // Store only main window state for pull-based retrieval
-    let expected = std::iter::once("main".to_string()).collect();
+    // Store window state for pull-based retrieval (using actual target label)
+    let expected = std::iter::once(target_label.clone()).collect();
+    let state_with_correct_label = WindowState {
+        window_label: target_label.clone(),
+        ..main_state
+    };
     init_pending_restore_state(
-        std::iter::once(("main".to_string(), main_state)),
+        std::iter::once((target_label.clone(), state_with_correct_label)),
         expected,
     ).await;
 
-    // Emit restore signal to main window (signal only, state is pulled)
-    main_window
+    // Emit restore signal to target window (signal only, state is pulled)
+    target_window
         .emit(EVENT_RESTORE_START, ())
         .map_err(|e| format!("Failed to emit restore event: {}", e))?;
 
@@ -330,7 +343,7 @@ pub async fn restore_session_multi_window(
     let mut windows_created = Vec::new();
 
     {
-        let mut state = pending.lock().await;
+        let mut state = pending.lock().unwrap();
         state.clear();
 
         // Store main window state first
@@ -377,7 +390,7 @@ pub async fn restore_session_multi_window(
 /// Returns None if no state is pending for the given window.
 pub async fn get_window_restore_state(window_label: &str) -> Option<WindowState> {
     let pending = get_pending_restore_state();
-    let state = pending.lock().await;
+    let state = pending.lock().unwrap();
     state.window_states.get(window_label).cloned()
 }
 
@@ -387,7 +400,7 @@ pub async fn get_window_restore_state(window_label: &str) -> Option<WindowState>
 /// Only counts windows that were in the expected set.
 pub async fn mark_window_restore_complete(window_label: &str) -> bool {
     let pending = get_pending_restore_state();
-    let mut state = pending.lock().await;
+    let mut state = pending.lock().unwrap();
 
     // Only track completion for expected windows
     if state.expected_labels.contains(window_label) {

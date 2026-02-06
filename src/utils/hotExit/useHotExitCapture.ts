@@ -6,7 +6,7 @@
  */
 
 import { useEffect } from 'react';
-import { emit, listen } from '@tauri-apps/api/event';
+import { listen } from '@tauri-apps/api/event';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { useTabStore } from '@/stores/tabStore';
 import { useDocumentStore } from '@/stores/documentStore';
@@ -58,7 +58,11 @@ function toHotExitCheckpoint(checkpoint: StoreHistoryCheckpoint): HistoryCheckpo
 export function useHotExitCapture() {
   useEffect(() => {
     const unlistenPromise = listen(HOT_EXIT_EVENTS.CAPTURE_REQUEST, async () => {
-      const windowLabel = getCurrentWebviewWindow().label;
+      // Get current window inside callback to ensure it's available
+      const currentWindow = getCurrentWebviewWindow();
+      const windowLabel = currentWindow.label;
+      // Only the window with label "main" is the main window
+      // doc-* windows are secondary windows even if doc-0
       const isMainWindow = windowLabel === 'main';
 
       try {
@@ -68,9 +72,10 @@ export function useHotExitCapture() {
           state: windowState,
         };
 
-        // Emit response (with fallback error handling)
+        // Emit response using window.emit() to ensure it reaches Rust app.listen()
+        // (global emit() may not route to Rust properly in Tauri v2)
         try {
-          await emit(HOT_EXIT_EVENTS.CAPTURE_RESPONSE, response);
+          await currentWindow.emit(HOT_EXIT_EVENTS.CAPTURE_RESPONSE, response);
         } catch (emitError) {
           console.error('[HotExit] Failed to emit capture response:', emitError);
         }
@@ -91,8 +96,8 @@ export function useHotExitCapture() {
           state: fallbackState,
         };
 
-        // Best-effort emit for fallback
-        void emit(HOT_EXIT_EVENTS.CAPTURE_RESPONSE, response).catch((e) => {
+        // Best-effort emit for fallback using window.emit()
+        void currentWindow.emit(HOT_EXIT_EVENTS.CAPTURE_RESPONSE, response).catch((e) => {
           console.error('[HotExit] Failed to emit fallback response:', e);
         });
       }
