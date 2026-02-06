@@ -11,10 +11,12 @@
 
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
+import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
 import { runOrQueueProseMirrorAction } from "@/utils/imeGuard";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
+import { cleanMarkdownForClipboard } from "@/plugins/markdownCopy/tiptap";
 import type { AiSuggestion } from "./types";
 import { AI_SUGGESTION_EVENTS } from "./types";
 
@@ -49,26 +51,63 @@ const ICON_X = ["M18 6 6 18", "m6 6 12 12"];
 function createGhostText(text: string, isFocused: boolean): HTMLSpanElement {
   const span = document.createElement("span");
   span.className = `ai-suggestion-ghost${isFocused ? " ai-suggestion-ghost-focused" : ""}`;
-  span.textContent = text;
+  // Strip markdown backslash escapes (\$, \~, \@ …) and collapse autolinks
+  // so ghost text matches what the user will see after accepting.
+  span.textContent = cleanMarkdownForClipboard(text);
   return span;
 }
 
 /**
+ * Apply a suggestion's document change directly on the editor view.
+ * Bypasses the CustomEvent → handleAccept → runOrQueueProseMirrorAction chain
+ * for immediate response when clicking buttons.
+ */
+function applySuggestion(view: EditorView, suggestion: AiSuggestion): void {
+  const { state } = view;
+  switch (suggestion.type) {
+    case "insert": {
+      if (suggestion.newContent) {
+        const slice = createMarkdownPasteSlice(state, suggestion.newContent);
+        view.dispatch(state.tr.replaceRange(suggestion.from, suggestion.from, slice));
+      }
+      break;
+    }
+    case "replace": {
+      if (suggestion.newContent) {
+        const slice = createMarkdownPasteSlice(state, suggestion.newContent);
+        view.dispatch(state.tr.replaceRange(suggestion.from, suggestion.to, slice));
+      }
+      break;
+    }
+    case "delete": {
+      view.dispatch(state.tr.delete(suggestion.from, suggestion.to));
+      break;
+    }
+  }
+}
+
+/**
  * Create accept/reject buttons container.
+ * Buttons apply changes directly via the editor store — no CustomEvent
+ * indirection — for immediate visual response.
  */
 function createButtons(suggestion: AiSuggestion): HTMLSpanElement {
   const container = document.createElement("span");
   container.className = "ai-suggestion-buttons";
 
-  // Accept button with Check icon
+  // Use mousedown instead of click — ProseMirror's mousedown handler
+  // triggers state updates that rebuild widget decorations, so the button
+  // DOM is replaced before the click event fires.
   const acceptBtn = document.createElement("button");
   acceptBtn.className = "ai-suggestion-btn ai-suggestion-btn-accept";
   acceptBtn.title = "Accept (Enter)";
   acceptBtn.appendChild(createIcon(ICON_CHECK));
-  acceptBtn.onclick = (e) => {
+  acceptBtn.onmousedown = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    useAiSuggestionStore.getState().acceptSuggestion(suggestion.id);
+    const view = useTiptapEditorStore.getState().editor?.view;
+    if (view) applySuggestion(view, suggestion);
+    useAiSuggestionStore.getState().removeSuggestion(suggestion.id);
   };
 
   // Reject button with X icon
@@ -76,15 +115,24 @@ function createButtons(suggestion: AiSuggestion): HTMLSpanElement {
   rejectBtn.className = "ai-suggestion-btn ai-suggestion-btn-reject";
   rejectBtn.title = "Reject (Escape)";
   rejectBtn.appendChild(createIcon(ICON_X));
-  rejectBtn.onclick = (e) => {
+  rejectBtn.onmousedown = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    useAiSuggestionStore.getState().rejectSuggestion(suggestion.id);
+    useAiSuggestionStore.getState().removeSuggestion(suggestion.id);
   };
 
   container.appendChild(acceptBtn);
   container.appendChild(rejectBtn);
   return container;
+}
+
+/**
+ * Check if a DOM event targets a suggestion button.
+ * Used by widget decorations to tell ProseMirror not to handle button clicks.
+ */
+function isButtonEvent(event: Event): boolean {
+  const target = event.target as HTMLElement;
+  return target.closest(".ai-suggestion-btn") !== null;
 }
 
 /**
@@ -212,7 +260,7 @@ export const aiSuggestionExtension = Extension.create({
                       }
 
                       return container;
-                    }, { side: 0 })
+                    }, { side: 0, stopEvent: isButtonEvent })
                   );
                   break;
                 }
@@ -245,7 +293,7 @@ export const aiSuggestionExtension = Extension.create({
                       }
 
                       return container;
-                    }, { side: 0 })
+                    }, { side: 0, stopEvent: isButtonEvent })
                   );
                   break;
                 }
@@ -263,7 +311,7 @@ export const aiSuggestionExtension = Extension.create({
                   // Buttons for focused suggestion
                   if (isFocused) {
                     decorations.push(
-                      Decoration.widget(suggestion.to, () => createButtons(suggestion), { side: 0 })
+                      Decoration.widget(suggestion.to, () => createButtons(suggestion), { side: 0, stopEvent: isButtonEvent })
                     );
                   }
                   break;

@@ -30,6 +30,10 @@ interface AiSuggestionActions {
   /** Reject a suggestion by ID */
   rejectSuggestion: (id: string) => void;
 
+  /** Remove a suggestion without dispatching accept/reject events.
+   *  Used by button handlers that apply changes directly. */
+  removeSuggestion: (id: string) => void;
+
   /** Accept all pending suggestions */
   acceptAll: () => void;
 
@@ -145,6 +149,30 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
         newSuggestions.delete(id);
 
         // Update focus to next available suggestion
+        let newFocusedId: string | null = null;
+        if (state.focusedSuggestionId === id && newSuggestions.size > 0) {
+          const sorted = Array.from(newSuggestions.values()).sort(
+            (a, b) => a.from - b.from
+          );
+          newFocusedId = sorted[0]?.id ?? null;
+        } else if (state.focusedSuggestionId !== id) {
+          newFocusedId = state.focusedSuggestionId;
+        }
+
+        return {
+          suggestions: newSuggestions,
+          focusedSuggestionId: newFocusedId,
+        };
+      });
+    },
+
+    removeSuggestion: (id) => {
+      if (!get().suggestions.has(id)) return;
+
+      set((state) => {
+        const newSuggestions = new Map(state.suggestions);
+        newSuggestions.delete(id);
+
         let newFocusedId: string | null = null;
         if (state.focusedSuggestionId === id && newSuggestions.size > 0) {
           const sorted = Array.from(newSuggestions.values()).sort(
