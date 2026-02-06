@@ -74,7 +74,7 @@ export function useTerminalSessions(
     if (!activeId) return null;
     const entry = sessionsRef.current.get(activeId);
     if (!entry) return null;
-    return { term: entry.instance.term, pty: entry.pty };
+    return { term: entry.instance.term, ptyRef: entry.ptyRefForKeys };
   }, []);
 
   /** Spawn shell for a session entry. */
@@ -113,6 +113,14 @@ export function useTerminalSessions(
       }
       currentEntry.pty = pty;
       currentEntry.spawnedCwd = cwd;
+
+      // If workspace changed while spawning, cd to the current root
+      const currentRoot = useWorkspaceStore.getState().rootPath;
+      if (currentRoot && currentRoot !== cwd) {
+        const escaped = currentRoot.replace(/'/g, "'\\''");
+        pty.write(`\x15cd '${escaped}'\n`);
+        currentEntry.spawnedCwd = currentRoot;
+      }
     } catch (err) {
       const e = sessionsRef.current.get(sessionId);
       if (e && !e.disposed) {
@@ -223,7 +231,12 @@ export function useTerminalSessions(
   /** Show active session container, hide others. */
   const switchVisibility = useCallback((activeId: string | null) => {
     for (const [id, entry] of sessionsRef.current) {
-      entry.instance.container.style.display = id === activeId ? "block" : "none";
+      if (id === activeId) {
+        entry.instance.container.style.display = "block";
+      } else {
+        entry.instance.container.style.display = "none";
+        entry.instance.searchAddon.clearDecorations();
+      }
     }
     if (activeId) {
       const entry = sessionsRef.current.get(activeId);
@@ -290,14 +303,6 @@ export function useTerminalSessions(
       for (const id of prevSessionIds) {
         if (!currentIds.has(id)) {
           removeSessionEntry(id);
-        }
-      }
-
-      // Ensure at least one session exists while initialized
-      if (currentIds.size === 0) {
-        const newSession = useTerminalSessionStore.getState().createSession();
-        if (newSession) {
-          createSession(newSession.id);
         }
       }
 

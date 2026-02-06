@@ -31,6 +31,16 @@ export function TerminalPanel() {
   const { fit, getActiveTerminal, getActiveSearchAddon, restartActiveSession } =
     useTerminalSessions(activated ? containerRef : NULL_REF, { onSearch });
 
+  // Create a session when terminal becomes visible with none existing
+  // (e.g., user closed all tabs then re-opened the panel)
+  useEffect(() => {
+    if (!visible) return;
+    const store = useTerminalSessionStore.getState();
+    if (store.sessions.length === 0) {
+      store.createSession();
+    }
+  }, [visible]);
+
   // Refit when shown or resized
   useEffect(() => {
     if (!visible) return;
@@ -102,7 +112,7 @@ export function TerminalPanel() {
         <TerminalContextMenu
           position={contextMenu}
           term={active.term}
-          ptyRef={{ current: active.pty }}
+          ptyRef={active.ptyRef}
           onClose={closeContextMenu}
         />
       )}
