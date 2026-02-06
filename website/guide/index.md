@@ -17,6 +17,7 @@ VMark is a local-first Markdown editor with dual editing modes, rich formatting 
 - **Sidebar**: File tree navigation (toggle with `Cmd/Ctrl + Shift + B`)
 - **Outline**: Document structure view (toggle with `Cmd/Ctrl + Alt + 1`)
 - **Status Bar**: Word count, character count, and auto-save status (toggle with `F7`)
+- **Terminal**: Integrated shell panel (toggle with `` Ctrl + ` ``)
 
 ### Menu Bar
 
@@ -94,6 +95,7 @@ Open settings with `Cmd/Ctrl + ,` to customize:
 - **Appearance**: Theme, fonts, font size, line height
 - **Editor**: Auto-save interval, default behaviors
 - **Markdown**: Export options, formatting preferences
+- **Terminal**: Terminal font size and line height
 - **Shortcuts**: Customize keyboard shortcuts
 
 ## Tips for Getting Started
