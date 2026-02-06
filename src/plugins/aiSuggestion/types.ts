@@ -11,13 +11,11 @@ export type SuggestionType = "insert" | "replace" | "delete";
  * Use these constants instead of magic strings.
  */
 export const AI_SUGGESTION_EVENTS = {
-  ADDED: "ai-suggestion:added",
   ACCEPT: "ai-suggestion:accept",
   REJECT: "ai-suggestion:reject",
   ACCEPT_ALL: "ai-suggestion:accept-all",
   REJECT_ALL: "ai-suggestion:reject-all",
   FOCUS_CHANGED: "ai-suggestion:focus-changed",
-  CLEARED: "ai-suggestion:cleared",
 } as const;
 
 export interface AiSuggestion {

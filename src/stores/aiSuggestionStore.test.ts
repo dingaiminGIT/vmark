@@ -86,17 +86,6 @@ describe("aiSuggestionStore", () => {
       expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id);
     });
 
-    it("dispatches ai-suggestion:added event", () => {
-      const handler = vi.fn();
-      window.addEventListener(AI_SUGGESTION_EVENTS.ADDED, handler);
-
-      const { addSuggestion } = useAiSuggestionStore.getState();
-      addSuggestion({ type: "insert", from: 0, to: 5 });
-
-      expect(handler).toHaveBeenCalledTimes(1);
-
-      window.removeEventListener(AI_SUGGESTION_EVENTS.ADDED, handler);
-    });
   });
 
   describe("acceptSuggestion", () => {
@@ -157,6 +146,88 @@ describe("aiSuggestionStore", () => {
       expect(handler).toHaveBeenCalledTimes(1);
 
       window.removeEventListener(AI_SUGGESTION_EVENTS.REJECT, handler);
+    });
+  });
+
+  describe("removeSuggestion", () => {
+    it("removes suggestion from store", () => {
+      const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
+
+      const id = addSuggestion({ type: "insert", from: 0, to: 5 });
+      expect(useAiSuggestionStore.getState().suggestions.size).toBe(1);
+
+      removeSuggestion(id);
+      expect(useAiSuggestionStore.getState().suggestions.size).toBe(0);
+    });
+
+    it("updates focus when removing focused suggestion", () => {
+      const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
+
+      const id1 = addSuggestion({ type: "insert", from: 0, to: 5 });
+      const id2 = addSuggestion({ type: "insert", from: 10, to: 15 });
+
+      expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id1);
+
+      removeSuggestion(id1);
+      expect(useAiSuggestionStore.getState().focusedSuggestionId).toBe(id2);
+    });
+
+    it("is a no-op for missing id", () => {
+      const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
+
+      addSuggestion({ type: "insert", from: 0, to: 5 });
+      removeSuggestion("nonexistent-id");
+
+      expect(useAiSuggestionStore.getState().suggestions.size).toBe(1);
+    });
+
+    it("does not dispatch accept or reject events", () => {
+      const acceptHandler = vi.fn();
+      const rejectHandler = vi.fn();
+      window.addEventListener(AI_SUGGESTION_EVENTS.ACCEPT, acceptHandler);
+      window.addEventListener(AI_SUGGESTION_EVENTS.REJECT, rejectHandler);
+
+      const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
+      const id = addSuggestion({ type: "insert", from: 0, to: 5 });
+      removeSuggestion(id);
+
+      expect(acceptHandler).not.toHaveBeenCalled();
+      expect(rejectHandler).not.toHaveBeenCalled();
+
+      window.removeEventListener(AI_SUGGESTION_EVENTS.ACCEPT, acceptHandler);
+      window.removeEventListener(AI_SUGGESTION_EVENTS.REJECT, rejectHandler);
+    });
+
+    it("dispatches focus-changed event when focus auto-advances", () => {
+      const handler = vi.fn();
+      window.addEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handler);
+
+      const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
+      const id1 = addSuggestion({ type: "insert", from: 0, to: 5 });
+      addSuggestion({ type: "insert", from: 10, to: 15 });
+
+      handler.mockClear();
+      removeSuggestion(id1);
+
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      window.removeEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handler);
+    });
+
+    it("does not dispatch focus-changed when no focus advance needed", () => {
+      const handler = vi.fn();
+      window.addEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handler);
+
+      const { addSuggestion, removeSuggestion } = useAiSuggestionStore.getState();
+      const id = addSuggestion({ type: "insert", from: 0, to: 5 });
+
+      handler.mockClear();
+      removeSuggestion(id);
+
+      // Last suggestion removed — focus becomes null, no event
+      expect(handler).not.toHaveBeenCalled();
+
+      window.removeEventListener(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, handler);
     });
   });
 

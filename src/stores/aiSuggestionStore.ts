@@ -70,6 +70,30 @@ function generateSuggestionId(): string {
   return `ai-suggestion-${++suggestionCounter}-${Date.now()}`;
 }
 
+/**
+ * Delete a suggestion and update focus to the next available.
+ * Shared by acceptSuggestion, rejectSuggestion, and removeSuggestion.
+ */
+function deleteAndUpdateFocus(state: AiSuggestionState, id: string): AiSuggestionState {
+  const newSuggestions = new Map(state.suggestions);
+  newSuggestions.delete(id);
+
+  let newFocusedId: string | null = null;
+  if (state.focusedSuggestionId === id && newSuggestions.size > 0) {
+    const sorted = Array.from(newSuggestions.values()).sort(
+      (a, b) => a.from - b.from
+    );
+    newFocusedId = sorted[0]?.id ?? null;
+  } else if (state.focusedSuggestionId !== id) {
+    newFocusedId = state.focusedSuggestionId;
+  }
+
+  return {
+    suggestions: newSuggestions,
+    focusedSuggestionId: newFocusedId,
+  };
+}
+
 export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActions>(
   (set, get) => ({
     ...initialState,
@@ -96,11 +120,6 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
         };
       });
 
-      // Dispatch event for plugin to create decorations
-      window.dispatchEvent(
-        new CustomEvent(AI_SUGGESTION_EVENTS.ADDED, { detail: { id, suggestion } })
-      );
-
       return id;
     },
 
@@ -113,26 +132,7 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
         new CustomEvent(AI_SUGGESTION_EVENTS.ACCEPT, { detail: { id, suggestion } })
       );
 
-      set((state) => {
-        const newSuggestions = new Map(state.suggestions);
-        newSuggestions.delete(id);
-
-        // Update focus to next available suggestion
-        let newFocusedId: string | null = null;
-        if (state.focusedSuggestionId === id && newSuggestions.size > 0) {
-          const sorted = Array.from(newSuggestions.values()).sort(
-            (a, b) => a.from - b.from
-          );
-          newFocusedId = sorted[0]?.id ?? null;
-        } else if (state.focusedSuggestionId !== id) {
-          newFocusedId = state.focusedSuggestionId;
-        }
-
-        return {
-          suggestions: newSuggestions,
-          focusedSuggestionId: newFocusedId,
-        };
-      });
+      set((state) => deleteAndUpdateFocus(state, id));
     },
 
     rejectSuggestion: (id) => {
@@ -144,50 +144,19 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
         new CustomEvent(AI_SUGGESTION_EVENTS.REJECT, { detail: { id, suggestion } })
       );
 
-      set((state) => {
-        const newSuggestions = new Map(state.suggestions);
-        newSuggestions.delete(id);
-
-        // Update focus to next available suggestion
-        let newFocusedId: string | null = null;
-        if (state.focusedSuggestionId === id && newSuggestions.size > 0) {
-          const sorted = Array.from(newSuggestions.values()).sort(
-            (a, b) => a.from - b.from
-          );
-          newFocusedId = sorted[0]?.id ?? null;
-        } else if (state.focusedSuggestionId !== id) {
-          newFocusedId = state.focusedSuggestionId;
-        }
-
-        return {
-          suggestions: newSuggestions,
-          focusedSuggestionId: newFocusedId,
-        };
-      });
+      set((state) => deleteAndUpdateFocus(state, id));
     },
 
     removeSuggestion: (id) => {
       if (!get().suggestions.has(id)) return;
-
-      set((state) => {
-        const newSuggestions = new Map(state.suggestions);
-        newSuggestions.delete(id);
-
-        let newFocusedId: string | null = null;
-        if (state.focusedSuggestionId === id && newSuggestions.size > 0) {
-          const sorted = Array.from(newSuggestions.values()).sort(
-            (a, b) => a.from - b.from
-          );
-          newFocusedId = sorted[0]?.id ?? null;
-        } else if (state.focusedSuggestionId !== id) {
-          newFocusedId = state.focusedSuggestionId;
-        }
-
-        return {
-          suggestions: newSuggestions,
-          focusedSuggestionId: newFocusedId,
-        };
-      });
+      const oldFocusedId = get().focusedSuggestionId;
+      set((state) => deleteAndUpdateFocus(state, id));
+      const newFocusedId = get().focusedSuggestionId;
+      if (newFocusedId && newFocusedId !== oldFocusedId) {
+        window.dispatchEvent(
+          new CustomEvent(AI_SUGGESTION_EVENTS.FOCUS_CHANGED, { detail: { id: newFocusedId } })
+        );
+      }
     },
 
     acceptAll: () => {
@@ -271,7 +240,6 @@ export const useAiSuggestionStore = create<AiSuggestionState & AiSuggestionActio
 
     clearAll: () => {
       set({ suggestions: new Map(), focusedSuggestionId: null });
-      window.dispatchEvent(new CustomEvent(AI_SUGGESTION_EVENTS.CLEARED));
     },
   })
 );
