@@ -286,6 +286,14 @@ export function useTerminalSessions(
         }
       }
 
+      // Ensure at least one session exists while initialized
+      if (currentIds.size === 0) {
+        const newSession = useTerminalSessionStore.getState().createSession();
+        if (newSession) {
+          createSession(newSession.id);
+        }
+      }
+
       // Detect active session change
       if (storeState.activeSessionId !== prevActiveId) {
         switchVisibility(storeState.activeSessionId);
