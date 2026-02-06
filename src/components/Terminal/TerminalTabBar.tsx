@@ -34,7 +34,7 @@ export function TerminalTabBar({ onClose, onRestart }: TerminalTabBarProps) {
         {sessions.map((s) => (
           <button
             key={s.id}
-            className={`terminal-tab ${s.id === activeId ? "terminal-tab-active" : ""}`}
+            className={`terminal-tab ${s.id === activeId ? "terminal-tab-active" : ""} ${!s.isAlive ? "terminal-tab-dead" : ""}`}
             onClick={() => handleSwitch(s.id)}
             title={s.label}
           >
