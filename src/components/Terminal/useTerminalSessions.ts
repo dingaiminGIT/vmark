@@ -6,13 +6,16 @@ import {
   createTerminalInstance,
   type TerminalInstance,
 } from "./createTerminalInstance";
-import { spawnPty } from "./spawnPty";
+import { spawnPty, resolveTerminalCwd } from "./spawnPty";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 import type { SearchAddon } from "@xterm/addon-search";
 
 interface SessionEntry {
   instance: TerminalInstance;
   pty: IPty | null;
   ptyRefForKeys: React.RefObject<IPty | null>;
+  spawnedCwd: string | undefined;
+  shellStarted: boolean;
   shellExited: boolean;
   disposed: boolean;
 }
@@ -71,7 +74,7 @@ export function useTerminalSessions(
     if (!activeId) return null;
     const entry = sessionsRef.current.get(activeId);
     if (!entry) return null;
-    return { term: entry.instance.term, pty: entry.pty };
+    return { term: entry.instance.term, ptyRef: entry.ptyRefForKeys };
   }, []);
 
   /** Spawn shell for a session entry. */
@@ -80,6 +83,7 @@ export function useTerminalSessions(
     if (!entry || entry.disposed) return;
 
     entry.shellExited = false;
+    const cwd = resolveTerminalCwd();
 
     try {
       const pty = await spawnPty({
@@ -108,6 +112,15 @@ export function useTerminalSessions(
         return;
       }
       currentEntry.pty = pty;
+      currentEntry.spawnedCwd = cwd;
+
+      // If workspace changed while spawning, cd to the current root
+      const currentRoot = useWorkspaceStore.getState().rootPath;
+      if (currentRoot && currentRoot !== cwd) {
+        const escaped = currentRoot.replace(/'/g, "'\\''");
+        pty.write(`\x15cd '${escaped}'\n`);
+        currentEntry.spawnedCwd = currentRoot;
+      }
     } catch (err) {
       const e = sessionsRef.current.get(sessionId);
       if (e && !e.disposed) {
@@ -153,7 +166,7 @@ export function useTerminalSessions(
 
       const termSettings = useSettingsStore.getState().terminal;
       const fontSize = termSettings?.fontSize ?? 13;
-      const lineHeight = termSettings?.lineHeight ?? 1.4;
+      const lineHeight = termSettings?.lineHeight ?? 1.2;
 
       // Create a shared ptyRef that we'll update as the pty changes
       const ptyRefForKeys: React.RefObject<IPty | null> = { current: null };
@@ -169,6 +182,8 @@ export function useTerminalSessions(
         instance,
         pty: null,
         ptyRefForKeys,
+        spawnedCwd: undefined,
+        shellStarted: false,
         shellExited: false,
         disposed: false,
       };
@@ -193,11 +208,10 @@ export function useTerminalSessions(
         }
       });
 
-      // Start shell
-      startShell(sessionId).then(() => {
-        const e = sessionsRef.current.get(sessionId);
-        if (e) ptyRefForKeys.current = e.pty;
-      });
+      // Shell is spawned lazily by switchVisibility after the container
+      // is visible and fitAddon has measured the real dimensions.
+      // This avoids spawning at 80×24 defaults while hidden, which
+      // causes blank lines when the terminal is later resized.
     },
     [containerRef, startShell],
   );
@@ -217,7 +231,12 @@ export function useTerminalSessions(
   /** Show active session container, hide others. */
   const switchVisibility = useCallback((activeId: string | null) => {
     for (const [id, entry] of sessionsRef.current) {
-      entry.instance.container.style.display = id === activeId ? "block" : "none";
+      if (id === activeId) {
+        entry.instance.container.style.display = "block";
+      } else {
+        entry.instance.container.style.display = "none";
+        entry.instance.searchAddon.clearDecorations();
+      }
     }
     if (activeId) {
       const entry = sessionsRef.current.get(activeId);
@@ -227,10 +246,20 @@ export function useTerminalSessions(
             entry.instance.fitAddon.fit();
             entry.instance.term.focus();
           } catch { /* ignore */ }
+
+          // Start shell after first fit so PTY gets the real dimensions
+          // instead of 80×24 defaults from a hidden container
+          if (!entry.shellStarted && !entry.shellExited && !entry.disposed) {
+            entry.shellStarted = true;
+            startShell(activeId).then(() => {
+              const e = sessionsRef.current.get(activeId);
+              if (e) e.ptyRefForKeys.current = e.pty;
+            });
+          }
         });
       }
     }
-  }, []);
+  }, [startShell]);
 
   // Initialize on mount — subscribe to store changes
   useEffect(() => {
@@ -277,14 +306,6 @@ export function useTerminalSessions(
         }
       }
 
-      // Ensure at least one session exists while initialized
-      if (currentIds.size === 0) {
-        const newSession = useTerminalSessionStore.getState().createSession();
-        if (newSession) {
-          createSession(newSession.id);
-        }
-      }
-
       // Detect active session change
       if (storeState.activeSessionId !== prevActiveId) {
         switchVisibility(storeState.activeSessionId);
@@ -326,6 +347,28 @@ export function useTerminalSessions(
       };
       for (const [, entry] of sessionsRef.current) {
         entry.instance.term.options.theme = newTheme;
+      }
+    });
+  }, []);
+
+  // cd running sessions when workspace root changes
+  useEffect(() => {
+    let prevRoot = useWorkspaceStore.getState().rootPath;
+    return useWorkspaceStore.subscribe((state) => {
+      const newRoot = state.rootPath;
+      if (!newRoot || newRoot === prevRoot) {
+        prevRoot = newRoot;
+        return;
+      }
+      prevRoot = newRoot;
+
+      const escaped = newRoot.replace(/'/g, "'\\''");
+      for (const [, entry] of sessionsRef.current) {
+        if (entry.pty && !entry.shellExited && entry.spawnedCwd !== newRoot) {
+          // Ctrl+U clears any partial input, then cd to new workspace
+          entry.pty.write(`\x15cd '${escaped}'\n`);
+          entry.spawnedCwd = newRoot;
+        }
       }
     });
   }, []);

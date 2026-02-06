@@ -390,7 +390,7 @@ const initialState: SettingsState = {
   },
   terminal: {
     fontSize: 13,
-    lineHeight: 1.4,
+    lineHeight: 1.2,
     copyOnSelect: true,
   },
   advanced: {

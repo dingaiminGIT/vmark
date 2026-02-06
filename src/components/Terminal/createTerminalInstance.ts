@@ -76,6 +76,7 @@ export function createTerminalInstance(options: CreateOptions): TerminalInstance
     fontFamily: resolveMonoFont(),
     fontSize: settings.fontSize,
     lineHeight: settings.lineHeight,
+    cursorStyle: "underline",
     cursorBlink: true,
     allowProposedApi: true,
     scrollback: 5000,

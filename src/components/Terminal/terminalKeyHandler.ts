@@ -1,6 +1,7 @@
 import type { IPty } from "tauri-pty";
 import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { Terminal } from "@xterm/xterm";
+import { useTerminalSessionStore } from "@/stores/terminalSessionStore";
 
 export interface KeyHandlerCallbacks {
   onSearch: () => void;
@@ -8,7 +9,8 @@ export interface KeyHandlerCallbacks {
 
 /**
  * Create a custom key event handler for the terminal.
- * Handles Cmd+C (copy/SIGINT), Cmd+V (paste), Cmd+K (clear), Cmd+F (search).
+ * Handles Cmd+C (copy/SIGINT), Cmd+V (paste), Cmd+K (clear), Cmd+F (search),
+ * Cmd+1-5 (switch tab).
  * Returns a handler for `term.attachCustomKeyEventHandler()`.
  */
 export function createTerminalKeyHandler(
@@ -45,6 +47,14 @@ export function createTerminalKeyHandler(
       }
       case "f": {
         callbacks.onSearch();
+        return false;
+      }
+      case "1": case "2": case "3": case "4": case "5": {
+        const idx = parseInt(event.key, 10) - 1;
+        const { sessions, setActiveSession } = useTerminalSessionStore.getState();
+        if (idx < sessions.length) {
+          setActiveSession(sessions[idx].id);
+        }
         return false;
       }
       default:

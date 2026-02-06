@@ -49,6 +49,15 @@
   background: var(--accent-bg);
 }
 
+.terminal-tab-dead {
+  color: var(--error-color);
+  opacity: 0.6;
+}
+
+.terminal-tab-dead.terminal-tab-active {
+  opacity: 1;
+}
+
 .terminal-tab-bar-actions {
   display: flex;
   flex-direction: column;

@@ -71,6 +71,8 @@ VMark sets these environment variables in every terminal session:
 
 The shell is read from `$SHELL` (falls back to `/bin/sh`). The working directory starts at the workspace root, or the active file's parent directory, or `$HOME`.
 
+When you open a workspace or file after the terminal is already running, all sessions automatically `cd` to the new workspace root.
+
 ## Settings
 
 Open **Settings → Terminal** to configure:

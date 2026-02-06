@@ -37,7 +37,7 @@
 .terminal-container {
   width: 100%;
   height: 100%;
-  padding: var(--spacing-1) 1em 0 1em;
+  padding: var(--spacing-1) 0 0 2em;
 }
 
 /* Override xterm scrollbar to match app style */
