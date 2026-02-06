@@ -79,6 +79,7 @@ Open **Settings → Terminal** to configure:
 |---------|-------|---------|
 | Font Size | 10 – 24 px | 13 px |
 | Line Height | 1.0 – 2.0 | 1.4 |
+| Copy on Select | On / Off | On |
 
 Changes apply immediately to all open sessions.
 

@@ -5,6 +5,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { SearchAddon } from "@xterm/addon-search";
 import { SerializeAddon } from "@xterm/addon-serialize";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useSettingsStore, themes } from "@/stores/settingsStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -131,6 +132,13 @@ export function createTerminalInstance(options: CreateOptions): TerminalInstance
   term.attachCustomKeyEventHandler(
     createTerminalKeyHandler(term, ptyRef, { onSearch }),
   );
+
+  // Copy on select
+  term.onSelectionChange(() => {
+    if (term.hasSelection() && useSettingsStore.getState().terminal.copyOnSelect) {
+      writeText(term.getSelection());
+    }
+  });
 
   const dispose = () => {
     term.dispose();

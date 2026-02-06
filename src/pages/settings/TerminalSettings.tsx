@@ -5,7 +5,7 @@
  */
 
 import { useSettingsStore } from "@/stores/settingsStore";
-import { SettingRow, SettingsGroup, Select } from "./components";
+import { SettingRow, SettingsGroup, Select, Toggle } from "./components";
 
 const fontSizeOptions = [
   { value: "10", label: "10px" },
@@ -48,6 +48,13 @@ export function TerminalSettings() {
             value={String(terminal.lineHeight)}
             options={lineHeightOptions}
             onChange={(v) => updateTerminalSetting("lineHeight", Number(v))}
+          />
+        </SettingRow>
+
+        <SettingRow label="Copy on Select" description="Automatically copy selected text to clipboard">
+          <Toggle
+            checked={terminal.copyOnSelect}
+            onChange={(v) => updateTerminalSetting("copyOnSelect", v)}
           />
         </SettingRow>
       </SettingsGroup>
