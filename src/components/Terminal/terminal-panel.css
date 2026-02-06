@@ -9,7 +9,7 @@
 }
 
 .terminal-resize-handle {
-  height: 4px;
+  height: var(--spacing-1);
   background: transparent;
   cursor: row-resize;
   transition: background 0.15s;
@@ -20,22 +20,29 @@
   background: var(--border-color);
 }
 
+.terminal-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .terminal-sessions-container {
   position: relative;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
 }
 
 .terminal-container {
   width: 100%;
   height: 100%;
-  padding: 4px 0 0 8px;
+  padding: var(--spacing-1) 0 0 var(--spacing-2);
 }
 
 /* Override xterm scrollbar to match app style */
 .terminal-container .xterm-viewport::-webkit-scrollbar {
-  width: 4px;
+  width: var(--spacing-1);
 }
 
 .terminal-container .xterm-viewport::-webkit-scrollbar-track {

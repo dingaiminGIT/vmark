@@ -7,24 +7,25 @@ import {
 } from "@/stores/terminalSessionStore";
 
 describe("TerminalTabBar", () => {
-  let onClear: () => void;
+  let onClose: () => void;
   let onRestart: () => void;
 
   beforeEach(() => {
     vi.clearAllMocks();
     resetTerminalSessionStore();
-    onClear = vi.fn<() => void>();
+    onClose = vi.fn<() => void>();
     onRestart = vi.fn<() => void>();
   });
 
   function renderWithSession() {
     useTerminalSessionStore.getState().createSession();
-    return render(<TerminalTabBar onClear={onClear} onRestart={onRestart} />);
+    return render(<TerminalTabBar onClose={onClose} onRestart={onRestart} />);
   }
 
-  it("renders session tab", () => {
+  it("renders session tab with number", () => {
     renderWithSession();
-    expect(screen.getByText("Terminal 1")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByTitle("Terminal 1")).toBeInTheDocument();
   });
 
   it("creates a new session on + click", () => {
@@ -38,9 +39,9 @@ describe("TerminalTabBar", () => {
     useTerminalSessionStore.getState().createSession();
     useTerminalSessionStore.getState().createSession();
 
-    render(<TerminalTabBar onClear={onClear} onRestart={onRestart} />);
+    render(<TerminalTabBar onClose={onClose} onRestart={onRestart} />);
 
-    const tab1 = screen.getByText("Terminal 1");
+    const tab1 = screen.getByTitle("Terminal 1");
     fireEvent.click(tab1);
     expect(useTerminalSessionStore.getState().activeSessionId).toBe(
       useTerminalSessionStore.getState().sessions[0].id,
@@ -51,16 +52,16 @@ describe("TerminalTabBar", () => {
     for (let i = 0; i < 5; i++) {
       useTerminalSessionStore.getState().createSession();
     }
-    render(<TerminalTabBar onClear={onClear} onRestart={onRestart} />);
+    render(<TerminalTabBar onClose={onClose} onRestart={onRestart} />);
 
     const addBtn = screen.getByTitle("Maximum 5 sessions");
     expect(addBtn).toBeDisabled();
   });
 
-  it("calls onClear and onRestart", () => {
+  it("calls onClose and onRestart", () => {
     renderWithSession();
-    fireEvent.click(screen.getByTitle("Clear"));
-    expect(onClear).toHaveBeenCalled();
+    fireEvent.click(screen.getByTitle("Close"));
+    expect(onClose).toHaveBeenCalled();
     fireEvent.click(screen.getByTitle("Restart"));
     expect(onRestart).toHaveBeenCalled();
   });

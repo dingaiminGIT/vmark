@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback, type RefObject } from "react";
 import { useUIStore } from "@/stores/uiStore";
+import { useTerminalSessionStore } from "@/stores/terminalSessionStore";
 import { useTerminalSessions } from "./useTerminalSessions";
 import { useTerminalResize } from "./useTerminalResize";
 import { TerminalTabBar } from "./TerminalTabBar";
@@ -27,10 +28,8 @@ export function TerminalPanel() {
     setSearchVisible((v) => !v);
   }, []);
 
-  const { fit, getActiveTerminal, getActiveSearchAddon } = useTerminalSessions(
-    activated ? containerRef : NULL_REF,
-    { onSearch },
-  );
+  const { fit, getActiveTerminal, getActiveSearchAddon, restartActiveSession } =
+    useTerminalSessions(activated ? containerRef : NULL_REF, { onSearch });
 
   // Refit when shown or resized
   useEffect(() => {
@@ -55,18 +54,21 @@ export function TerminalPanel() {
   }, []);
 
   // Tab bar actions
-  const handleClear = useCallback(() => {
-    const active = getActiveTerminal();
-    if (active) active.term.clear();
-  }, [getActiveTerminal]);
+  const handleClose = useCallback(() => {
+    const activeId = useTerminalSessionStore.getState().activeSessionId;
+    if (!activeId) return;
+
+    useTerminalSessionStore.getState().removeSession(activeId);
+
+    // If no sessions remain, hide the terminal panel
+    if (useTerminalSessionStore.getState().sessions.length === 0) {
+      useUIStore.getState().toggleTerminal();
+    }
+  }, []);
 
   const handleRestart = useCallback(() => {
-    // Send SIGTERM-like reset — write exit to the PTY
-    const active = getActiveTerminal();
-    if (active?.pty) {
-      active.pty.write("exit\n");
-    }
-  }, [getActiveTerminal]);
+    restartActiveSession();
+  }, [restartActiveSession]);
 
   // Not yet activated — render nothing
   if (!activated) return null;
@@ -79,19 +81,21 @@ export function TerminalPanel() {
       style={{ height, display: visible ? "flex" : "none" }}
     >
       <div className="terminal-resize-handle" onMouseDown={handleResize} />
-      <TerminalTabBar onClear={handleClear} onRestart={handleRestart} />
-      <div className="terminal-sessions-container">
-        <div
-          ref={containerRef}
-          className="terminal-container"
-          onContextMenu={handleContextMenu}
-        />
-        {searchVisible && (
-          <TerminalSearchBar
-            getSearchAddon={getActiveSearchAddon}
-            onClose={() => setSearchVisible(false)}
+      <div className="terminal-body">
+        <div className="terminal-sessions-container">
+          <div
+            ref={containerRef}
+            className="terminal-container"
+            onContextMenu={handleContextMenu}
           />
-        )}
+          {searchVisible && (
+            <TerminalSearchBar
+              getSearchAddon={getActiveSearchAddon}
+              onClose={() => setSearchVisible(false)}
+            />
+          )}
+        </div>
+        <TerminalTabBar onClose={handleClose} onRestart={handleRestart} />
       </div>
       {contextMenu && active && (
         <TerminalContextMenu

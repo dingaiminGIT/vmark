@@ -13,6 +13,7 @@ import type { SerializeAddon } from "@xterm/addon-serialize";
 interface SessionEntry {
   instance: TerminalInstance;
   pty: IPty | null;
+  ptyRefForKeys: React.RefObject<IPty | null>;
   shellExited: boolean;
   disposed: boolean;
 }
@@ -32,6 +33,12 @@ export function useTerminalSessions(
 ) {
   const sessionsRef = useRef<Map<string, SessionEntry>>(new Map());
   const initializedRef = useRef(false);
+
+  // Store callbacks in a ref to avoid recreating createSession on every render.
+  // The callbacks object is a new literal each render, but the individual
+  // functions (onSearch) are stable useCallbacks from the parent.
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
 
   // Fit the active terminal
   const fit = useCallback(() => {
@@ -120,11 +127,38 @@ export function useTerminalSessions(
     }
   }, []);
 
+  /** Kill current PTY, clear terminal, respawn shell for the active session. */
+  const restartActiveSession = useCallback(() => {
+    const activeId = useTerminalSessionStore.getState().activeSessionId;
+    if (!activeId) return;
+    const entry = sessionsRef.current.get(activeId);
+    if (!entry || entry.disposed) return;
+
+    // Kill current PTY
+    if (entry.pty) {
+      try { entry.pty.kill(); } catch { /* ignore */ }
+      entry.pty = null;
+      entry.ptyRefForKeys.current = null;
+    }
+
+    entry.shellExited = false;
+    entry.instance.term.clear();
+    entry.instance.term.write("\r\nRestarting shell...\r\n");
+
+    startShell(activeId).then(() => {
+      const e = sessionsRef.current.get(activeId);
+      if (e) e.ptyRefForKeys.current = e.pty;
+    });
+  }, [startShell]);
+
   /** Create a new session with xterm + PTY. */
   const createSession = useCallback(
     (sessionId: string) => {
       const parent = containerRef.current;
       if (!parent) return;
+
+      // Skip if already exists (guard against double-init)
+      if (sessionsRef.current.has(sessionId)) return;
 
       const termSettings = useSettingsStore.getState().terminal;
       const fontSize = termSettings?.fontSize ?? 13;
@@ -137,12 +171,13 @@ export function useTerminalSessions(
         parentEl: parent,
         settings: { fontSize, lineHeight },
         ptyRef: ptyRefForKeys,
-        onSearch: () => callbacks?.onSearch?.(),
+        onSearch: () => callbacksRef.current?.onSearch?.(),
       });
 
       const entry: SessionEntry = {
         instance,
         pty: null,
+        ptyRefForKeys,
         shellExited: false,
         disposed: false,
       };
@@ -173,7 +208,7 @@ export function useTerminalSessions(
         if (e) ptyRefForKeys.current = e.pty;
       });
     },
-    [containerRef, callbacks, startShell],
+    [containerRef, startShell],
   );
 
   /** Remove a session — kill PTY and dispose instance. */
@@ -211,11 +246,21 @@ export function useTerminalSessions(
     if (!containerRef.current || initializedRef.current) return;
     initializedRef.current = true;
 
-    // Create first session
-    const session = useTerminalSessionStore.getState().createSession();
-    if (session) {
-      createSession(session.id);
-      switchVisibility(session.id);
+    const state = useTerminalSessionStore.getState();
+
+    if (state.sessions.length === 0) {
+      // First launch — create initial session
+      const session = state.createSession();
+      if (session) {
+        createSession(session.id);
+        switchVisibility(session.id);
+      }
+    } else {
+      // Sessions already exist (e.g., hot-exit restore) — create instances
+      for (const s of state.sessions) {
+        createSession(s.id);
+      }
+      switchVisibility(state.activeSessionId);
     }
 
     // Subscribe to store changes
@@ -224,8 +269,8 @@ export function useTerminalSessions(
     );
     let prevActiveId = useTerminalSessionStore.getState().activeSessionId;
 
-    const unsubscribe = useTerminalSessionStore.subscribe((state) => {
-      const currentIds = new Set(state.sessions.map((s) => s.id));
+    const unsubscribe = useTerminalSessionStore.subscribe((storeState) => {
+      const currentIds = new Set(storeState.sessions.map((s) => s.id));
 
       // Detect new sessions
       for (const id of currentIds) {
@@ -242,12 +287,12 @@ export function useTerminalSessions(
       }
 
       // Detect active session change
-      if (state.activeSessionId !== prevActiveId) {
-        switchVisibility(state.activeSessionId);
+      if (storeState.activeSessionId !== prevActiveId) {
+        switchVisibility(storeState.activeSessionId);
       }
 
       prevSessionIds = currentIds;
-      prevActiveId = state.activeSessionId;
+      prevActiveId = storeState.activeSessionId;
     });
 
     return () => {
@@ -308,6 +353,7 @@ export function useTerminalSessions(
     getActiveTerminal,
     getActiveSearchAddon,
     getActiveSerializeAddon,
+    restartActiveSession,
     sessionsRef,
   };
 }
