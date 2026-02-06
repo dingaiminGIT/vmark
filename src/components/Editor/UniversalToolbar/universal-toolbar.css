@@ -42,6 +42,15 @@
   min-height: 28px;
 }
 
+/* Vertical divider between button groups */
+.universal-toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-color);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
 /* Button styles */
 .universal-toolbar-btn {
   display: flex;

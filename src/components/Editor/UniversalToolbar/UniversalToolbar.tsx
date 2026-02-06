@@ -30,6 +30,8 @@ import { getInitialFocusIndex } from "./toolbarFocus";
 import { getNextFocusableIndex, getPrevFocusableIndex } from "./toolbarNavigation";
 import { GroupDropdown } from "./GroupDropdown";
 import { toast } from "sonner";
+import { icons } from "@/utils/icons";
+import { usePromptPickerStore } from "@/stores/promptPickerStore";
 import "./universal-toolbar.css";
 
 /**
@@ -464,6 +466,22 @@ export function UniversalToolbar() {
           })()}
         </div>
       ))}
+
+      {/* AI Prompts button */}
+      <div className="universal-toolbar-divider" />
+      <button
+        type="button"
+        className="universal-toolbar-btn"
+        title="AI Prompts (⌘Y)"
+        aria-label="AI Prompts"
+        tabIndex={-1}
+        onClick={() => usePromptPickerStore.getState().openPicker({ filterScope: "selection" })}
+      >
+        <span
+          className="universal-toolbar-icon"
+          dangerouslySetInnerHTML={{ __html: icons.sparkles }}
+        />
+      </button>
 
       {menuOpen && menuAnchor && openGroup && (
         <GroupDropdown

@@ -1,0 +1,222 @@
+/* ============================================================================
+ * Prompt Picker — Spotlight-style overlay
+ * ============================================================================ */
+
+.prompt-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.prompt-picker {
+  width: 500px;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-color);
+  box-shadow: var(--popup-shadow);
+  animation: popup-fade-in 0.1s ease-out;
+  overflow: hidden;
+}
+
+/* ---- Header / Search ---- */
+
+.prompt-picker-header {
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.prompt-picker-search {
+  width: 100%;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 15px;
+  font-family: var(--font-sans);
+  outline: none;
+}
+
+.prompt-picker-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ---- Quick Chips ---- */
+
+.prompt-chips {
+  display: flex;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.prompt-chip {
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.prompt-chip:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.prompt-chip:focus-visible {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+/* ---- List ---- */
+
+.prompt-picker-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.prompt-picker-empty {
+  padding: 16px 8px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.prompt-picker-section-title {
+  padding: 8px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ---- Item ---- */
+
+.prompt-picker-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.prompt-picker-item:hover {
+  background: var(--hover-bg);
+}
+
+.prompt-picker-item--selected {
+  background: var(--accent-bg);
+}
+
+.prompt-picker-item--selected .prompt-picker-item-name {
+  color: var(--accent-primary);
+}
+
+.prompt-picker-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.prompt-picker-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prompt-picker-item-desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-picker-item-scope {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ---- Freeform ---- */
+
+.prompt-picker-freeform {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-color);
+}
+
+.prompt-picker-freeform-input {
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  outline: none;
+  resize: none;
+}
+
+.prompt-picker-freeform-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ---- Footer ---- */
+
+.prompt-picker-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--border-color);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.prompt-picker-scope {
+  font-family: var(--font-mono);
+}
+
+.prompt-picker-running {
+  color: var(--primary-color);
+}
+
+.prompt-picker-hint {
+  margin-left: auto;
+}
+
+/* ---- Focus indicators ---- */
+
+.prompt-picker-item:focus-visible {
+  outline: none;
+  background: var(--accent-bg);
+}
+
+/* ---- Dark theme ---- */
+
+.dark-theme .prompt-picker-backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .prompt-picker {
+  box-shadow: var(--popup-shadow-dark);
+}

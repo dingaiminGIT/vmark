@@ -49,6 +49,7 @@ export { registerSectionTools } from './tools/sections.js';
 export { registerBatchOpTools } from './tools/batch-ops.js';
 export { registerParagraphTools } from './tools/paragraphs.js';
 export { registerSmartInsertTool } from './tools/smart-insert.js';
+export { registerPromptTools } from './tools/prompts.js';
 
 // Resource registrations
 export { registerDocumentResources } from './resources/document.js';
@@ -156,6 +157,7 @@ import { registerSectionTools } from './tools/sections.js';
 import { registerBatchOpTools } from './tools/batch-ops.js';
 import { registerParagraphTools } from './tools/paragraphs.js';
 import { registerSmartInsertTool } from './tools/smart-insert.js';
+import { registerPromptTools } from './tools/prompts.js';
 import { registerDocumentResources } from './resources/document.js';
 import type { Bridge } from './bridge/types.js';
 
@@ -186,6 +188,7 @@ export function createVMarkMcpServer(bridge: Bridge): VMarkMcpServer {
   registerBatchOpTools(server);
   registerParagraphTools(server);
   registerSmartInsertTool(server);
+  registerPromptTools(server);
 
   // Register resources
   registerDocumentResources(server);

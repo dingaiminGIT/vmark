@@ -253,6 +253,8 @@ pub fn create_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &selection_submenu,
             &lines_submenu,
             &line_endings_submenu,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "ai-prompts", "AI Prompts...", true, Some("CmdOrCtrl+Y"))?,
         ],
     )?;
 
@@ -915,6 +917,8 @@ fn create_menu_with_shortcuts(
             &selection_submenu,
             &lines_submenu,
             &line_endings_submenu,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "ai-prompts", "AI Prompts...", true, get_accel("ai-prompts", "CmdOrCtrl+Y"))?,
         ],
     )?;
 

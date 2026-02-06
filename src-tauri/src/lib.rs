@@ -1,3 +1,4 @@
+mod ai_provider;
 mod app_paths;
 mod mcp_bridge;
 mod mcp_config;
@@ -5,6 +6,7 @@ mod mcp_server;
 mod menu;
 mod menu_events;
 mod pdf_export;
+mod prompts;
 mod quit;
 mod watcher;
 mod window_manager;
@@ -143,6 +145,11 @@ pub fn run() {
             pdf_export::convert_html_to_pdf,
             pdf_export::convert_html_string_to_pdf,
             get_default_shell,
+            prompts::get_prompts_dir,
+            prompts::list_prompts,
+            prompts::read_prompt,
+            ai_provider::detect_ai_providers,
+            ai_provider::run_ai_prompt,
             #[cfg(debug_assertions)]
             debug_log,
             print_webview,
@@ -166,6 +173,11 @@ pub fn run() {
             // Migrate legacy files from ~/.vmark/ to app data directory
             if let Err(e) = app_paths::migrate_legacy_files(app.handle()) {
                 eprintln!("[Tauri] Warning: Failed to migrate legacy files: {}", e);
+            }
+
+            // Install default AI prompts (no-op if already present)
+            if let Err(e) = prompts::install_default_prompts(app.handle()) {
+                eprintln!("[Tauri] Warning: Failed to install default prompts: {}", e);
             }
 
             // Listen for "ready" events from frontend windows

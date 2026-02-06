@@ -12,8 +12,10 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useMcpServer } from "@/hooks/useMcpServer";
 import { useMcpHealthCheck } from "@/hooks/useMcpHealthCheck";
 import { useMcpHealthStore } from "@/stores/mcpHealthStore";
+import { useAiProviderStore } from "@/stores/aiProviderStore";
 import { McpConfigInstaller } from "./McpConfigInstaller";
 import { RefreshCw, Users, ExternalLink } from "lucide-react";
+import type { ProviderType, RestProviderType } from "@/types/aiPrompts";
 
 function StatusBadge({ running, loading }: { running: boolean; loading: boolean }) {
   if (loading) {
@@ -274,6 +276,170 @@ export function IntegrationsSettings() {
       <div className="mt-6">
         <McpConfigInstaller onInstallSuccess={handleMcpConfigInstalled} />
       </div>
+
+      <div className="mt-6">
+        <AiProviderSettings />
+      </div>
     </div>
+  );
+}
+
+// ============================================================================
+// AI Provider Settings
+// ============================================================================
+
+function AiProviderSettings() {
+  const cliProviders = useAiProviderStore((s) => s.cliProviders);
+  const restProviders = useAiProviderStore((s) => s.restProviders);
+  const activeProvider = useAiProviderStore((s) => s.activeProvider);
+  const detecting = useAiProviderStore((s) => s.detecting);
+
+  const handleDetect = () => {
+    useAiProviderStore.getState().detectProviders();
+  };
+
+  const handleSetActive = (type: ProviderType) => {
+    useAiProviderStore.getState().setActiveProvider(type);
+  };
+
+  const handleRestUpdate = (
+    type: RestProviderType,
+    field: string,
+    value: string | boolean
+  ) => {
+    useAiProviderStore.getState().updateRestProvider(type, { [field]: value });
+  };
+
+  // Build provider options for dropdown
+  const providerOptions: { value: ProviderType; label: string }[] = [
+    ...cliProviders
+      .filter((p) => p.available)
+      .map((p) => ({ value: p.type as ProviderType, label: `${p.name} (CLI)` })),
+    ...restProviders
+      .filter((p) => p.enabled)
+      .map((p) => ({ value: p.type as ProviderType, label: p.name })),
+  ];
+
+  return (
+    <SettingsGroup title="AI Providers">
+      <SettingRow
+        label="Detect CLI Providers"
+        description="Scan for installed AI CLIs (claude, codex, gemini, ollama)"
+      >
+        <button
+          onClick={handleDetect}
+          disabled={detecting}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md
+            bg-[var(--bg-tertiary)] text-[var(--text-secondary)]
+            hover:bg-[var(--hover-bg-strong)] hover:text-[var(--text-color)]
+            disabled:opacity-50 disabled:cursor-not-allowed
+            transition-colors"
+        >
+          <RefreshCw size={12} className={detecting ? "animate-spin" : ""} />
+          Detect
+        </button>
+      </SettingRow>
+
+      {cliProviders.length > 0 && (
+        <div className="mt-2 px-1">
+          <div className="text-xs text-[var(--text-tertiary)] mb-1">CLI Providers</div>
+          {cliProviders.map((p) => (
+            <div
+              key={p.type}
+              className="flex items-center justify-between text-xs py-1"
+            >
+              <span className="text-[var(--text-secondary)]">{p.name}</span>
+              <span
+                className={
+                  p.available
+                    ? "text-[var(--success-color)]"
+                    : "text-[var(--text-tertiary)]"
+                }
+              >
+                {p.available ? "Available" : "Not found"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {providerOptions.length > 0 && (
+        <SettingRow
+          label="Active Provider"
+          description="Provider used for AI prompts"
+        >
+          <Select<ProviderType>
+            value={activeProvider ?? providerOptions[0]?.value ?? ("claude" as ProviderType)}
+            options={providerOptions}
+            onChange={handleSetActive}
+          />
+        </SettingRow>
+      )}
+
+      {/* REST provider configs */}
+      <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+        <div className="text-xs text-[var(--text-tertiary)] mb-2">
+          REST API Providers
+        </div>
+        {restProviders.map((p) => (
+          <div key={p.type} className="mb-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-[var(--text-secondary)]">
+                {p.name}
+              </span>
+              <Toggle
+                checked={p.enabled}
+                onChange={(enabled) =>
+                  handleRestUpdate(p.type, "enabled", enabled)
+                }
+              />
+            </div>
+            {p.enabled && (
+              <div className="flex flex-col gap-1.5 ml-1">
+                {p.type !== "google-ai" && (
+                  <input
+                    className="w-full px-2 py-1 text-xs rounded
+                      bg-[var(--bg-tertiary)] text-[var(--text-color)]
+                      border border-[var(--border-color)]
+                      focus:border-[var(--primary-color)] outline-none
+                      font-mono"
+                    placeholder="API Endpoint"
+                    value={p.endpoint}
+                    onChange={(e) =>
+                      handleRestUpdate(p.type, "endpoint", e.target.value)
+                    }
+                  />
+                )}
+                <input
+                  className="w-full px-2 py-1 text-xs rounded
+                    bg-[var(--bg-tertiary)] text-[var(--text-color)]
+                    border border-[var(--border-color)]
+                    focus:border-[var(--primary-color)] outline-none
+                    font-mono"
+                  placeholder="API Key"
+                  type="password"
+                  value={p.apiKey}
+                  onChange={(e) =>
+                    handleRestUpdate(p.type, "apiKey", e.target.value)
+                  }
+                />
+                <input
+                  className="w-full px-2 py-1 text-xs rounded
+                    bg-[var(--bg-tertiary)] text-[var(--text-color)]
+                    border border-[var(--border-color)]
+                    focus:border-[var(--primary-color)] outline-none
+                    font-mono"
+                  placeholder="Model"
+                  value={p.model}
+                  onChange={(e) =>
+                    handleRestUpdate(p.type, "model", e.target.value)
+                  }
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </SettingsGroup>
   );
 }
