@@ -10,12 +10,18 @@ use tauri::{AppHandle, Emitter, Listener, Manager};
 use serde::{Deserialize, Serialize};
 use super::session::{SessionData, WindowState, SCHEMA_VERSION, MAX_SESSION_AGE_DAYS};
 use super::migration::{can_migrate, migrate_session, needs_migration};
-use super::{EVENT_CAPTURE_REQUEST, EVENT_CAPTURE_RESPONSE, EVENT_CAPTURE_TIMEOUT, EVENT_RESTORE_START};
+use super::{EVENT_CAPTURE_REQUEST, EVENT_CAPTURE_RESPONSE, EVENT_CAPTURE_TIMEOUT, EVENT_RESTORE_START, MAIN_WINDOW_LABEL};
+
+/// Polling interval for waiting on responses
+const RESPONSE_POLL_INTERVAL_MS: u64 = 100;
+
+/// Capture timeout in seconds
+const CAPTURE_TIMEOUT_SECS: u64 = 5;
 
 /// Pending restore state for multi-window restoration
 /// Windows pull their state from here on startup
 #[derive(Debug, Default)]
-pub struct PendingRestoreState {
+pub(crate) struct PendingRestoreState {
     /// Window states indexed by window label
     pub window_states: HashMap<String, WindowState>,
     /// Set of window labels that are expected to complete restoration
@@ -42,33 +48,59 @@ impl PendingRestoreState {
 /// Global pending restore state
 static PENDING_RESTORE: OnceLock<Arc<Mutex<PendingRestoreState>>> = OnceLock::new();
 
-/// Get the pending restore state (for testing or internal use)
-pub fn get_pending_restore_state() -> Arc<Mutex<PendingRestoreState>> {
+/// Get the pending restore state (for internal use)
+pub(crate) fn get_pending_restore_state() -> Arc<Mutex<PendingRestoreState>> {
     Arc::clone(
         PENDING_RESTORE.get_or_init(|| Arc::new(Mutex::new(PendingRestoreState::default())))
     )
 }
 
+/// Lock the pending restore state, recovering from poisoning
+fn lock_pending_restore(pending: &Arc<Mutex<PendingRestoreState>>) -> std::sync::MutexGuard<'_, PendingRestoreState> {
+    pending.lock().unwrap_or_else(|poisoned| {
+        eprintln!("[HotExit] Recovering from poisoned mutex");
+        poisoned.into_inner()
+    })
+}
+
 /// Clear pending restore state
-pub async fn clear_pending_restore() {
+pub fn clear_pending_restore() {
     let pending = get_pending_restore_state();
-    let mut state = pending.lock().unwrap();
+    let mut state = lock_pending_restore(&pending);
     state.clear();
 }
 
-const CAPTURE_TIMEOUT_SECS: u64 = 5;
+/// Capture request payload with correlation ID
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CaptureRequest {
+    pub capture_id: String,
+}
 
 /// Capture response from a window
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CaptureResponse {
+    pub capture_id: String,
     pub window_label: String,
     pub state: WindowState,
 }
 
 /// Coordinator state for collecting window responses
 struct CaptureState {
+    capture_id: String,
     expected_windows: HashSet<String>,
     responses: HashMap<String, WindowState>,
+}
+
+/// Normalize window state label to match expected label
+fn normalize_window_label(state: &mut WindowState, expected_label: &str) {
+    if state.window_label != expected_label {
+        eprintln!(
+            "[HotExit] Normalizing mismatched window_label: {} -> {}",
+            state.window_label,
+            expected_label
+        );
+        state.window_label = expected_label.to_string();
+    }
 }
 
 /// Capture session from all windows
@@ -78,7 +110,7 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
         .webview_windows()
         .into_iter()
         .filter_map(|(label, _)| {
-            if label == "main" || label.starts_with("doc-") {
+            if label == MAIN_WINDOW_LABEL || label.starts_with("doc-") {
                 Some(label)
             } else {
                 None
@@ -90,9 +122,13 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
         return Err("No document windows to capture".to_string());
     }
 
+    // Generate unique capture ID for this request
+    let capture_id = format!("capture-{}", chrono::Utc::now().timestamp_millis());
+
     // Use std::sync::Mutex (not tokio::sync::Mutex) because the listener callback
     // runs on the tokio runtime and blocking_lock() would panic
     let state = Arc::new(Mutex::new(CaptureState {
+        capture_id: capture_id.clone(),
         expected_windows: windows.iter().cloned().collect(),
         responses: HashMap::new(),
     }));
@@ -102,7 +138,20 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
     let unlisten = app.listen(EVENT_CAPTURE_RESPONSE, move |event| {
         match serde_json::from_str::<CaptureResponse>(event.payload()) {
             Ok(mut response) => {
-                let mut state = state_clone.lock().unwrap();
+                let mut state = state_clone.lock().unwrap_or_else(|poisoned| {
+                    eprintln!("[HotExit] Recovering from poisoned capture state mutex");
+                    poisoned.into_inner()
+                });
+
+                // Ignore responses from different capture requests (stale responses)
+                if response.capture_id != state.capture_id {
+                    eprintln!(
+                        "[HotExit] Ignoring stale response (capture_id mismatch: {} vs {})",
+                        response.capture_id,
+                        state.capture_id
+                    );
+                    return;
+                }
 
                 // Only accept responses from expected windows
                 if !state.expected_windows.contains(&response.window_label) {
@@ -123,14 +172,7 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
                 }
 
                 // Normalize: ensure state.window_label matches the response key
-                if response.window_label != response.state.window_label {
-                    eprintln!(
-                        "[HotExit] Normalizing mismatched window_label: {} -> {}",
-                        response.state.window_label,
-                        response.window_label
-                    );
-                    response.state.window_label = response.window_label.clone();
-                }
+                normalize_window_label(&mut response.state, &response.window_label);
 
                 state.responses.insert(response.window_label.clone(), response.state);
             }
@@ -144,8 +186,9 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
         }
     });
 
-    // Broadcast capture request - ensure unlisten on failure
-    if let Err(e) = app.emit(EVENT_CAPTURE_REQUEST, ()) {
+    // Broadcast capture request with capture_id - ensure unlisten on failure
+    let request = CaptureRequest { capture_id };
+    if let Err(e) = app.emit(EVENT_CAPTURE_REQUEST, &request) {
         app.unlisten(unlisten);
         return Err(format!("Failed to emit capture request: {}", e));
     }
@@ -160,7 +203,28 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
     // Always unlisten after waiting
     app.unlisten(unlisten);
 
-    let final_state = state.lock().unwrap();
+    let final_state = state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+
+    // Check if we got enough responses
+    let got_responses = final_state.responses.len();
+    let expected_responses = final_state.expected_windows.len();
+
+    if result.is_err() {
+        // Timeout occurred
+        eprintln!(
+            "[HotExit] Timeout: Got {}/{} window responses",
+            got_responses,
+            expected_responses
+        );
+        if let Err(e) = app.emit(EVENT_CAPTURE_TIMEOUT, ()) {
+            eprintln!("[HotExit] Failed to emit capture timeout event: {}", e);
+        }
+
+        // If we got zero responses, this is a critical failure
+        if got_responses == 0 {
+            return Err("Capture timeout: no windows responded".to_string());
+        }
+    }
 
     // Build session from collected responses, sorted deterministically
     let mut windows_vec: Vec<WindowState> = final_state.responses.values().cloned().collect();
@@ -181,35 +245,18 @@ pub async fn capture_session(app: &AppHandle) -> Result<SessionData, String> {
         workspace: None, // Workspace capture not yet implemented
     };
 
-    match result {
-        Ok(_) => {
-            // All windows responded
-            Ok(session)
-        }
-        Err(_) => {
-            // Timeout - proceed with partial state
-            eprintln!(
-                "[HotExit] Timeout: Got {}/{} window responses",
-                final_state.responses.len(),
-                final_state.expected_windows.len()
-            );
-            if let Err(e) = app.emit(EVENT_CAPTURE_TIMEOUT, ()) {
-                eprintln!("[HotExit] Failed to emit capture timeout event: {}", e);
-            }
-            Ok(session)
-        }
-    }
+    Ok(session)
 }
 
 async fn wait_for_all_responses(state: Arc<Mutex<CaptureState>>, expected: usize) {
     loop {
         {
-            let current = state.lock().unwrap();
+            let current = state.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
             if current.responses.len() >= expected {
                 break;
             }
         }
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(RESPONSE_POLL_INTERVAL_MS)).await;
     }
 }
 
@@ -239,13 +286,13 @@ fn prepare_session_for_restore(session: SessionData) -> Result<SessionData, Stri
     Ok(session)
 }
 
-/// Initialize pending restore state with given windows
-async fn init_pending_restore_state(
+/// Initialize pending restore state with given windows (sync version)
+fn init_pending_restore_state_sync(
     windows: impl IntoIterator<Item = (String, WindowState)>,
     expected_labels: HashSet<String>,
 ) {
     let pending = get_pending_restore_state();
-    let mut state = pending.lock().unwrap();
+    let mut state = lock_pending_restore(&pending);
     state.clear();
     state.expected_labels = expected_labels;
     for (label, window_state) in windows {
@@ -257,7 +304,7 @@ async fn init_pending_restore_state(
 ///
 /// Now uses pull-based approach: stores state in PendingRestoreState,
 /// then emits RESTORE_START signal to trigger main window to pull its state.
-pub async fn restore_session(
+pub fn restore_session(
     app: &AppHandle,
     session: SessionData,
 ) -> Result<(), String> {
@@ -265,7 +312,7 @@ pub async fn restore_session(
 
     // Find the target window: prefer "main" label, fall back to first document window
     let target_window = app
-        .get_webview_window("main")
+        .get_webview_window(MAIN_WINDOW_LABEL)
         .or_else(|| {
             app.webview_windows()
                 .into_iter()
@@ -290,10 +337,10 @@ pub async fn restore_session(
         window_label: target_label.clone(),
         ..main_state
     };
-    init_pending_restore_state(
+    init_pending_restore_state_sync(
         std::iter::once((target_label.clone(), state_with_correct_label)),
         expected,
-    ).await;
+    );
 
     // Emit restore signal to target window (signal only, state is pulled)
     target_window
@@ -314,10 +361,9 @@ pub struct RestoreMultiWindowResult {
 /// Creates secondary windows and stores session state for pull-based restoration.
 /// Each window will call get_window_restore_state on startup to get its state.
 ///
-/// CRITICAL: State is stored BEFORE windows are created, and the mutex is held
-/// across window creation to prevent race conditions where a window starts
-/// before its state is available.
-pub async fn restore_session_multi_window(
+/// Strategy: Pre-populate all state BEFORE creating windows to avoid race conditions.
+/// Secondary windows are created after state is ready, then main window is signaled.
+pub fn restore_session_multi_window(
     app: &AppHandle,
     session: SessionData,
 ) -> Result<RestoreMultiWindowResult, String> {
@@ -325,8 +371,16 @@ pub async fn restore_session_multi_window(
 
     // Validate main window exists BEFORE modifying state
     let main_window = app
-        .get_webview_window("main")
+        .get_webview_window(MAIN_WINDOW_LABEL)
         .ok_or("Main window not found")?;
+
+    // Find main window state: prefer is_main_window flag, fall back to first window
+    let main_state = session
+        .windows
+        .iter()
+        .find(|w| w.is_main_window)
+        .or_else(|| session.windows.first())
+        .cloned();
 
     // Collect secondary windows to create
     let secondary_windows: Vec<_> = session
@@ -336,45 +390,54 @@ pub async fn restore_session_multi_window(
         .cloned()
         .collect();
 
-    // CRITICAL: Hold mutex while creating windows to prevent race conditions.
-    // Windows can start their JS immediately after creation, so state must be
-    // ready BEFORE the window exists.
-    let pending = get_pending_restore_state();
-    let mut windows_created = Vec::new();
+    // Pre-calculate how many windows we'll have
+    let secondary_count = secondary_windows.len();
+    let mut windows_created = Vec::with_capacity(secondary_count);
+    let mut window_states_to_store: Vec<(String, WindowState)> = Vec::with_capacity(secondary_count + 1);
+    let mut expected_labels = HashSet::with_capacity(secondary_count + 1);
 
-    {
-        let mut state = pending.lock().unwrap();
-        state.clear();
+    // Always include main in expected_labels (even if session doesn't have main state)
+    expected_labels.insert(MAIN_WINDOW_LABEL.to_string());
 
-        // Store main window state first
-        if let Some(main_state) = session.windows.iter().find(|w| w.is_main_window) {
-            state.window_states.insert("main".to_string(), main_state.clone());
-            state.expected_labels.insert("main".to_string());
-        }
+    // Prepare main window state
+    if let Some(state) = main_state {
+        let normalized = WindowState {
+            window_label: MAIN_WINDOW_LABEL.to_string(),
+            is_main_window: true,
+            ..state
+        };
+        window_states_to_store.push((MAIN_WINDOW_LABEL.to_string(), normalized));
+    } else {
+        eprintln!("[HotExit] Warning: No main window state in session, main will restore empty");
+    }
 
-        // Create each secondary window while holding the lock
-        for window_state in secondary_windows {
-            match crate::window_manager::create_document_window(app, None, None) {
-                Ok(new_label) => {
-                    // Store state with NEW label BEFORE window's JS can query it
-                    let updated_state = WindowState {
-                        window_label: new_label.clone(),
-                        ..window_state
-                    };
-                    state.window_states.insert(new_label.clone(), updated_state);
-                    state.expected_labels.insert(new_label.clone());
-                    windows_created.push(new_label);
-                }
-                Err(e) => {
-                    eprintln!(
-                        "[HotExit] Failed to create window for {}: {}",
-                        window_state.window_label, e
-                    );
-                    // Don't add to expected_labels - window doesn't exist
-                }
+    // Create secondary windows and collect their new labels
+    // We do this OUTSIDE the mutex to avoid blocking state queries
+    for window_state in secondary_windows {
+        match crate::window_manager::create_document_window(app, None, None) {
+            Ok(new_label) => {
+                // Prepare state with NEW label
+                let updated_state = WindowState {
+                    window_label: new_label.clone(),
+                    is_main_window: false, // Force non-main
+                    ..window_state
+                };
+                expected_labels.insert(new_label.clone());
+                window_states_to_store.push((new_label.clone(), updated_state));
+                windows_created.push(new_label);
+            }
+            Err(e) => {
+                eprintln!(
+                    "[HotExit] Failed to create window for {}: {}",
+                    window_state.window_label, e
+                );
+                // Don't add to expected_labels - window doesn't exist
             }
         }
-    } // Mutex released here - all state is now ready
+    }
+
+    // Now store all state atomically
+    init_pending_restore_state_sync(window_states_to_store, expected_labels);
 
     // Emit restore signal to main window (signal only, state is pulled)
     main_window
@@ -388,9 +451,9 @@ pub async fn restore_session_multi_window(
 ///
 /// Called by windows on startup to get their pending restore state.
 /// Returns None if no state is pending for the given window.
-pub async fn get_window_restore_state(window_label: &str) -> Option<WindowState> {
+pub fn get_window_restore_state(window_label: &str) -> Option<WindowState> {
     let pending = get_pending_restore_state();
-    let state = pending.lock().unwrap();
+    let state = lock_pending_restore(&pending);
     state.window_states.get(window_label).cloned()
 }
 
@@ -398,9 +461,9 @@ pub async fn get_window_restore_state(window_label: &str) -> Option<WindowState>
 ///
 /// Returns true if all expected windows have completed.
 /// Only counts windows that were in the expected set.
-pub async fn mark_window_restore_complete(window_label: &str) -> bool {
+pub fn mark_window_restore_complete(window_label: &str) -> bool {
     let pending = get_pending_restore_state();
-    let mut state = pending.lock().unwrap();
+    let mut state = lock_pending_restore(&pending);
 
     // Only track completion for expected windows
     if state.expected_labels.contains(window_label) {

@@ -106,7 +106,14 @@ export interface WorkspaceState {
 /**
  * Event payloads
  */
+export interface CaptureRequest {
+  /** Unique ID to correlate responses with this request */
+  capture_id: string;
+}
+
 export interface CaptureResponse {
+  /** Must match the capture_id from the request */
+  capture_id: string;
   window_label: string;
   state: WindowState;
 }
@@ -123,3 +130,8 @@ export const HOT_EXIT_EVENTS = {
   RESTORE_FAILED: 'hot-exit:restore-failed',
   TRIGGER_RESTART: 'hot-exit:trigger-restart',
 } as const;
+
+/**
+ * Main window label constant (must match Rust MAIN_WINDOW_LABEL)
+ */
+export const MAIN_WINDOW_LABEL = 'main';

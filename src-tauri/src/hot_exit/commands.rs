@@ -26,8 +26,8 @@ pub async fn hot_exit_capture(app: AppHandle) -> Result<SessionData, String> {
 
 /// Restore session to current window from provided session data
 #[tauri::command]
-pub async fn hot_exit_restore(app: AppHandle, session: SessionData) -> Result<(), String> {
-    restore_session(&app, session).await
+pub fn hot_exit_restore(app: AppHandle, session: SessionData) -> Result<(), String> {
+    restore_session(&app, session)
 }
 
 /// Inspect the saved session file (returns None if no session exists)
@@ -40,7 +40,7 @@ pub async fn hot_exit_inspect_session(app: AppHandle) -> Result<Option<SessionDa
 #[tauri::command]
 pub async fn hot_exit_clear_session(app: AppHandle) -> Result<(), String> {
     // Also clear pending restore state
-    clear_pending_restore().await;
+    clear_pending_restore();
     delete_session(&app).await
 }
 
@@ -49,11 +49,11 @@ pub async fn hot_exit_clear_session(app: AppHandle) -> Result<(), String> {
 /// Creates secondary windows and stores session state for pull-based restoration.
 /// Returns list of created window labels.
 #[tauri::command]
-pub async fn hot_exit_restore_multi_window(
+pub fn hot_exit_restore_multi_window(
     app: AppHandle,
     session: SessionData,
 ) -> Result<RestoreMultiWindowResult, String> {
-    restore_session_multi_window(&app, session).await
+    restore_session_multi_window(&app, session)
 }
 
 /// Get pending window state for restoration
@@ -61,14 +61,14 @@ pub async fn hot_exit_restore_multi_window(
 /// Called by windows on startup to get their pending restore state.
 /// Returns None if no state is pending for the given window.
 #[tauri::command]
-pub async fn hot_exit_get_window_state(window_label: String) -> Option<WindowState> {
-    get_window_restore_state(&window_label).await
+pub fn hot_exit_get_window_state(window_label: String) -> Option<WindowState> {
+    get_window_restore_state(&window_label)
 }
 
 /// Mark a window as having completed restoration
 ///
 /// Returns true if all expected windows have completed.
 #[tauri::command]
-pub async fn hot_exit_window_restore_complete(window_label: String) -> bool {
-    mark_window_restore_complete(&window_label).await
+pub fn hot_exit_window_restore_complete(window_label: String) -> bool {
+    mark_window_restore_complete(&window_label)
 }

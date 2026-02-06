@@ -18,3 +18,6 @@ pub const EVENT_CAPTURE_TIMEOUT: &str = "hot-exit:capture-timeout";
 pub const EVENT_RESTORE_START: &str = "hot-exit:restore-start";
 // Note: EVENT_RESTORE_COMPLETE, EVENT_RESTORE_FAILED, EVENT_TRIGGER_RESTART
 // are defined in TypeScript (src/utils/hotExit/types.ts) and emitted from frontend
+
+/// Main window label constant (must match TypeScript MAIN_WINDOW_LABEL)
+pub const MAIN_WINDOW_LABEL: &str = "main";
