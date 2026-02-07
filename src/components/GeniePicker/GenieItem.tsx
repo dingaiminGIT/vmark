@@ -23,21 +23,21 @@ export function GenieItem({
 }: GenieItemProps) {
   return (
     <div
-      className={`prompt-picker-item ${selected ? "prompt-picker-item--selected" : ""}`}
+      className={`genie-picker-item ${selected ? "genie-picker-item--selected" : ""}`}
       data-index={index}
       onClick={() => onSelect(genie)}
       onMouseEnter={() => onHover(index)}
     >
-      <div className="prompt-picker-item-name">
+      <div className="genie-picker-item-name">
         {formatName(genie.metadata.name)}
       </div>
-      <div className="prompt-picker-item-meta">
+      <div className="genie-picker-item-meta">
         {genie.metadata.description && (
-          <span className="prompt-picker-item-desc">
+          <span className="genie-picker-item-desc">
             {genie.metadata.description}
           </span>
         )}
-        <span className="prompt-picker-item-scope">
+        <span className="genie-picker-item-scope">
           {genie.metadata.scope}
         </span>
       </div>

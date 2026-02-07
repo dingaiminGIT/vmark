@@ -1,7 +1,7 @@
 //! AI Genies — file reader and default genie installer
 //!
 //! Scans the global genies directory (`<appDataDir>/genies/`) for markdown
-//! prompt files.
+//! genie files.
 
 use serde::Serialize;
 use std::collections::HashMap;
@@ -64,24 +64,24 @@ pub fn list_genies(app: AppHandle) -> Result<Vec<GenieEntry>, String> {
     Ok(entries)
 }
 
-/// Read a single prompt file — parse frontmatter and return metadata + template.
+/// Read a single genie file — parse frontmatter and return metadata + template.
 /// Validates the path is within the global genies directory to prevent traversal.
 #[command]
 pub fn read_genie(app: AppHandle, path: String) -> Result<GenieContent, String> {
     // Canonicalize requested path
     let requested = fs::canonicalize(&path)
-        .map_err(|e| format!("Invalid prompt path {}: {}", path, e))?;
+        .map_err(|e| format!("Invalid genie path {}: {}", path, e))?;
 
     // Validate path is within the global genies directory
     let global_dir = fs::canonicalize(global_genies_dir(&app)?)
         .unwrap_or_else(|_| global_genies_dir(&app).unwrap_or_default());
 
     if !requested.starts_with(&global_dir) {
-        return Err("Prompt path is outside allowed directories".to_string());
+        return Err("Genie path is outside allowed directories".to_string());
     }
 
     let content = fs::read_to_string(&requested)
-        .map_err(|e| format!("Failed to read prompt file {}: {}", path, e))?;
+        .map_err(|e| format!("Failed to read genie file {}: {}", path, e))?;
 
     parse_genie(&content, &path)
 }
@@ -166,7 +166,7 @@ pub struct GenieMenuEntry {
     pub category: Option<String>,
 }
 
-/// Scan a directory and return prompt entries with titles resolved from frontmatter.
+/// Scan a directory and return genie entries with titles resolved from frontmatter.
 pub fn scan_genies_with_titles(dir: &Path) -> Vec<GenieMenuEntry> {
     let mut entries = Vec::new();
     scan_genies_recursive(dir, dir, &mut entries);
@@ -325,7 +325,7 @@ fn parse_genie(content: &str, path: &str) -> Result<GenieContent, String> {
 }
 
 // ============================================================================
-// Default Prompts Installer
+// Default Genies Installer
 // ============================================================================
 
 struct DefaultGenie {
@@ -372,8 +372,8 @@ const DEFAULT_GENIES: &[DefaultGenie] = &[
 pub fn install_default_genies(app: &AppHandle) -> Result<(), String> {
     let base = global_genies_dir(app)?;
 
-    for prompt in DEFAULT_GENIES {
-        let target = base.join(prompt.path);
+    for genie in DEFAULT_GENIES {
+        let target = base.join(genie.path);
 
         // Create parent directories
         if let Some(parent) = target.parent() {
@@ -384,7 +384,7 @@ pub fn install_default_genies(app: &AppHandle) -> Result<(), String> {
         // Atomic create — skip if file already exists (no TOCTOU race)
         match OpenOptions::new().write(true).create_new(true).open(&target) {
             Ok(mut file) => {
-                file.write_all(prompt.content.as_bytes())
+                file.write_all(genie.content.as_bytes())
                     .map_err(|e| format!("Failed to write {:?}: {}", target, e))?;
             }
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
@@ -432,9 +432,9 @@ You are an expert editor. Improve the following text:
 
     #[test]
     fn test_parse_genie_without_frontmatter() {
-        let content = "Just a plain prompt template\n\n{{content}}";
-        let result = parse_genie(content, "test-prompt.md").unwrap();
-        assert_eq!(result.metadata.name, "test-prompt");
+        let content = "Just a plain genie template\n\n{{content}}";
+        let result = parse_genie(content, "test-genie.md").unwrap();
+        assert_eq!(result.metadata.name, "test-genie");
         assert_eq!(result.metadata.scope, "selection");
         assert!(result.template.contains("{{content}}"));
     }

@@ -26,7 +26,7 @@ export function GenieChips({ genies, onSelect }: GenieChipsProps) {
   if (available.length === 0) return null;
 
   return (
-    <div className="prompt-chips">
+    <div className="genie-chips">
       {available.map((action) => {
         const genie = genies.find(
           (g) => g.metadata.name === action.genieName
@@ -35,7 +35,7 @@ export function GenieChips({ genies, onSelect }: GenieChipsProps) {
         return (
           <button
             key={action.genieName}
-            className="prompt-chip"
+            className="genie-chip"
             onClick={() => onSelect(genie)}
             type="button"
           >

@@ -1,8 +1,8 @@
 /* ============================================================================
- * Prompt Picker — Spotlight-style overlay
+ * Genie Picker — Spotlight-style overlay
  * ============================================================================ */
 
-.prompt-picker-backdrop {
+.genie-picker-backdrop {
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -13,7 +13,7 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
-.prompt-picker {
+.genie-picker {
   width: 500px;
   max-height: 60vh;
   display: flex;
@@ -28,12 +28,12 @@
 
 /* ---- Header / Search ---- */
 
-.prompt-picker-header {
+.genie-picker-header {
   padding: 12px 14px 8px;
   border-bottom: 1px solid var(--border-color);
 }
 
-.prompt-picker-search {
+.genie-picker-search {
   width: 100%;
   padding: 6px 0;
   border: none;
@@ -44,13 +44,13 @@
   outline: none;
 }
 
-.prompt-picker-search::placeholder {
+.genie-picker-search::placeholder {
   color: var(--text-tertiary);
 }
 
 /* ---- Quick Chips ---- */
 
-.prompt-chips {
+.genie-chips {
   display: flex;
   gap: 6px;
   padding: 8px 14px;
@@ -58,7 +58,7 @@
   flex-wrap: wrap;
 }
 
-.prompt-chip {
+.genie-chip {
   padding: 3px 10px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-pill);
@@ -69,32 +69,32 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.prompt-chip:hover {
+.genie-chip:hover {
   background: var(--hover-bg);
   color: var(--text-color);
 }
 
-.prompt-chip:focus-visible {
+.genie-chip:focus-visible {
   outline: none;
   border-color: var(--primary-color);
 }
 
 /* ---- List ---- */
 
-.prompt-picker-list {
+.genie-picker-list {
   flex: 1;
   overflow-y: auto;
   padding: 6px;
 }
 
-.prompt-picker-empty {
+.genie-picker-empty {
   padding: 16px 8px;
   text-align: center;
   color: var(--text-tertiary);
   font-size: 13px;
 }
 
-.prompt-picker-section-title {
+.genie-picker-section-title {
   padding: 8px 8px 4px;
   font-size: 11px;
   font-weight: 600;
@@ -105,7 +105,7 @@
 
 /* ---- Item ---- */
 
-.prompt-picker-item {
+.genie-picker-item {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -115,31 +115,31 @@
   transition: background 0.1s;
 }
 
-.prompt-picker-item:hover {
+.genie-picker-item:hover {
   background: var(--hover-bg);
 }
 
-.prompt-picker-item--selected {
+.genie-picker-item--selected {
   background: var(--accent-bg);
 }
 
-.prompt-picker-item--selected .prompt-picker-item-name {
+.genie-picker-item--selected .genie-picker-item-name {
   color: var(--accent-primary);
 }
 
-.prompt-picker-item-name {
+.genie-picker-item-name {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-color);
 }
 
-.prompt-picker-item-meta {
+.genie-picker-item-meta {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.prompt-picker-item-desc {
+.genie-picker-item-desc {
   font-size: 11px;
   color: var(--text-tertiary);
   flex: 1;
@@ -148,7 +148,7 @@
   white-space: nowrap;
 }
 
-.prompt-picker-item-scope {
+.genie-picker-item-scope {
   font-size: 10px;
   padding: 1px 6px;
   border-radius: var(--radius-pill);
@@ -159,12 +159,12 @@
 
 /* ---- Freeform ---- */
 
-.prompt-picker-freeform {
+.genie-picker-freeform {
   padding: 8px 14px;
   border-top: 1px solid var(--border-color);
 }
 
-.prompt-picker-freeform-input {
+.genie-picker-freeform-input {
   width: 100%;
   padding: 4px 0;
   border: none;
@@ -176,13 +176,13 @@
   resize: none;
 }
 
-.prompt-picker-freeform-input::placeholder {
+.genie-picker-freeform-input::placeholder {
   color: var(--text-tertiary);
 }
 
 /* ---- Footer ---- */
 
-.prompt-picker-footer {
+.genie-picker-footer {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -192,31 +192,31 @@
   color: var(--text-tertiary);
 }
 
-.prompt-picker-scope {
+.genie-picker-scope {
   font-family: var(--font-mono);
 }
 
-.prompt-picker-running {
+.genie-picker-running {
   color: var(--primary-color);
 }
 
-.prompt-picker-hint {
+.genie-picker-hint {
   margin-left: auto;
 }
 
 /* ---- Focus indicators ---- */
 
-.prompt-picker-item:focus-visible {
+.genie-picker-item:focus-visible {
   outline: none;
   background: var(--accent-bg);
 }
 
 /* ---- Dark theme ---- */
 
-.dark-theme .prompt-picker-backdrop {
+.dark-theme .genie-picker-backdrop {
   background: rgba(0, 0, 0, 0.4);
 }
 
-.dark-theme .prompt-picker {
+.dark-theme .genie-picker {
   box-shadow: var(--popup-shadow-dark);
 }

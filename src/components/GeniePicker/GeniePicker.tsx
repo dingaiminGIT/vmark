@@ -19,7 +19,7 @@ import { useGenieInvocation } from "@/hooks/useGenieInvocation";
 import type { GenieDefinition, GenieScope } from "@/types/aiGenies";
 import { GenieChips } from "./GenieChips";
 import { GenieItem } from "./GenieItem";
-import "./prompt-picker.css";
+import "./genie-picker.css";
 
 const SCOPES: GenieScope[] = ["selection", "block", "document"];
 
@@ -214,17 +214,17 @@ export function GeniePicker() {
   let itemIndex = 0;
 
   return createPortal(
-    <div className="prompt-picker-backdrop">
+    <div className="genie-picker-backdrop">
       <div
         ref={containerRef}
-        className="prompt-picker"
+        className="genie-picker"
         onKeyDown={handleKeyDown}
       >
         {/* Search input */}
-        <div className="prompt-picker-header">
+        <div className="genie-picker-header">
           <input
             ref={inputRef}
-            className="prompt-picker-search"
+            className="genie-picker-search"
             type="text"
             placeholder="Search genies..."
             value={filter}
@@ -241,19 +241,19 @@ export function GeniePicker() {
         )}
 
         {/* Genie list */}
-        <div className="prompt-picker-list" ref={listRef}>
+        <div className="genie-picker-list" ref={listRef}>
           {loading && (
-            <div className="prompt-picker-empty">Loading genies...</div>
+            <div className="genie-picker-empty">Loading genies...</div>
           )}
 
           {!loading && flatList.length === 0 && !filter && (
-            <div className="prompt-picker-empty">
+            <div className="genie-picker-empty">
               No genies found. Add .md files to your genies directory.
             </div>
           )}
 
           {!loading && flatList.length === 0 && filter && (
-            <div className="prompt-picker-empty">
+            <div className="genie-picker-empty">
               No matching genies for &ldquo;{filter}&rdquo;
             </div>
           )}
@@ -261,7 +261,7 @@ export function GeniePicker() {
           {/* Recents section */}
           {recents.length > 0 && (
             <>
-              <div className="prompt-picker-section-title">Recently Used</div>
+              <div className="genie-picker-section-title">Recently Used</div>
               {recents.map((genie) => {
                 const idx = itemIndex++;
                 return (
@@ -281,7 +281,7 @@ export function GeniePicker() {
           {/* Category sections */}
           {Array.from(grouped.entries()).map(([category, list]) => (
             <div key={category}>
-              <div className="prompt-picker-section-title">{category}</div>
+              <div className="genie-picker-section-title">{category}</div>
               {list.map((genie) => {
                 const idx = itemIndex++;
                 return (
@@ -300,10 +300,10 @@ export function GeniePicker() {
         </div>
 
         {/* Freeform input */}
-        <div className="prompt-picker-freeform">
+        <div className="genie-picker-freeform">
           <textarea
             ref={freeformRef}
-            className="prompt-picker-freeform-input"
+            className="genie-picker-freeform-input"
             placeholder="Describe what you want..."
             value={freeform}
             onChange={(e) => setFreeform(e.target.value)}
@@ -312,14 +312,14 @@ export function GeniePicker() {
         </div>
 
         {/* Footer */}
-        <div className="prompt-picker-footer">
-          <span className="prompt-picker-scope">
+        <div className="genie-picker-footer">
+          <span className="genie-picker-scope">
             scope: {activeScope ?? "all"}
           </span>
           {isRunning && (
-            <span className="prompt-picker-running">Running...</span>
+            <span className="genie-picker-running">Running...</span>
           )}
-          <span className="prompt-picker-hint">
+          <span className="genie-picker-hint">
             Tab ↹ cycle scope
           </span>
         </div>

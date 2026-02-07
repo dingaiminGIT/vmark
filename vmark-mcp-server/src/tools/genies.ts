@@ -1,20 +1,20 @@
 /**
- * Prompt tools — List, read, and invoke AI prompts.
+ * Genie tools — List, read, and invoke AI genies.
  *
- * These tools allow AI assistants to discover available prompts,
+ * These tools allow AI assistants to discover available genies,
  * read their templates, and invoke them against editor content.
  */
 
 import { VMarkMcpServer, resolveWindowId, requireStringArg, getStringArg } from '../server.js';
 
-interface PromptEntry {
+interface GenieEntry {
   name: string;
   path: string;
   source: string;
   category: string | null;
 }
 
-interface PromptContent {
+interface GenieContent {
   metadata: {
     name: string;
     description: string;
@@ -27,16 +27,16 @@ interface PromptContent {
 }
 
 /**
- * Register all prompt tools on the server.
+ * Register all genie tools on the server.
  */
-export function registerPromptTools(server: VMarkMcpServer): void {
-  // list_prompts — List available AI prompts
+export function registerGenieTools(server: VMarkMcpServer): void {
+  // list_genies — List available AI genies
   server.registerTool(
     {
-      name: 'list_prompts',
+      name: 'list_genies',
       description:
-        'List all available AI prompts from global and workspace directories. ' +
-        'Returns prompt names, categories, scopes, and file paths.',
+        'List all available AI genies from global and workspace directories. ' +
+        'Returns genie names, categories, scopes, and file paths.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -51,40 +51,40 @@ export function registerPromptTools(server: VMarkMcpServer): void {
       const windowId = resolveWindowId(args.windowId as string | undefined);
 
       try {
-        const result = await server.sendBridgeRequest<{ prompts: PromptEntry[] }>({
-          type: 'prompts.list',
+        const result = await server.sendBridgeRequest<{ genies: GenieEntry[] }>({
+          type: 'genies.list',
           windowId,
         });
 
-        if (!result.prompts || result.prompts.length === 0) {
-          return VMarkMcpServer.successResult('No prompts found');
+        if (!result.genies || result.genies.length === 0) {
+          return VMarkMcpServer.successResult('No genies found');
         }
 
         return VMarkMcpServer.successResult(
-          `Found ${result.prompts.length} prompt(s):\n` +
-            JSON.stringify(result.prompts, null, 2)
+          `Found ${result.genies.length} genie(s):\n` +
+            JSON.stringify(result.genies, null, 2)
         );
       } catch (error) {
         return VMarkMcpServer.errorResult(
-          `Failed to list prompts: ${error instanceof Error ? error.message : String(error)}`
+          `Failed to list genies: ${error instanceof Error ? error.message : String(error)}`
         );
       }
     }
   );
 
-  // read_prompt — Read a specific prompt's template
+  // read_genie — Read a specific genie's template
   server.registerTool(
     {
-      name: 'read_prompt',
+      name: 'read_genie',
       description:
-        'Read a specific AI prompt file and return its metadata and template. ' +
-        'Use list_prompts first to discover available prompts and their file paths.',
+        'Read a specific AI genie file and return its metadata and template. ' +
+        'Use list_genies first to discover available genies and their file paths.',
       inputSchema: {
         type: 'object',
         properties: {
           path: {
             type: 'string',
-            description: 'The file path of the prompt to read.',
+            description: 'The file path of the genie to read.',
           },
           windowId: {
             type: 'string',
@@ -99,14 +99,14 @@ export function registerPromptTools(server: VMarkMcpServer): void {
       const windowId = resolveWindowId(args.windowId as string | undefined);
 
       try {
-        const result = await server.sendBridgeRequest<PromptContent>({
-          type: 'prompts.read',
+        const result = await server.sendBridgeRequest<GenieContent>({
+          type: 'genies.read',
           windowId,
           path,
         });
 
         return VMarkMcpServer.successResult(
-          `Prompt: ${result.metadata.name}\n` +
+          `Genie: ${result.metadata.name}\n` +
             `Description: ${result.metadata.description}\n` +
             `Scope: ${result.metadata.scope}\n` +
             `Category: ${result.metadata.category ?? 'none'}\n\n` +
@@ -114,26 +114,26 @@ export function registerPromptTools(server: VMarkMcpServer): void {
         );
       } catch (error) {
         return VMarkMcpServer.errorResult(
-          `Failed to read prompt: ${error instanceof Error ? error.message : String(error)}`
+          `Failed to read genie: ${error instanceof Error ? error.message : String(error)}`
         );
       }
     }
   );
 
-  // invoke_prompt — Run a prompt against current editor content
+  // invoke_genie — Run a genie against current editor content
   server.registerTool(
     {
-      name: 'invoke_prompt',
+      name: 'invoke_genie',
       description:
-        'Invoke an AI prompt against the current editor content. ' +
-        'The prompt template will be filled with content based on the scope ' +
+        'Invoke an AI genie against the current editor content. ' +
+        'The genie template will be filled with content based on the scope ' +
         '(selection, block, or document) and sent to the active AI provider.',
       inputSchema: {
         type: 'object',
         properties: {
-          promptPath: {
+          geniePath: {
             type: 'string',
-            description: 'File path of the prompt to invoke.',
+            description: 'File path of the genie to invoke.',
           },
           scope: {
             type: 'string',
@@ -145,11 +145,11 @@ export function registerPromptTools(server: VMarkMcpServer): void {
             description: 'Optional window identifier. Defaults to focused window.',
           },
         },
-        required: ['promptPath'],
+        required: ['geniePath'],
       },
     },
     async (args) => {
-      const promptPath = requireStringArg(args, 'promptPath');
+      const geniePath = requireStringArg(args, 'geniePath');
       const scope = getStringArg(args, 'scope') ?? 'selection';
       const windowId = resolveWindowId(args.windowId as string | undefined);
 
@@ -163,18 +163,18 @@ export function registerPromptTools(server: VMarkMcpServer): void {
 
       try {
         const result = await server.sendBridgeRequest<{ status: string }>({
-          type: 'prompts.invoke',
+          type: 'genies.invoke',
           windowId,
-          promptPath,
+          geniePath,
           scope,
         });
 
         return VMarkMcpServer.successResult(
-          `Prompt invoked: ${result.status}`
+          `Genie invoked: ${result.status}`
         );
       } catch (error) {
         return VMarkMcpServer.errorResult(
-          `Failed to invoke prompt: ${error instanceof Error ? error.message : String(error)}`
+          `Failed to invoke genie: ${error instanceof Error ? error.message : String(error)}`
         );
       }
     }

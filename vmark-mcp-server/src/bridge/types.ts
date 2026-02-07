@@ -689,10 +689,10 @@ export type BridgeRequest =
   | { type: 'paragraph.write'; baseRevision: string; target: ParagraphTarget; operation: ParagraphOperation; content?: string; mode?: OperationMode; windowId?: WindowId }
   // Smart insert command
   | { type: 'smartInsert'; baseRevision: string; destination: SmartInsertDestination; content: string; mode?: OperationMode; windowId?: WindowId }
-  // Prompt commands
-  | { type: 'prompts.list'; windowId?: WindowId }
-  | { type: 'prompts.read'; windowId?: WindowId; path: string }
-  | { type: 'prompts.invoke'; windowId?: WindowId; promptPath: string; scope: string };
+  // Genie commands
+  | { type: 'genies.list'; windowId?: WindowId }
+  | { type: 'genies.read'; path: string; windowId?: WindowId }
+  | { type: 'genies.invoke'; geniePath: string; scope: string; windowId?: WindowId };
 
 /**
  * Bridge response types - responses from VMark.
