@@ -128,9 +128,21 @@
 }
 
 .genie-picker-item-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-color);
+}
+
+.genie-picker-item-icon {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.genie-picker-item--selected .genie-picker-item-icon {
+  color: var(--accent-primary);
 }
 
 .genie-picker-item-meta {
