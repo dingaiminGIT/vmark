@@ -4,7 +4,7 @@
  * Provides cross-mode undo/redo functionality by:
  * 1. Creating checkpoints when switching modes
  * 2. Intercepting undo/redo when native history is exhausted
- * 3. Restoring to checkpoints (potentially switching modes)
+ * 3. Restoring content from checkpoints (mode is never changed — that's a view preference)
  */
 
 import { useCallback } from "react";
@@ -109,16 +109,12 @@ export function doNativeUndo(): boolean {
 
   if (sourceMode) {
     const view = useActiveEditorStore.getState().activeSourceView;
-    if (!view) return false;
-    if (undoDepth(view.state) === 0) return false;
-    undo(view);
-    return true;
+    if (!view || undoDepth(view.state) === 0) return false;
+    return undo(view);
   } else {
     const editor = useTiptapEditorStore.getState().editor;
-    if (!editor) return false;
-    if (!editor.can().undo()) return false;
-    editor.commands.undo();
-    return true;
+    if (!editor || !editor.can().undo()) return false;
+    return editor.commands.undo();
   }
 }
 
@@ -131,16 +127,12 @@ export function doNativeRedo(): boolean {
 
   if (sourceMode) {
     const view = useActiveEditorStore.getState().activeSourceView;
-    if (!view) return false;
-    if (redoDepth(view.state) === 0) return false;
-    redo(view);
-    return true;
+    if (!view || redoDepth(view.state) === 0) return false;
+    return redo(view);
   } else {
     const editor = useTiptapEditorStore.getState().editor;
-    if (!editor) return false;
-    if (!editor.can().redo()) return false;
-    editor.commands.redo();
-    return true;
+    if (!editor || !editor.can().redo()) return false;
+    return editor.commands.redo();
   }
 }
 
