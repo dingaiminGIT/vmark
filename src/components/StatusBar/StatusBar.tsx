@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useCallback, type MouseEvent, type Keyboa
 
 // Stable empty array to avoid creating new reference on each render
 const EMPTY_TABS: never[] = [];
-import { Code2, Type, Save, Plus, AlertTriangle, GitFork, Satellite, Terminal } from "lucide-react";
+import { Code2, Type, Save, Plus, AlertTriangle, GitFork, Satellite, Sparkles, Terminal } from "lucide-react";
 import { countWords as alfaazCount } from "alfaaz";
 import { useEditorStore } from "@/stores/editorStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -19,6 +19,7 @@ import {
   useDocumentIsDivergent,
 } from "@/hooks/useDocumentState";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useAiInvocationStore } from "@/stores/aiInvocationStore";
 import { formatRelativeTime, formatExactTime } from "@/utils/dateUtils";
 import { Tab } from "@/components/Tabs/Tab";
 import { TabContextMenu, type ContextMenuPosition } from "@/components/Tabs/TabContextMenu";
@@ -92,6 +93,9 @@ export function StatusBar() {
   const terminalVisible = useUIStore((state) => state.terminalVisible);
   const sourceModeShortcut = useShortcutsStore((state) => state.getShortcut("sourceMode"));
   const terminalShortcut = useShortcutsStore((state) => state.getShortcut("toggleTerminal"));
+
+  // AI genie running state
+  const aiRunning = useAiInvocationStore((s) => s.isRunning);
 
   // MCP server status
   const { running: mcpRunning, loading: mcpLoading, port: mcpPort, error: mcpError } = useMcpServer();
@@ -185,8 +189,8 @@ export function StatusBar() {
   const showTabs = isDocumentWindow && tabs.length >= 1;
   const showNewTabButton = isDocumentWindow;
 
-  // When hidden (Cmd+J toggled), don't render
-  if (!statusBarVisible) return null;
+  // When hidden (Cmd+J toggled), don't render — unless AI is working
+  if (!statusBarVisible && !aiRunning) return null;
 
   return (
     <>
@@ -227,6 +231,13 @@ export function StatusBar() {
 
           {/* Right section: stats + mode */}
           <div className="status-bar-right">
+            {/* AI genie running indicator */}
+            {aiRunning && (
+              <span className="status-ai-running" title="AI genie is working...">
+                <Sparkles size={12} />
+              </span>
+            )}
+
             {/* MCP status indicator */}
             <button
               className={`status-mcp ${mcpRunning ? "connected" : ""} ${mcpLoading ? "loading" : ""} ${mcpError ? "error" : ""}`}
