@@ -153,6 +153,7 @@ fn emit_event(window: &tauri::WebviewWindow, event: &PendingMenuEvent) {
 /// This is race-condition safe: check and queue happen in a single lock acquisition.
 fn emit_or_queue_atomic(window: &tauri::WebviewWindow, event: PendingMenuEvent) {
     let label = window.label();
+    #[cfg(debug_assertions)]
     let event_name = event.event_name.clone(); // For logging
 
     if check_ready_or_queue(label, event.clone()) {
@@ -313,9 +314,9 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         #[cfg(debug_assertions)]
         eprintln!("[menu_events] Handling 'preferences' menu event");
         match crate::window_manager::show_settings_window(app) {
-            Ok(label) => {
+            Ok(_label) => {
                 #[cfg(debug_assertions)]
-                eprintln!("[menu_events] Settings window ready: {}", label);
+                eprintln!("[menu_events] Settings window ready: {}", _label);
             }
             Err(e) => {
                 eprintln!("[menu_events] ERROR: Failed to show settings: {}", e);
@@ -329,9 +330,9 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         #[cfg(debug_assertions)]
         eprintln!("[menu_events] Handling 'about' menu event");
         match crate::window_manager::show_settings_window_section(app, Some("about")) {
-            Ok(label) => {
+            Ok(_label) => {
                 #[cfg(debug_assertions)]
-                eprintln!("[menu_events] Settings window (about) ready: {}", label);
+                eprintln!("[menu_events] Settings window (about) ready: {}", _label);
             }
             Err(e) => {
                 eprintln!("[menu_events] ERROR: Failed to show about: {}", e);

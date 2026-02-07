@@ -580,6 +580,7 @@ async fn handle_message(text: &str, client_id: u64, app: &AppHandle) -> Result<(
     let (response_tx, response_rx) = oneshot::channel();
 
     let request_id = msg.id.clone();
+    #[cfg(debug_assertions)]
     let request_type_for_log = request.request_type.clone();
 
     // Store the pending request
