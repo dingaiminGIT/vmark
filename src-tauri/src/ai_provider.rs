@@ -168,15 +168,6 @@ pub async fn run_ai_prompt(
     api_key: Option<String>,
     endpoint: Option<String>,
 ) -> Result<(), String> {
-    eprintln!(
-        "[AI] run_ai_prompt: provider={}, model={:?}, has_key={}, endpoint={:?}, prompt_len={}",
-        provider,
-        model,
-        api_key.as_ref().map_or(false, |k| !k.is_empty()),
-        endpoint,
-        prompt.len(),
-    );
-
     match provider.as_str() {
         // CLI providers
         "claude" => run_cli_provider(&window, &request_id, "claude", &["--print", "--output-format", "text"], Some(&prompt)),
@@ -267,15 +258,6 @@ fn run_cli_provider(
     args: &[&str],
     stdin_prompt: Option<&str>,
 ) -> Result<(), String> {
-    let stdin_mode = if stdin_prompt.is_some() { "piped" } else { "null" };
-    eprintln!(
-        "[AI] run_cli_provider: cmd={}, args={:?}, stdin={}, prompt_len={}",
-        cmd,
-        args,
-        stdin_mode,
-        stdin_prompt.map_or(0, |p| p.len()),
-    );
-
     let stdin_cfg = if stdin_prompt.is_some() { Stdio::piped() } else { Stdio::null() };
 
     let mut child = Command::new(cmd)
@@ -285,12 +267,7 @@ fn run_cli_provider(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| {
-            eprintln!("[AI] Failed to spawn {}: {}", cmd, e);
-            format!("Failed to spawn {}: {}", cmd, e)
-        })?;
-
-    eprintln!("[AI] {} spawned, pid={}", cmd, child.id());
+        .map_err(|e| format!("Failed to spawn {}: {}", cmd, e))?;
 
     // Write prompt to stdin when the provider expects it
     if let Some(prompt) = stdin_prompt {
@@ -298,26 +275,19 @@ fn run_cli_provider(
             stdin
                 .write_all(prompt.as_bytes())
                 .map_err(|e| format!("Failed to write to stdin: {}", e))?;
-            eprintln!("[AI] Wrote {} bytes to {} stdin", prompt.len(), cmd);
             // stdin is dropped here, closing it
         }
     }
 
     // Stream stdout line by line
-    let mut line_count = 0usize;
     if let Some(stdout) = child.stdout.take() {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             match line {
                 Ok(text) => {
-                    line_count += 1;
-                    if line_count <= 3 {
-                        eprintln!("[AI] {} stdout[{}]: {:.120}", cmd, line_count, text);
-                    }
                     emit_chunk(window, request_id, &(text + "\n"));
                 }
                 Err(e) => {
-                    eprintln!("[AI] {} stdout read error: {}", cmd, e);
                     emit_error(window, request_id, &format!("Read error: {}", e));
                     let _ = child.kill();
                     return Ok(());
@@ -326,15 +296,11 @@ fn run_cli_provider(
         }
     }
 
-    eprintln!("[AI] {} stdout closed after {} lines", cmd, line_count);
-
     // Check exit status — include stderr in error message
     let output = child.wait_with_output().map_err(|e| format!("Wait failed: {}", e))?;
-    eprintln!("[AI] {} exit status: {}", cmd, output.status);
     if !output.status.success() {
         let stderr_text = String::from_utf8_lossy(&output.stderr);
         let stderr_msg = stderr_text.trim();
-        eprintln!("[AI] {} stderr: {:.300}", cmd, stderr_msg);
         let msg = if stderr_msg.is_empty() {
             format!("{} exited with status {}", cmd, output.status)
         } else {
@@ -342,7 +308,6 @@ fn run_cli_provider(
         };
         emit_error(window, request_id, &msg);
     } else {
-        eprintln!("[AI] {} completed successfully", cmd);
         emit_done(window, request_id);
     }
 
@@ -361,8 +326,6 @@ async fn run_rest_anthropic(
     model: &str,
     prompt: &str,
 ) -> Result<(), String> {
-    eprintln!("[AI] REST Anthropic: endpoint={}, model={}, prompt_len={}", endpoint, model, prompt.len());
-
     let client = reqwest::Client::new();
     let body = serde_json::json!({
         "model": model,
@@ -380,12 +343,9 @@ async fn run_rest_anthropic(
         .await
         .map_err(|e| format!("Anthropic request failed: {}", e))?;
 
-    eprintln!("[AI] Anthropic response status: {}", resp.status());
-
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        eprintln!("[AI] Anthropic error body: {:.300}", text);
         emit_error(window, request_id, &format!("Anthropic API error {}: {}", status, text));
         return Ok(());
     }
@@ -397,15 +357,12 @@ async fn run_rest_anthropic(
 
     // Extract text from content blocks
     if let Some(content) = json.get("content").and_then(|c| c.as_array()) {
-        eprintln!("[AI] Anthropic: {} content block(s)", content.len());
         for block in content {
             if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
-                eprintln!("[AI] Anthropic chunk: {:.120}", text);
                 emit_chunk(window, request_id, text);
             }
         }
     } else {
-        eprintln!("[AI] Anthropic: no content blocks in response");
         emit_error(window, request_id, "No content blocks in Anthropic response");
         return Ok(());
     }
@@ -422,8 +379,6 @@ async fn run_rest_openai(
     model: &str,
     prompt: &str,
 ) -> Result<(), String> {
-    eprintln!("[AI] REST OpenAI: endpoint={}, model={}, prompt_len={}", endpoint, model, prompt.len());
-
     let client = reqwest::Client::new();
     let body = serde_json::json!({
         "model": model,
@@ -439,12 +394,9 @@ async fn run_rest_openai(
         .await
         .map_err(|e| format!("OpenAI request failed: {}", e))?;
 
-    eprintln!("[AI] OpenAI response status: {}", resp.status());
-
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        eprintln!("[AI] OpenAI error body: {:.300}", text);
         emit_error(window, request_id, &format!("OpenAI API error {}: {}", status, text));
         return Ok(());
     }
@@ -462,10 +414,8 @@ async fn run_rest_openai(
         .and_then(|m| m.get("content"))
         .and_then(|t| t.as_str())
     {
-        eprintln!("[AI] OpenAI chunk: {:.120}", text);
         emit_chunk(window, request_id, text);
     } else {
-        eprintln!("[AI] OpenAI: no choices in response");
         emit_error(window, request_id, "No choices in OpenAI response");
         return Ok(());
     }
@@ -481,8 +431,6 @@ async fn run_rest_google(
     model: &str,
     prompt: &str,
 ) -> Result<(), String> {
-    eprintln!("[AI] REST Google AI: model={}, prompt_len={}", model, prompt.len());
-
     let client = reqwest::Client::new();
     let body = serde_json::json!({
         "contents": [{"parts": [{"text": prompt}]}]
@@ -501,12 +449,9 @@ async fn run_rest_google(
         .await
         .map_err(|e| format!("Google AI request failed: {}", e))?;
 
-    eprintln!("[AI] Google AI response status: {}", resp.status());
-
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        eprintln!("[AI] Google AI error body: {:.300}", text);
         emit_error(window, request_id, &format!("Google AI error {}: {}", status, text));
         return Ok(());
     }
@@ -527,10 +472,8 @@ async fn run_rest_google(
         .and_then(|p| p.get("text"))
         .and_then(|t| t.as_str())
     {
-        eprintln!("[AI] Google AI chunk: {:.120}", text);
         emit_chunk(window, request_id, text);
     } else {
-        eprintln!("[AI] Google AI: no candidates in response");
         emit_error(window, request_id, "No candidates in Google AI response");
         return Ok(());
     }
@@ -546,8 +489,6 @@ async fn run_rest_ollama(
     model: &str,
     prompt: &str,
 ) -> Result<(), String> {
-    eprintln!("[AI] REST Ollama: endpoint={}, model={}, prompt_len={}", endpoint, model, prompt.len());
-
     let client = reqwest::Client::new();
     let body = serde_json::json!({
         "model": model,
@@ -563,12 +504,9 @@ async fn run_rest_ollama(
         .await
         .map_err(|e| format!("Ollama request failed: {}", e))?;
 
-    eprintln!("[AI] Ollama API response status: {}", resp.status());
-
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        eprintln!("[AI] Ollama API error body: {:.300}", text);
         emit_error(window, request_id, &format!("Ollama API error {}: {}", status, text));
         return Ok(());
     }
@@ -579,10 +517,8 @@ async fn run_rest_ollama(
         .map_err(|e| format!("Failed to parse response: {}", e))?;
 
     if let Some(text) = json.get("response").and_then(|r| r.as_str()) {
-        eprintln!("[AI] Ollama API chunk: {:.120}", text);
         emit_chunk(window, request_id, text);
     } else {
-        eprintln!("[AI] Ollama API: no response field");
         emit_error(window, request_id, "No response field in Ollama response");
         return Ok(());
     }
