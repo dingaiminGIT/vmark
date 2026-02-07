@@ -152,6 +152,7 @@ pub fn run() {
             genies::read_genie,
             ai_provider::detect_ai_providers,
             ai_provider::run_ai_prompt,
+            ai_provider::read_env_api_keys,
             #[cfg(debug_assertions)]
             debug_log,
             print_webview,

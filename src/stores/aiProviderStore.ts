@@ -38,6 +38,8 @@ interface AiProviderActions {
     type: RestProviderType,
     updates: Partial<RestProviderConfig>
   ): void;
+  /** Load API keys from environment variables into empty REST provider fields. */
+  loadEnvApiKeys(): Promise<void>;
   getActiveProviderName(): string;
 }
 
@@ -181,6 +183,26 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
             p.type === type ? { ...p, ...updates } : p
           ),
         }));
+      },
+
+      loadEnvApiKeys: async () => {
+        try {
+          const envKeys: Record<string, string> =
+            await invoke("read_env_api_keys");
+          set((state) => ({
+            restProviders: state.restProviders.map((p) => {
+              const envKey = envKeys[p.type];
+              // Only fill if the field is currently empty
+              if (envKey && !p.apiKey) {
+                return { ...p, apiKey: envKey };
+              }
+              return p;
+            }),
+          }));
+        } catch (e) {
+          // Non-critical — user can still type keys manually
+          console.warn("Failed to read env API keys:", e);
+        }
       },
 
       getActiveProviderName: () => {

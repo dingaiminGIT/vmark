@@ -121,6 +121,36 @@ fn check_command(cmd: &str) -> (bool, Option<String>) {
 }
 
 // ============================================================================
+// Environment API Keys
+// ============================================================================
+
+/// Read well-known API key environment variables for REST providers.
+///
+/// Returns a map of `RestProviderType → key` for any env var that is set
+/// and non-empty. The frontend uses this to pre-fill empty API key fields.
+#[command]
+pub fn read_env_api_keys() -> std::collections::HashMap<String, String> {
+    let mapping: &[(&str, &[&str])] = &[
+        ("anthropic", &["ANTHROPIC_API_KEY"]),
+        ("openai", &["OPENAI_API_KEY"]),
+        ("google-ai", &["GOOGLE_API_KEY", "GEMINI_API_KEY"]),
+    ];
+
+    let mut result = std::collections::HashMap::new();
+    for (provider, vars) in mapping {
+        for var in *vars {
+            if let Ok(val) = std::env::var(var) {
+                if !val.is_empty() {
+                    result.insert(provider.to_string(), val);
+                    break; // first match wins
+                }
+            }
+        }
+    }
+    result
+}
+
+// ============================================================================
 // Prompt Execution
 // ============================================================================
 

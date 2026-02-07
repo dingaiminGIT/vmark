@@ -325,6 +325,11 @@ function AiProviderSettings() {
   const activeProvider = useAiProviderStore((s) => s.activeProvider);
   const detecting = useAiProviderStore((s) => s.detecting);
 
+  // Pre-fill empty API key fields from environment variables
+  useEffect(() => {
+    useAiProviderStore.getState().loadEnvApiKeys();
+  }, []);
+
   const handleDetect = () => {
     useAiProviderStore.getState().detectProviders();
   };
