@@ -37,7 +37,12 @@ function getCellRange(
     offset += 1;
   }
 
-  // Split into cells (including trailing empty cell if trailing pipe)
+  // Normalize trailing whitespace then strip trailing pipe
+  content = content.trimEnd();
+  if (content.endsWith("|") && !content.endsWith("\\|")) {
+    content = content.slice(0, -1);
+  }
+
   const cells = splitTableCells(content);
 
   // Target the colIndex-th cell

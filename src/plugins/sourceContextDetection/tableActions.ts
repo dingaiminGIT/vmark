@@ -6,7 +6,7 @@
 
 import type { EditorView } from "@codemirror/view";
 import { getDisplayWidth, padToWidth } from "@/utils/stringWidth";
-import { parseTableRow } from "@/utils/tableParser";
+import { parseTableRow, splitTableCells } from "@/utils/tableParser";
 import type { SourceTableInfo, TableAlignment } from "./tableDetection";
 
 /**
@@ -48,13 +48,20 @@ function formatAlignmentCell(alignment: TableAlignment, width = 5): string {
 
 /**
  * Build empty cells matching the widths of existing table columns.
- * Falls back to 5-space cells if header can't be parsed.
+ * Uses raw (untrimmed) cell content from splitTableCells to match
+ * the actual column display widths in a formatted table.
  */
 function buildEmptyCells(info: SourceTableInfo): string[] {
-  const headerCells = parseTableRow(info.lines[0]);
+  // Use splitTableCells on raw header to preserve padding widths
+  let rawHeader = info.lines[0].trim();
+  if (rawHeader.startsWith("|")) rawHeader = rawHeader.slice(1);
+  rawHeader = rawHeader.trimEnd();
+  if (rawHeader.endsWith("|") && !rawHeader.endsWith("\\|")) rawHeader = rawHeader.slice(0, -1);
+  const rawCells = splitTableCells(rawHeader);
+
   return Array.from({ length: info.colCount }, (_, i) => {
-    const headerWidth = i < headerCells.length ? getDisplayWidth(headerCells[i]) : 3;
-    const width = Math.max(3, headerWidth);
+    const cellWidth = i < rawCells.length ? getDisplayWidth(rawCells[i]) : 3;
+    const width = Math.max(3, cellWidth);
     return padToWidth("", width);
   });
 }

@@ -39,9 +39,9 @@ export type TableAlignment = "left" | "center" | "right";
 export function isTableLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed.startsWith("|")) return false;
-  // Need at least 2 pipes for a valid table row (e.g., "| A |")
+  // Need at least 2 cells for a valid table row (e.g., "| A |" or "| A | B")
   const cells = splitTableCells(trimmed.slice(1)); // slice off leading pipe
-  return cells.length >= 1 && trimmed.length > 1;
+  return cells.length >= 2;
 }
 
 /**
@@ -182,12 +182,8 @@ function getColIndexAtPosition(lineText: string, pos: number): number {
     }
   }
 
-  // The first pipe in "| A | B |" is the leading pipe (col 0 after it),
-  // so we subtract 1 if line starts with pipe (the leading pipe doesn't count as a column boundary)
-  if (lineText.trimStart().startsWith("|")) {
-    col = Math.max(0, col);
-  }
-
+  // The leading pipe increments col but isn't a real column boundary,
+  // so col is already correct (first cell = 0 after the leading pipe bump)
   return Math.max(0, col);
 }
 

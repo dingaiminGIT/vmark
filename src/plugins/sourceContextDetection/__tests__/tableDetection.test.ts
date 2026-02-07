@@ -51,6 +51,14 @@ describe("isTableLine", () => {
   it("returns true for minimal table row", () => {
     expect(isTableLine("| A |")).toBe(true);
   });
+
+  it("returns false for single-cell line without trailing pipe", () => {
+    expect(isTableLine("| A")).toBe(false);
+  });
+
+  it("returns true for two-column row", () => {
+    expect(isTableLine("| A | B")).toBe(true);
+  });
 });
 
 describe("splitTableCells with escaped pipes", () => {

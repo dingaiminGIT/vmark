@@ -170,7 +170,9 @@ export class TiptapTableContextMenu {
   private handleKeydown = (e: KeyboardEvent) => {
     if (e.key === "Escape" && this.isVisible) {
       this.hide();
-      this.editorView.focus();
+      if (this.editorView.dom.isConnected) {
+        this.editorView.focus();
+      }
     }
   };
 

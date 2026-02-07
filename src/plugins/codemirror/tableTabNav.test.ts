@@ -80,6 +80,21 @@ describe("getCellBoundaries", () => {
     // Empty cells still have boundaries
     expect(cells.length).toBeGreaterThan(0);
   });
+
+  it("handles indented table row with leading whitespace", () => {
+    const cells = getCellBoundaries("  | A | B |");
+    expect(cells.length).toBe(2);
+    // First cell "A" starts at offset 4 (2 ws + pipe + space)
+    expect(cells[0].from).toBe(4);
+    expect(cells[0].to).toBe(5);
+  });
+
+  it("handles trailing whitespace after last pipe", () => {
+    const cells = getCellBoundaries("| A | B |   ");
+    expect(cells.length).toBe(2);
+    expect(cells[0]).toEqual({ from: 2, to: 3 });
+    expect(cells[1]).toEqual({ from: 6, to: 7 });
+  });
 });
 
 describe("goToNextCell", () => {

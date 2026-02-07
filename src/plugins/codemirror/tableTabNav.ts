@@ -26,15 +26,20 @@ export interface CellBoundary {
 export function getCellBoundaries(lineText: string): CellBoundary[] {
   const cells: CellBoundary[] = [];
 
+  // Handle leading whitespace (indented tables)
+  const trimmed = lineText.trimStart();
+  const leadingWs = lineText.length - trimmed.length;
+
   // Strip leading pipe
-  let offset = 0;
-  let content = lineText;
+  let offset = leadingWs;
+  let content = trimmed;
   if (content.startsWith("|")) {
     content = content.slice(1);
-    offset = 1;
+    offset += 1;
   }
 
-  // Strip trailing pipe (only if not escaped)
+  // Normalize trailing whitespace then strip trailing pipe (only if not escaped)
+  content = content.trimEnd();
   if (content.endsWith("|") && !content.endsWith("\\|")) {
     content = content.slice(0, -1);
   }
