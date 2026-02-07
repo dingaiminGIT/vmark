@@ -714,7 +714,7 @@ fn find_genies_submenu(parent: &Submenu<tauri::Wry>) -> Option<Submenu<tauri::Wr
     None
 }
 
-/// Refresh the Genies submenu by scanning global and workspace prompt directories.
+/// Refresh the Genies submenu by scanning global and workspace genie directories.
 /// Called by frontend on mount and when workspace changes.
 /// Creates the submenu dynamically inside Edit if it doesn't already exist.
 #[tauri::command]

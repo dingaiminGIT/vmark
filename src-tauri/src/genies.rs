@@ -49,7 +49,7 @@ pub fn get_genies_dir(app: AppHandle) -> Result<String, String> {
     Ok(dir.to_string_lossy().to_string())
 }
 
-/// List all available prompts from the global genies directory.
+/// List all available genies from the global genies directory.
 #[command]
 pub fn list_genies(app: AppHandle) -> Result<Vec<GenieEntry>, String> {
     let mut by_name: HashMap<String, GenieEntry> = HashMap::new();
@@ -337,58 +337,58 @@ const DEFAULT_GENIES: &[DefaultGenie] = &[
     // Editing
     DefaultGenie {
         path: "editing/polish.md",
-        content: include_str!("../resources/prompts/editing/polish.md"),
+        content: include_str!("../resources/genies/editing/polish.md"),
     },
     DefaultGenie {
         path: "editing/condense.md",
-        content: include_str!("../resources/prompts/editing/condense.md"),
+        content: include_str!("../resources/genies/editing/condense.md"),
     },
     DefaultGenie {
         path: "editing/fix-grammar.md",
-        content: include_str!("../resources/prompts/editing/fix-grammar.md"),
+        content: include_str!("../resources/genies/editing/fix-grammar.md"),
     },
     DefaultGenie {
         path: "editing/simplify.md",
-        content: include_str!("../resources/prompts/editing/simplify.md"),
+        content: include_str!("../resources/genies/editing/simplify.md"),
     },
     // Creative
     DefaultGenie {
         path: "creative/expand.md",
-        content: include_str!("../resources/prompts/creative/expand.md"),
+        content: include_str!("../resources/genies/creative/expand.md"),
     },
     DefaultGenie {
         path: "creative/rephrase.md",
-        content: include_str!("../resources/prompts/creative/rephrase.md"),
+        content: include_str!("../resources/genies/creative/rephrase.md"),
     },
     DefaultGenie {
         path: "creative/vivid.md",
-        content: include_str!("../resources/prompts/creative/vivid.md"),
+        content: include_str!("../resources/genies/creative/vivid.md"),
     },
     DefaultGenie {
         path: "creative/continue.md",
-        content: include_str!("../resources/prompts/creative/continue.md"),
+        content: include_str!("../resources/genies/creative/continue.md"),
     },
     // Structure
     DefaultGenie {
         path: "structure/summarize.md",
-        content: include_str!("../resources/prompts/structure/summarize.md"),
+        content: include_str!("../resources/genies/structure/summarize.md"),
     },
     DefaultGenie {
         path: "structure/outline.md",
-        content: include_str!("../resources/prompts/structure/outline.md"),
+        content: include_str!("../resources/genies/structure/outline.md"),
     },
     DefaultGenie {
         path: "structure/headline.md",
-        content: include_str!("../resources/prompts/structure/headline.md"),
+        content: include_str!("../resources/genies/structure/headline.md"),
     },
     // Tools
     DefaultGenie {
         path: "tools/translate.md",
-        content: include_str!("../resources/prompts/tools/translate.md"),
+        content: include_str!("../resources/genies/tools/translate.md"),
     },
     DefaultGenie {
         path: "tools/rewrite-in-english.md",
-        content: include_str!("../resources/prompts/tools/rewrite-in-english.md"),
+        content: include_str!("../resources/genies/tools/rewrite-in-english.md"),
     },
 ];
 
