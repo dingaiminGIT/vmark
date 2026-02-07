@@ -32,6 +32,8 @@ interface AiProviderActions {
   /** Ensure a provider is available. Auto-detects if none set. Returns true if ready. */
   ensureProvider(): Promise<boolean>;
   setActiveProvider(type: ProviderType): void;
+  /** Activate a provider — sets it as active and syncs REST `enabled` flags. */
+  activateProvider(type: ProviderType): void;
   updateRestProvider(
     type: RestProviderType,
     updates: Partial<RestProviderConfig>
@@ -121,20 +123,22 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
           // Validate active provider is still available
           const { activeProvider, restProviders } = get();
           if (activeProvider) {
-            const cliAvailable = providers.some(
-              (p) => p.type === activeProvider && p.available
+            const isCli = providers.some(
+              (p) => p.type === activeProvider
             );
-            const restAvailable = restProviders.some(
-              (p) => p.type === activeProvider && p.enabled
-            );
-            if (!cliAvailable && !restAvailable) {
-              // Active provider is gone — pick first available or null
-              const firstCli = providers.find((p) => p.available);
-              const firstRest = restProviders.find((p) => p.enabled);
-              set({
-                activeProvider: firstCli?.type ?? firstRest?.type ?? null,
-              });
+            // CLI provider that is no longer available → fall back
+            if (isCli) {
+              const stillAvailable = providers.some(
+                (p) => p.type === activeProvider && p.available
+              );
+              if (!stillAvailable) {
+                const firstCli = providers.find((p) => p.available);
+                set({
+                  activeProvider: firstCli?.type ?? restProviders.find((p) => p.enabled)?.type ?? null,
+                });
+              }
             }
+            // REST providers are always selectable — no validation needed
           } else {
             // No active provider — auto-select first available
             const first = providers.find((p) => p.available);
@@ -158,6 +162,17 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
 
       setActiveProvider: (type) => {
         set({ activeProvider: type });
+      },
+
+      activateProvider: (type) => {
+        set((state) => ({
+          activeProvider: type,
+          // Sync REST enabled flags: only the selected REST provider is enabled
+          restProviders: state.restProviders.map((p) => ({
+            ...p,
+            enabled: p.type === type,
+          })),
+        }));
       },
 
       updateRestProvider: (type, updates) => {

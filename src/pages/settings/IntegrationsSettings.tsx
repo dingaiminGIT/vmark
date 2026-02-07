@@ -15,7 +15,7 @@ import { useMcpHealthStore } from "@/stores/mcpHealthStore";
 import { useAiProviderStore } from "@/stores/aiProviderStore";
 import { McpConfigInstaller } from "./McpConfigInstaller";
 import { RefreshCw, Users, ExternalLink } from "lucide-react";
-import type { ProviderType, RestProviderType, RestProviderConfig } from "@/types/aiGenies";
+import type { ProviderType, RestProviderType } from "@/types/aiGenies";
 
 function StatusBadge({ running, loading }: { running: boolean; loading: boolean }) {
   if (loading) {
@@ -288,6 +288,37 @@ export function IntegrationsSettings() {
 // AI Provider Settings
 // ============================================================================
 
+function ProviderRadio({
+  checked,
+  disabled,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={onChange}
+      className={`w-3.5 h-3.5 rounded-full border flex-shrink-0
+        flex items-center justify-center transition-colors
+        ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+        ${checked
+          ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]"
+          : "border-[var(--text-tertiary)] bg-transparent hover:border-[var(--text-secondary)]"
+        }`}
+    >
+      {checked && (
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--contrast-text)]" />
+      )}
+    </button>
+  );
+}
+
 function AiProviderSettings() {
   const cliProviders = useAiProviderStore((s) => s.cliProviders);
   const restProviders = useAiProviderStore((s) => s.restProviders);
@@ -298,39 +329,23 @@ function AiProviderSettings() {
     useAiProviderStore.getState().detectProviders();
   };
 
-  const handleSetActive = (type: ProviderType) => {
-    useAiProviderStore.getState().setActiveProvider(type);
+  const handleActivate = (type: ProviderType) => {
+    useAiProviderStore.getState().activateProvider(type);
   };
 
-  const handleRestUpdate = (
+  const handleRestFieldUpdate = (
     type: RestProviderType,
-    field: keyof RestProviderConfig,
-    value: string | boolean
+    field: "endpoint" | "apiKey" | "model",
+    value: string
   ) => {
-    const store = useAiProviderStore.getState();
-    store.updateRestProvider(type, { [field]: value });
-
-    // If disabling a provider that is currently active, auto-select next available
-    if (field === "enabled" && value === false && store.activeProvider === type) {
-      const nextCli = store.cliProviders.find((p) => p.available);
-      const nextRest = store.restProviders.find(
-        (p) => p.type !== type && p.enabled
-      );
-      store.setActiveProvider(
-        (nextCli?.type ?? nextRest?.type ?? null) as ProviderType
-      );
-    }
+    useAiProviderStore.getState().updateRestProvider(type, { [field]: value });
   };
 
-  // Build provider options for dropdown
-  const providerOptions: { value: ProviderType; label: string }[] = [
-    ...cliProviders
-      .filter((p) => p.available)
-      .map((p) => ({ value: p.type as ProviderType, label: `${p.name} (CLI)` })),
-    ...restProviders
-      .filter((p) => p.enabled)
-      .map((p) => ({ value: p.type as ProviderType, label: p.name })),
-  ];
+  const inputClass = `w-full px-2 py-1 text-xs rounded
+    bg-[var(--bg-tertiary)] text-[var(--text-color)]
+    border border-[var(--border-color)]
+    focus:border-[var(--primary-color)] outline-none
+    font-mono`;
 
   return (
     <SettingsGroup title="AI Providers">
@@ -352,21 +367,36 @@ function AiProviderSettings() {
         </button>
       </SettingRow>
 
+      {/* CLI providers */}
       {cliProviders.length > 0 && (
-        <div className="mt-2 px-1">
+        <div className="mt-2 px-1" role="radiogroup" aria-label="CLI Providers">
           <div className="text-xs text-[var(--text-tertiary)] mb-1">CLI Providers</div>
           {cliProviders.map((p) => (
             <div
               key={p.type}
-              className="flex items-center justify-between text-xs py-1"
+              className={`flex items-center gap-2 text-xs py-1.5 ${
+                !p.available ? "opacity-50" : "cursor-pointer"
+              }`}
+              onClick={() => p.available && handleActivate(p.type)}
             >
-              <span className="text-[var(--text-secondary)]">{p.name}</span>
+              <ProviderRadio
+                checked={activeProvider === p.type}
+                disabled={!p.available}
+                onChange={() => handleActivate(p.type)}
+              />
+              <span className={
+                activeProvider === p.type
+                  ? "text-[var(--text-color)] font-medium"
+                  : "text-[var(--text-secondary)]"
+              }>
+                {p.name}
+              </span>
               <span
-                className={
+                className={`ml-auto text-xs ${
                   p.available
                     ? "text-[var(--success-color)]"
                     : "text-[var(--text-tertiary)]"
-                }
+                }`}
               >
                 {p.available ? "Available" : "Not found"}
               </span>
@@ -375,82 +405,65 @@ function AiProviderSettings() {
         </div>
       )}
 
-      {providerOptions.length > 0 && (
-        <SettingRow
-          label="Active Provider"
-          description="Provider used for AI prompts"
-        >
-          <Select<ProviderType>
-            value={activeProvider ?? providerOptions[0]?.value ?? ("claude" as ProviderType)}
-            options={providerOptions}
-            onChange={handleSetActive}
-          />
-        </SettingRow>
-      )}
-
-      {/* REST provider configs */}
-      <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
+      {/* REST providers */}
+      <div className="mt-3 pt-3 border-t border-[var(--border-color)]" role="radiogroup" aria-label="REST API Providers">
         <div className="text-xs text-[var(--text-tertiary)] mb-2">
           REST API Providers
         </div>
-        {restProviders.map((p) => (
-          <div key={p.type} className="mb-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-[var(--text-secondary)]">
-                {p.name}
-              </span>
-              <Toggle
-                checked={p.enabled}
-                onChange={(enabled) =>
-                  handleRestUpdate(p.type, "enabled", enabled)
-                }
-              />
-            </div>
-            {p.enabled && (
-              <div className="flex flex-col gap-1.5 ml-1">
-                {p.type !== "google-ai" && (
+        {restProviders.map((p) => {
+          const isActive = activeProvider === p.type;
+          return (
+            <div key={p.type} className="mb-3">
+              <div
+                className="flex items-center gap-2 text-xs py-1 cursor-pointer"
+                onClick={() => handleActivate(p.type)}
+              >
+                <ProviderRadio
+                  checked={isActive}
+                  onChange={() => handleActivate(p.type)}
+                />
+                <span className={
+                  isActive
+                    ? "text-[var(--text-color)] font-medium"
+                    : "text-[var(--text-secondary)]"
+                }>
+                  {p.name}
+                </span>
+              </div>
+              {isActive && (
+                <div className="flex flex-col gap-1.5 ml-5.5 mt-1">
+                  {p.type !== "google-ai" && (
+                    <input
+                      className={inputClass}
+                      placeholder="API Endpoint"
+                      value={p.endpoint}
+                      onChange={(e) =>
+                        handleRestFieldUpdate(p.type, "endpoint", e.target.value)
+                      }
+                    />
+                  )}
                   <input
-                    className="w-full px-2 py-1 text-xs rounded
-                      bg-[var(--bg-tertiary)] text-[var(--text-color)]
-                      border border-[var(--border-color)]
-                      focus:border-[var(--primary-color)] outline-none
-                      font-mono"
-                    placeholder="API Endpoint"
-                    value={p.endpoint}
+                    className={inputClass}
+                    placeholder="API Key"
+                    type="password"
+                    value={p.apiKey}
                     onChange={(e) =>
-                      handleRestUpdate(p.type, "endpoint", e.target.value)
+                      handleRestFieldUpdate(p.type, "apiKey", e.target.value)
                     }
                   />
-                )}
-                <input
-                  className="w-full px-2 py-1 text-xs rounded
-                    bg-[var(--bg-tertiary)] text-[var(--text-color)]
-                    border border-[var(--border-color)]
-                    focus:border-[var(--primary-color)] outline-none
-                    font-mono"
-                  placeholder="API Key"
-                  type="password"
-                  value={p.apiKey}
-                  onChange={(e) =>
-                    handleRestUpdate(p.type, "apiKey", e.target.value)
-                  }
-                />
-                <input
-                  className="w-full px-2 py-1 text-xs rounded
-                    bg-[var(--bg-tertiary)] text-[var(--text-color)]
-                    border border-[var(--border-color)]
-                    focus:border-[var(--primary-color)] outline-none
-                    font-mono"
-                  placeholder="Model"
-                  value={p.model}
-                  onChange={(e) =>
-                    handleRestUpdate(p.type, "model", e.target.value)
-                  }
-                />
-              </div>
-            )}
-          </div>
-        ))}
+                  <input
+                    className={inputClass}
+                    placeholder="Model"
+                    value={p.model}
+                    onChange={(e) =>
+                      handleRestFieldUpdate(p.type, "model", e.target.value)
+                    }
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </SettingsGroup>
   );
