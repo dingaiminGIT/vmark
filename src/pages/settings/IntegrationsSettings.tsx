@@ -15,7 +15,8 @@ import { useMcpHealthStore } from "@/stores/mcpHealthStore";
 import { useAiProviderStore } from "@/stores/aiProviderStore";
 import { McpConfigInstaller } from "./McpConfigInstaller";
 import { RefreshCw, Users, ExternalLink } from "lucide-react";
-import type { ProviderType, RestProviderType } from "@/types/aiGenies";
+import type { ProviderType } from "@/types/aiGenies";
+import { RestProviderConfigFields } from "./RestProviderConfigFields";
 
 function StatusBadge({ running, loading }: { running: boolean; loading: boolean }) {
   if (loading) {
@@ -338,20 +339,6 @@ function AiProviderSettings() {
     useAiProviderStore.getState().activateProvider(type);
   };
 
-  const handleRestFieldUpdate = (
-    type: RestProviderType,
-    field: "endpoint" | "apiKey" | "model",
-    value: string
-  ) => {
-    useAiProviderStore.getState().updateRestProvider(type, { [field]: value });
-  };
-
-  const inputClass = `w-full px-2 py-1 text-xs rounded
-    bg-[var(--bg-tertiary)] text-[var(--text-color)]
-    border border-[var(--border-color)]
-    focus:border-[var(--primary-color)] outline-none
-    font-mono`;
-
   return (
     <SettingsGroup title="AI Providers">
       <SettingRow
@@ -436,35 +423,12 @@ function AiProviderSettings() {
                 </span>
               </div>
               {isActive && (
-                <div className="flex flex-col gap-1.5 ml-5.5 mt-1">
-                  {p.type !== "google-ai" && (
-                    <input
-                      className={inputClass}
-                      placeholder="API Endpoint"
-                      value={p.endpoint}
-                      onChange={(e) =>
-                        handleRestFieldUpdate(p.type, "endpoint", e.target.value)
-                      }
-                    />
-                  )}
-                  <input
-                    className={inputClass}
-                    placeholder="API Key"
-                    type="password"
-                    value={p.apiKey}
-                    onChange={(e) =>
-                      handleRestFieldUpdate(p.type, "apiKey", e.target.value)
-                    }
-                  />
-                  <input
-                    className={inputClass}
-                    placeholder="Model"
-                    value={p.model}
-                    onChange={(e) =>
-                      handleRestFieldUpdate(p.type, "model", e.target.value)
-                    }
-                  />
-                </div>
+                <RestProviderConfigFields
+                  type={p.type}
+                  endpoint={p.endpoint}
+                  apiKey={p.apiKey}
+                  model={p.model}
+                />
               )}
             </div>
           );

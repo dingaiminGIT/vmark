@@ -13,6 +13,7 @@ import { useShortcutsStore } from "@/stores/shortcutsStore";
 import { useSourcePeekStore } from "@/stores/sourcePeekStore";
 import { openSourcePeekInline, revertAndCloseSourcePeek } from "@/plugins/sourcePeekInline";
 import { guardProseMirrorCommand } from "@/utils/imeGuard";
+import { isMacPlatform } from "@/utils/shortcutMatch";
 import { canRunActionInMultiSelection } from "@/plugins/toolbarActions/multiSelectionPolicy";
 import { getWysiwygMultiSelectionContext } from "@/plugins/toolbarActions/multiSelectionContext";
 import { expandedToggleMark } from "@/plugins/editorPlugins/expandedToggleMark";
@@ -1011,7 +1012,7 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
     return performUnifiedRedo(getCurrentWindowLabel());
   });
   // Windows/Linux convention: Ctrl+Y for redo (skip on macOS where Cmd+Y = AI Genies)
-  if (!/Mac|iPod|iPhone|iPad/.test(navigator.platform)) {
+  if (!isMacPlatform()) {
     bindings["Mod-y"] = guardProseMirrorCommand(() => {
       return performUnifiedRedo(getCurrentWindowLabel());
     });

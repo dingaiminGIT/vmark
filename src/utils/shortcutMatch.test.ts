@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { matchesShortcutEvent } from "@/utils/shortcutMatch";
+import { describe, it, expect, vi } from "vitest";
+import { matchesShortcutEvent, isMacPlatform } from "@/utils/shortcutMatch";
 
 function makeEvent(options: KeyboardEventInit & { key: string }) {
   return new KeyboardEvent("keydown", options);
@@ -49,5 +49,31 @@ describe("matchesShortcutEvent", () => {
   it("matches shifted . to >", () => {
     const event = makeEvent({ key: ">", shiftKey: true, metaKey: true });
     expect(matchesShortcutEvent(event, "Mod-Shift-.", "mac")).toBe(true);
+  });
+});
+
+describe("isMacPlatform", () => {
+  it("returns true when navigator.platform contains Mac", () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    expect(isMacPlatform()).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it("returns false on Windows", () => {
+    vi.stubGlobal("navigator", { platform: "Win32" });
+    expect(isMacPlatform()).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it("returns false on Linux", () => {
+    vi.stubGlobal("navigator", { platform: "Linux x86_64" });
+    expect(isMacPlatform()).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it("returns true for iPad", () => {
+    vi.stubGlobal("navigator", { platform: "iPad" });
+    expect(isMacPlatform()).toBe(true);
+    vi.unstubAllGlobals();
   });
 });

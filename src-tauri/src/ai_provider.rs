@@ -180,47 +180,41 @@ pub async fn run_ai_prompt(
 
         // REST providers
         "anthropic" => {
-            let key = api_key.unwrap_or_default();
-            if key.is_empty() {
-                emit_error(&window, &request_id, "Anthropic API key is required");
+            let Some(key) = require_api_key(&window, &request_id, &api_key, "Anthropic") else {
                 return Ok(());
-            }
+            };
             run_rest_anthropic(
                 &window,
                 &request_id,
                 &endpoint.unwrap_or_else(|| "https://api.anthropic.com".to_string()),
-                &key,
+                key,
                 &model.unwrap_or_else(|| "claude-sonnet-4-5-20250929".to_string()),
                 &prompt,
             )
             .await
         }
         "openai" => {
-            let key = api_key.unwrap_or_default();
-            if key.is_empty() {
-                emit_error(&window, &request_id, "OpenAI API key is required");
+            let Some(key) = require_api_key(&window, &request_id, &api_key, "OpenAI") else {
                 return Ok(());
-            }
+            };
             run_rest_openai(
                 &window,
                 &request_id,
                 &endpoint.unwrap_or_else(|| "https://api.openai.com".to_string()),
-                &key,
+                key,
                 &model.unwrap_or_else(|| "gpt-4o".to_string()),
                 &prompt,
             )
             .await
         }
         "google-ai" => {
-            let key = api_key.unwrap_or_default();
-            if key.is_empty() {
-                emit_error(&window, &request_id, "Google AI API key is required");
+            let Some(key) = require_api_key(&window, &request_id, &api_key, "Google AI") else {
                 return Ok(());
-            }
+            };
             run_rest_google(
                 &window,
                 &request_id,
-                &key,
+                key,
                 &model.unwrap_or_else(|| "gemini-2.0-flash".to_string()),
                 &prompt,
             )
@@ -530,6 +524,24 @@ async fn run_rest_ollama(
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/// Validate that an API key is present and non-empty.
+///
+/// Returns `Some(key)` if valid, or emits an error event and returns `None`.
+fn require_api_key<'a>(
+    window: &WebviewWindow,
+    request_id: &str,
+    api_key: &'a Option<String>,
+    provider_name: &str,
+) -> Option<&'a str> {
+    match api_key.as_deref() {
+        Some(k) if !k.is_empty() => Some(k),
+        _ => {
+            emit_error(window, request_id, &format!("{} API key is required", provider_name));
+            None
+        }
+    }
+}
 
 fn emit_chunk(window: &WebviewWindow, request_id: &str, text: &str) {
     let _ = window.emit(

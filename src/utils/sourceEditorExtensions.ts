@@ -54,6 +54,7 @@ import {
 import { buildSourceShortcutKeymap } from "@/plugins/codemirror/sourceShortcuts";
 import { toggleTaskList } from "@/plugins/sourceContextDetection/taskListActions";
 import { guardCodeMirrorKeyBinding } from "@/utils/imeGuard";
+import { isMacPlatform } from "@/utils/shortcutMatch";
 import { createSourceImagePopupPlugin } from "@/plugins/sourceImagePopup";
 import { createSourceLinkPopupPlugin } from "@/plugins/sourceLinkPopup";
 import { createSourceLinkTooltipPlugin } from "@/plugins/sourceLinkTooltip";
@@ -191,7 +192,7 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
         preventDefault: true,
       }),
       // Windows/Linux convention: Ctrl+Y for redo (skip on macOS where Cmd+Y = AI Genies)
-      ...(/Mac|iPod|iPhone|iPad/.test(navigator.platform) ? [] : [
+      ...(isMacPlatform() ? [] : [
         guardCodeMirrorKeyBinding({
           key: "Mod-y",
           run: () => performUnifiedRedo(getCurrentWindowLabel()),
