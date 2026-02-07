@@ -53,6 +53,11 @@ export class ColumnResizeManager {
   /**
    * Schedule a debounced update of resize handles.
    * Called from plugin update() to avoid synchronous DOM operations during input.
+   *
+   * Skips DOM modifications when the editor is composing (IME active) to
+   * avoid disrupting CJK composition — appending handle divs during
+   * composition triggers ProseMirror's MutationObserver which can cause
+   * DOM reconciliation that breaks the ongoing composition session.
    */
   scheduleUpdate(table: HTMLTableElement | null) {
     this.pendingTable = table;
@@ -65,6 +70,11 @@ export class ColumnResizeManager {
       const targetTable = this.pendingTable;
       this.pendingTable = null;
       if (targetTable) {
+        // Defer during composition to avoid disrupting IME input
+        if (this.view.composing) {
+          this.scheduleUpdate(targetTable);
+          return;
+        }
         this.addHandlesToTable(targetTable);
       }
     }, DEBOUNCE_MS);
