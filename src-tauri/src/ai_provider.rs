@@ -60,6 +60,46 @@ pub fn detect_ai_providers() -> Vec<CliProviderEntry> {
         .collect()
 }
 
+/// Resolve the user's full login-shell `$PATH`.
+///
+/// macOS app bundles launched from Finder/Dock inherit a minimal PATH
+/// (`/usr/bin:/bin:/usr/sbin:/sbin`).  Instead of guessing install
+/// locations, we spawn the user's interactive login shell and ask for
+/// its PATH.  Using `-li` ensures both `.zprofile` AND `.zshrc` are
+/// sourced, which is needed for tools initialized in `.zshrc` (nvm,
+/// fnm, pyenv, etc.).  Markers isolate PATH from shell startup noise.
+/// The result is cached for the lifetime of the process.
+fn login_shell_path() -> String {
+    use std::sync::OnceLock;
+    static CACHED: OnceLock<String> = OnceLock::new();
+
+    const START: &str = "__VMARK_PATH_START__";
+    const END: &str = "__VMARK_PATH_END__";
+
+    CACHED
+        .get_or_init(|| {
+            let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+            let cmd = format!("echo {START}${{PATH}}{END}");
+            let output = Command::new(&shell)
+                .args(["-lic", &cmd])
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .map(|o| String::from_utf8_lossy(&o.stdout).to_string());
+
+            if let Some(raw) = output {
+                if let Some(start) = raw.find(START) {
+                    if let Some(end) = raw.find(END) {
+                        let path = &raw[start + START.len()..end];
+                        return path.trim().to_string();
+                    }
+                }
+            }
+            std::env::var("PATH").unwrap_or_default()
+        })
+        .clone()
+}
+
 fn check_command(cmd: &str) -> (bool, Option<String>) {
     let which_cmd = if cfg!(target_os = "windows") {
         "where"
@@ -67,7 +107,11 @@ fn check_command(cmd: &str) -> (bool, Option<String>) {
         "which"
     };
 
-    match Command::new(which_cmd).arg(cmd).output() {
+    match Command::new(which_cmd)
+        .arg(cmd)
+        .env("PATH", login_shell_path())
+        .output()
+    {
         Ok(output) if output.status.success() => {
             let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
             (true, Some(path))
@@ -180,6 +224,7 @@ fn run_cli_provider(
 ) -> Result<(), String> {
     let mut child = Command::new(cmd)
         .args(args)
+        .env("PATH", login_shell_path())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
