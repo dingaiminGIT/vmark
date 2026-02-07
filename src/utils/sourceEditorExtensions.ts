@@ -190,12 +190,14 @@ export function createSourceEditorExtensions(config: ExtensionConfig): Extension
         run: () => performUnifiedRedo(getCurrentWindowLabel()),
         preventDefault: true,
       }),
-      // Windows/Linux convention: Ctrl+Y for redo
-      guardCodeMirrorKeyBinding({
-        key: "Mod-y",
-        run: () => performUnifiedRedo(getCurrentWindowLabel()),
-        preventDefault: true,
-      }),
+      // Windows/Linux convention: Ctrl+Y for redo (skip on macOS where Cmd+Y = AI Genies)
+      ...(/Mac|iPod|iPhone|iPad/.test(navigator.platform) ? [] : [
+        guardCodeMirrorKeyBinding({
+          key: "Mod-y",
+          run: () => performUnifiedRedo(getCurrentWindowLabel()),
+          preventDefault: true,
+        }),
+      ]),
       // Fallback Tab handlers: insert spaces if Tab/Shift-Tab not handled above
       tabIndentFallbackKeymap,
       shiftTabIndentFallbackKeymap,

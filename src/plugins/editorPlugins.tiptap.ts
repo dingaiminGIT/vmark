@@ -1010,10 +1010,12 @@ export function buildEditorKeymapBindings(): Record<string, Command> {
   bindings["Mod-Shift-z"] = guardProseMirrorCommand(() => {
     return performUnifiedRedo(getCurrentWindowLabel());
   });
-  // Windows/Linux convention: Ctrl+Y for redo
-  bindings["Mod-y"] = guardProseMirrorCommand(() => {
-    return performUnifiedRedo(getCurrentWindowLabel());
-  });
+  // Windows/Linux convention: Ctrl+Y for redo (skip on macOS where Cmd+Y = AI Genies)
+  if (!/Mac|iPod|iPhone|iPad/.test(navigator.platform)) {
+    bindings["Mod-y"] = guardProseMirrorCommand(() => {
+      return performUnifiedRedo(getCurrentWindowLabel());
+    });
+  }
 
   return bindings;
 }
