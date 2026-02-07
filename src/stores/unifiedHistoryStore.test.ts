@@ -199,28 +199,6 @@ describe("unifiedHistoryStore", () => {
     });
   });
 
-  describe("getNextUndoMode / getNextRedoMode", () => {
-    it("returns null when no checkpoints exist", () => {
-      const store = useUnifiedHistoryStore.getState();
-
-      expect(store.getNextUndoMode(TAB_A)).toBeNull();
-      expect(store.getNextRedoMode(TAB_A)).toBeNull();
-    });
-
-    it("returns mode of most recent checkpoint", () => {
-      const store = useUnifiedHistoryStore.getState();
-
-      store.createCheckpoint(TAB_A, createCheckpointData("Content", "source"));
-      store.createCheckpoint(TAB_A, createCheckpointData("Content", "wysiwyg"));
-
-      expect(store.getNextUndoMode(TAB_A)).toBe("wysiwyg");
-
-      store.pushRedo(TAB_A, createCheckpointData("Redo", "source"));
-
-      expect(store.getNextRedoMode(TAB_A)).toBe("source");
-    });
-  });
-
   describe("per-document isolation", () => {
     it("maintains separate history stacks for different documents", () => {
       const store = useUnifiedHistoryStore.getState();

@@ -82,16 +82,6 @@ interface UnifiedHistoryActions {
   canRedoCheckpoint: (tabId: string) => boolean;
 
   /**
-   * Get the mode of the next undo checkpoint (for UI hints).
-   */
-  getNextUndoMode: (tabId: string) => "source" | "wysiwyg" | null;
-
-  /**
-   * Get the mode of the next redo checkpoint (for UI hints).
-   */
-  getNextRedoMode: (tabId: string) => "source" | "wysiwyg" | null;
-
-  /**
    * Set restoring flag (prevents checkpoint creation during restore).
    */
   setRestoring: (value: boolean) => void;
@@ -242,18 +232,6 @@ export const useUnifiedHistoryStore = create<UnifiedHistoryState & UnifiedHistor
     canRedoCheckpoint: (tabId) => {
       const docHistory = get().documents[tabId];
       return docHistory ? docHistory.redoStack.length > 0 : false;
-    },
-
-    getNextUndoMode: (tabId) => {
-      const docHistory = get().documents[tabId];
-      if (!docHistory || docHistory.undoStack.length === 0) return null;
-      return docHistory.undoStack[docHistory.undoStack.length - 1].mode;
-    },
-
-    getNextRedoMode: (tabId) => {
-      const docHistory = get().documents[tabId];
-      if (!docHistory || docHistory.redoStack.length === 0) return null;
-      return docHistory.redoStack[docHistory.redoStack.length - 1].mode;
     },
 
     setRestoring: (value) => {
