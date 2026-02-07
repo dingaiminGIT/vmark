@@ -11,6 +11,8 @@
 
 export type GenieScope = "selection" | "block" | "document";
 
+export type GenieAction = "replace" | "insert";
+
 export interface GenieMetadata {
   name: string;
   description: string;
@@ -18,6 +20,8 @@ export interface GenieMetadata {
   category?: string;
   icon?: string;
   model?: string;
+  /** Suggestion type: "replace" (default) or "insert" (append after source). */
+  action?: GenieAction;
 }
 
 export interface GenieDefinition {

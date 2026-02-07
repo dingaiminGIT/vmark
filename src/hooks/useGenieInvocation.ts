@@ -10,7 +10,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { toast } from "sonner";
-import type { GenieDefinition, GenieScope, AiResponseChunk } from "@/types/aiGenies";
+import type { GenieDefinition, GenieScope, GenieAction, AiResponseChunk } from "@/types/aiGenies";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { useAiProviderStore } from "@/stores/aiProviderStore";
 import { useAiInvocationStore } from "@/stores/aiInvocationStore";
@@ -117,7 +117,7 @@ export function useGenieInvocation() {
   }, []);
 
   const runGenie = useCallback(
-    async (filledPrompt: string, extraction: ExtractionResult, model?: string) => {
+    async (filledPrompt: string, extraction: ExtractionResult, model?: string, action: GenieAction = "replace") => {
       const providerState = useAiProviderStore.getState();
       const provider = providerState.activeProvider;
       if (!provider) return; // Callers ensure provider exists
@@ -156,13 +156,14 @@ export function useGenieInvocation() {
         if (chunk.done) {
           // Create suggestion from accumulated result
           if (accumulated.trim()) {
+            const isInsert = action === "insert";
             useAiSuggestionStore.getState().addSuggestion({
               tabId,
-              type: "replace",
-              from: extraction.from,
+              type: isInsert ? "insert" : "replace",
+              from: isInsert ? extraction.to : extraction.from,
               to: extraction.to,
               newContent: accumulated.trim(),
-              originalContent: extraction.text,
+              originalContent: isInsert ? "" : extraction.text,
             });
           }
           cancel();
@@ -215,7 +216,7 @@ export function useGenieInvocation() {
       // Track genie as recent
       useGeniesStore.getState().addRecent(genie.metadata.name);
 
-      await runGenie(filled, extracted, genie.metadata.model);
+      await runGenie(filled, extracted, genie.metadata.model, genie.metadata.action ?? "replace");
     },
     [runGenie]
   );

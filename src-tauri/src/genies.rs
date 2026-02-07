@@ -36,6 +36,8 @@ pub struct GenieMetadata {
     pub category: Option<String>,
     pub icon: Option<String>,
     pub model: Option<String>,
+    /// Suggestion type: "replace" (default) or "insert" (append after source).
+    pub action: Option<String>,
 }
 
 // ============================================================================
@@ -268,6 +270,7 @@ fn parse_genie(content: &str, path: &str) -> Result<GenieContent, String> {
                 category: None,
                 icon: None,
                 model: None,
+                action: None,
             },
             template: content.to_string(),
         });
@@ -319,6 +322,7 @@ fn parse_genie(content: &str, path: &str) -> Result<GenieContent, String> {
             category: fields.get("category").cloned(),
             icon: fields.get("icon").cloned(),
             model: fields.get("model").cloned(),
+            action: fields.get("action").filter(|v| v.as_str() == "replace" || v.as_str() == "insert").cloned(),
         },
         template,
     })
@@ -451,7 +455,24 @@ You are an expert editor. Improve the following text:
         assert_eq!(result.metadata.scope, "selection");
         assert_eq!(result.metadata.category.as_deref(), Some("writing"));
         assert_eq!(result.metadata.icon.as_deref(), Some("sparkles"));
+        assert_eq!(result.metadata.action, None); // no action field → defaults to None
         assert!(result.template.contains("{{content}}"));
+    }
+
+    #[test]
+    fn test_parse_genie_with_action_insert() {
+        let content = "---\nname: continue\nscope: block\naction: insert\n---\n\nContinue writing.\n\n{{content}}";
+        let result = parse_genie(content, "continue.md").unwrap();
+        assert_eq!(result.metadata.name, "continue");
+        assert_eq!(result.metadata.scope, "block");
+        assert_eq!(result.metadata.action.as_deref(), Some("insert"));
+    }
+
+    #[test]
+    fn test_parse_genie_with_invalid_action() {
+        let content = "---\nname: typo\nscope: selection\naction: insret\n---\n\nTemplate";
+        let result = parse_genie(content, "typo.md").unwrap();
+        assert_eq!(result.metadata.action, None); // invalid value ignored
     }
 
     #[test]

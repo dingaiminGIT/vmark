@@ -4,6 +4,7 @@ description: Continue writing from here
 scope: block
 category: creative
 icon: pen-line
+action: insert
 ---
 
 Continue writing naturally from where the following text leaves off.
