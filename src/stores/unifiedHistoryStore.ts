@@ -111,14 +111,21 @@ export const useUnifiedHistoryStore = create<UnifiedHistoryState & UnifiedHistor
       // Don't create checkpoint while restoring
       if (get().isRestoring) return;
 
+      // Skip if content hasn't changed since last checkpoint (deduplication)
+      const docHistory = get().documents[tabId];
+      if (docHistory && docHistory.undoStack.length > 0) {
+        const last = docHistory.undoStack[docHistory.undoStack.length - 1];
+        if (last.markdown === checkpoint.markdown) return;
+      }
+
       const newCheckpoint: HistoryCheckpoint = {
         ...checkpoint,
         timestamp: Date.now(),
       };
 
       set((state) => {
-        const docHistory = state.documents[tabId] || emptyHistory;
-        const newUndoStack = [...docHistory.undoStack, newCheckpoint];
+        const currentHistory = state.documents[tabId] || emptyHistory;
+        const newUndoStack = [...currentHistory.undoStack, newCheckpoint];
         // Trim to max size
         if (newUndoStack.length > state.maxCheckpoints) {
           newUndoStack.shift();

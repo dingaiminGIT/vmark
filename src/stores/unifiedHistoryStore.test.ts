@@ -52,6 +52,31 @@ describe("unifiedHistoryStore", () => {
       expect(store.canUndoCheckpoint(TAB_A)).toBe(false);
     });
 
+    it("skips duplicate checkpoint when markdown is unchanged", () => {
+      const store = useUnifiedHistoryStore.getState();
+
+      store.createCheckpoint(TAB_A, createCheckpointData("Same content"));
+      store.createCheckpoint(TAB_A, createCheckpointData("Same content"));
+      store.createCheckpoint(TAB_A, createCheckpointData("Same content"));
+
+      // Only one checkpoint should exist
+      expect(store.popUndo(TAB_A)!.markdown).toBe("Same content");
+      expect(store.popUndo(TAB_A)).toBeNull();
+    });
+
+    it("allows checkpoint with same markdown but different content after other changes", () => {
+      const store = useUnifiedHistoryStore.getState();
+
+      store.createCheckpoint(TAB_A, createCheckpointData("A"));
+      store.createCheckpoint(TAB_A, createCheckpointData("B"));
+      store.createCheckpoint(TAB_A, createCheckpointData("A")); // back to "A" — not a duplicate
+
+      expect(store.popUndo(TAB_A)!.markdown).toBe("A");
+      expect(store.popUndo(TAB_A)!.markdown).toBe("B");
+      expect(store.popUndo(TAB_A)!.markdown).toBe("A");
+      expect(store.popUndo(TAB_A)).toBeNull();
+    });
+
     it("clears redo stack when new checkpoint is created", () => {
       const store = useUnifiedHistoryStore.getState();
 
