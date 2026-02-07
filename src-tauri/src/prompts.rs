@@ -1,8 +1,8 @@
-//! AI Prompts — file reader and default prompt installer
+//! AI Genies — file reader and default genie installer
 //!
-//! Scans global (`<appDataDir>/prompts/`) and workspace (`.vmark/prompts/`)
-//! directories for markdown prompt files. Workspace prompts override global
-//! ones on name collision.
+//! Scans global (`<appDataDir>/genies/`) and workspace (`.vmark/genies/`)
+//! directories for markdown prompt files. Workspace genies override global
+//! ones on name collision in the store (menu shows both independently).
 
 use serde::Serialize;
 use std::collections::HashMap;
@@ -43,9 +43,9 @@ pub struct PromptMetadata {
 // Commands
 // ============================================================================
 
-/// Return the global prompts directory path.
+/// Return the global genies directory path.
 #[command]
-pub fn get_prompts_dir(app: AppHandle) -> Result<String, String> {
+pub fn get_genies_dir(app: AppHandle) -> Result<String, String> {
     let dir = global_prompts_dir(&app)?;
     Ok(dir.to_string_lossy().to_string())
 }
@@ -67,7 +67,7 @@ pub fn list_prompts(
 
     // 2. Scan workspace prompts (overrides global)
     if let Some(root) = workspace_root {
-        let ws_dir = Path::new(&root).join(".vmark").join("prompts");
+        let ws_dir = Path::new(&root).join(".vmark").join("genies");
         if ws_dir.is_dir() {
             scan_prompts_dir(&ws_dir, &ws_dir, "workspace", &mut by_name);
         }
@@ -100,7 +100,7 @@ pub fn read_prompt(
     }
 
     if let Some(root) = &workspace_root {
-        let ws_dir = Path::new(root).join(".vmark").join("prompts");
+        let ws_dir = Path::new(root).join(".vmark").join("genies");
         if let Ok(ws_canonical) = fs::canonicalize(&ws_dir) {
             if requested.starts_with(&ws_canonical) {
                 allowed = true;
@@ -122,9 +122,9 @@ pub fn read_prompt(
 // Scanning
 // ============================================================================
 
-fn global_prompts_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub fn global_prompts_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    Ok(app_data.join("prompts"))
+    Ok(app_data.join("genies"))
 }
 
 /// Recursively scan a directory for `.md` files. Subdirectory names become categories.
@@ -177,6 +177,94 @@ fn scan_prompts_dir(
             );
         }
     }
+}
+
+// ============================================================================
+// Menu scanning — returns entries with resolved titles from frontmatter
+// ============================================================================
+
+pub struct GenieMenuEntry {
+    pub title: String,
+    pub path: String,
+    pub category: Option<String>,
+}
+
+/// Scan a directory and return prompt entries with titles resolved from frontmatter.
+pub fn scan_genies_with_titles(dir: &Path) -> Vec<GenieMenuEntry> {
+    let mut entries = Vec::new();
+    scan_genies_recursive(dir, dir, &mut entries);
+    entries.sort_by(|a, b| a.title.cmp(&b.title));
+    entries
+}
+
+fn scan_genies_recursive(dir: &Path, base: &Path, entries: &mut Vec<GenieMenuEntry>) {
+    let read_dir = match fs::read_dir(dir) {
+        Ok(rd) => rd,
+        Err(_) => return,
+    };
+
+    for entry in read_dir.flatten() {
+        let ft = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
+        };
+        if ft.is_symlink() {
+            continue;
+        }
+
+        let path = entry.path();
+        if ft.is_dir() {
+            scan_genies_recursive(&path, base, entries);
+        } else if path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md")) {
+            let filename_stem = path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+
+            let title = match fs::read_to_string(&path) {
+                Ok(content) => extract_frontmatter_name(&content).unwrap_or(filename_stem),
+                Err(_) => filename_stem,
+            };
+
+            let category = path
+                .parent()
+                .and_then(|p| p.strip_prefix(base).ok())
+                .filter(|rel| !rel.as_os_str().is_empty())
+                .map(|rel| rel.to_string_lossy().to_string());
+
+            entries.push(GenieMenuEntry {
+                title,
+                path: path.to_string_lossy().to_string(),
+                category,
+            });
+        }
+    }
+}
+
+/// Extract the `name:` value from YAML frontmatter without a full parse.
+fn extract_frontmatter_name(content: &str) -> Option<String> {
+    let content = content.trim_start_matches('\u{FEFF}');
+    let trimmed = content.trim_start();
+    if !trimmed.starts_with("---") {
+        return None;
+    }
+    let after_first = &trimmed[3..];
+    let closing = after_first.find("\n---")?;
+    let frontmatter = &after_first[..closing];
+
+    for line in frontmatter.lines() {
+        let line = line.trim();
+        if let Some((key, value)) = line.split_once(':') {
+            if key.trim().eq_ignore_ascii_case("name") {
+                let name = value.trim().to_string();
+                if !name.is_empty() {
+                    return Some(name);
+                }
+            }
+        }
+    }
+    None
 }
 
 // ============================================================================
@@ -303,7 +391,7 @@ const DEFAULT_PROMPTS: &[DefaultPrompt] = &[
     },
 ];
 
-/// Install default prompts into `<appDataDir>/prompts/` if they don't already exist.
+/// Install default genies into `<appDataDir>/genies/` if they don't already exist.
 pub fn install_default_prompts(app: &AppHandle) -> Result<(), String> {
     let base = global_prompts_dir(app)?;
 

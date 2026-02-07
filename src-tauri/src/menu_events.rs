@@ -274,6 +274,22 @@ pub fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         }
     }
 
+    // Handle genie item clicks — look up path from snapshot and emit
+    if let Some(index_str) = id.strip_prefix("genie-item-") {
+        if let Ok(index) = index_str.parse::<usize>() {
+            if let Some(path) = crate::menu::get_genie_path(index) {
+                let event = PendingMenuEvent {
+                    event_name: "menu:invoke-genie".to_string(),
+                    recent_file_path: Some(path),
+                };
+                if let Some(focused) = get_focused_window(app) {
+                    emit_event(&focused, &event);
+                }
+                return;
+            }
+        }
+    }
+
     // Handle clear-recent-workspaces
     if id == "clear-recent-workspaces" {
         if let Some(focused) = get_focused_window(app) {
