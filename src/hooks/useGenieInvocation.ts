@@ -18,6 +18,8 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
 import { useGeniesStore } from "@/stores/geniesStore";
 import { useTabStore } from "@/stores/tabStore";
+import { getExpandedSourcePeekRange, serializeSourcePeekRange } from "@/utils/sourcePeek";
+import { serializeMarkdown } from "@/utils/markdownPipeline";
 
 // ============================================================================
 // Content Extraction
@@ -34,12 +36,7 @@ function extractContent(scope: GenieScope): ExtractionResult | null {
   const sourceMode = useEditorStore.getState().sourceMode;
 
   if (sourceMode) {
-    // In source mode, use raw content string
     const content = useEditorStore.getState().content;
-    if (scope === "document") {
-      return { text: content, from: 0, to: content.length };
-    }
-    // For selection/block in source mode, we don't have ProseMirror — use full content
     return { text: content, from: 0, to: content.length };
   }
 
@@ -51,29 +48,26 @@ function extractContent(scope: GenieScope): ExtractionResult | null {
   switch (scope) {
     case "selection": {
       if (!selection.empty) {
-        const text = doc.textBetween(selection.from, selection.to, "\n\n");
-        return { text, from: selection.from, to: selection.to };
+        // Explicit selection — serialize selected range as markdown
+        const range = { from: selection.from, to: selection.to };
+        const text = serializeSourcePeekRange(state, range);
+        return { text, from: range.from, to: range.to };
       }
-      // No selection — use current block (paragraph) instead
-      const $sel = selection.$from;
-      const selDepth = $sel.depth;
-      const selStart = $sel.start(selDepth);
-      const selEnd = $sel.end(selDepth);
-      const selText = doc.textBetween(selStart, selEnd, "\n\n");
-      return { text: selText, from: selStart, to: selEnd };
+      // No selection — expand to compound block (whole list, blockquote, etc.)
+      const range = getExpandedSourcePeekRange(state);
+      const text = serializeSourcePeekRange(state, range);
+      return { text, from: range.from, to: range.to };
     }
 
     case "block": {
-      const $pos = selection.$from;
-      const depth = $pos.depth;
-      const start = $pos.start(depth);
-      const end = $pos.end(depth);
-      const text = doc.textBetween(start, end, "\n\n");
-      return { text, from: start, to: end };
+      // Expand to compound block — whole list, table, blockquote
+      const range = getExpandedSourcePeekRange(state);
+      const text = serializeSourcePeekRange(state, range);
+      return { text, from: range.from, to: range.to };
     }
 
     case "document": {
-      const text = doc.textBetween(0, doc.content.size, "\n\n");
+      const text = serializeMarkdown(state.schema, doc);
       return { text, from: 0, to: doc.content.size };
     }
 
