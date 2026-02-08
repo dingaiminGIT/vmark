@@ -789,6 +789,10 @@ pub fn refresh_genies_menu(app: AppHandle) -> Result<(), String> {
         *s = snapshot;
     }
 
+    // Re-apply SF Symbol icons to cover newly added genie items
+    #[cfg(target_os = "macos")]
+    crate::macos_menu::apply_menu_icons();
+
     Ok(())
 }
 
