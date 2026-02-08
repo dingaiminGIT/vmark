@@ -206,10 +206,17 @@ function isSafeStyleValue(value: string): boolean {
  * Sanitize SVG content for safe rendering (e.g., Mermaid diagrams).
  * Allows SVG elements but removes scripts and event handlers.
  * Preserves style attributes and all SVG-specific attributes for proper rendering.
+ *
+ * Mermaid uses foreignObject with HTML labels (div, span) inside SVG.
+ * HTML_INTEGRATION_POINTS tells DOMPurify to allow HTML inside foreignObject,
+ * and the html profile provides the allowed HTML tag list. Without these,
+ * DOMPurify strips the HTML wrappers (div, span) from foreignObject content,
+ * losing inline styles (line-height, display, text-align) that mermaid relies
+ * on for correct text sizing — causing text to clip inside node boxes.
  */
 export function sanitizeSvg(svg: string): string {
   return DOMPurify.sanitize(svg, {
-    USE_PROFILES: { svg: true, svgFilters: true },
+    USE_PROFILES: { svg: true, svgFilters: true, html: true },
     ADD_TAGS: ["foreignObject"],
     // Explicitly add style and common SVG attributes that might be needed
     ADD_ATTR: ["style", "fill", "stroke", "class", "transform", "d", "cx", "cy", "r", "rx", "ry", "x", "y", "width", "height", "viewBox", "xmlns", "marker-end", "marker-start"],
@@ -222,6 +229,8 @@ export function sanitizeSvg(svg: string): string {
       "onfocus",
       "onblur",
     ],
+    // Allow HTML elements inside SVG foreignObject (mermaid's htmlLabels)
+    HTML_INTEGRATION_POINTS: { foreignobject: true },
   });
 }
 
