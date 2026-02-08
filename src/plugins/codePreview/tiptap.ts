@@ -4,6 +4,8 @@ import type { EditorView } from "@tiptap/pm/view";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { renderLatex } from "../latex";
 import { renderMermaid, updateMermaidTheme } from "../mermaid";
+import { setupMermaidPanZoom } from "@/plugins/mermaid/mermaidPanZoom";
+import { setupMermaidExport } from "@/plugins/mermaid/mermaidExport";
 import { sanitizeKatex, sanitizeSvg } from "@/utils/sanitize";
 import { useBlockMathEditingStore } from "@/stores/blockMathEditingStore";
 import { parseLatexError } from "@/plugins/latex/latexErrorParser";
@@ -62,7 +64,8 @@ function installDoubleClickHandler(element: HTMLElement, onDoubleClick?: () => v
 function createPreviewElement(
   language: string,
   rendered: string,
-  onDoubleClick?: () => void
+  onDoubleClick?: () => void,
+  mermaidSource?: string,
 ): HTMLElement {
   const wrapper = document.createElement("div");
   // Use "latex" class for both "latex" and "$$math$$" languages
@@ -70,6 +73,14 @@ function createPreviewElement(
   wrapper.className = `code-block-preview ${previewClass}-preview`;
   const sanitized = language === "mermaid" ? sanitizeSvg(rendered) : sanitizeKatex(rendered);
   wrapper.innerHTML = sanitized;
+  if (language === "mermaid") {
+    // Defer panzoom/export setup — Panzoom requires DOM-attached elements,
+    // but ProseMirror attaches the widget after the factory returns.
+    requestAnimationFrame(() => {
+      setupMermaidPanZoom(wrapper);
+      if (mermaidSource) setupMermaidExport(wrapper, mermaidSource);
+    });
+  }
   installDoubleClickHandler(wrapper, onDoubleClick);
   return wrapper;
 }
@@ -92,7 +103,8 @@ function createPreviewPlaceholder(
 function createEditHeader(
   language: string,
   onCancel: () => void,
-  onSave: () => void
+  onSave: () => void,
+  onCopy?: () => void,
 ): HTMLElement {
   const header = document.createElement("div");
   header.className = "code-block-edit-header";
@@ -103,6 +115,31 @@ function createEditHeader(
 
   const actions = document.createElement("div");
   actions.className = "code-block-edit-actions";
+
+  // Copy button (mermaid only — passed via onCopy)
+  if (onCopy) {
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "code-block-edit-btn code-block-edit-copy";
+    copyBtn.title = "Copy mermaid code";
+    copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+    copyBtn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    copyBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onCopy();
+      // Brief checkmark feedback
+      copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      copyBtn.classList.add("code-block-edit-btn--success");
+      setTimeout(() => {
+        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+        copyBtn.classList.remove("code-block-edit-btn--success");
+      }, 1500);
+    });
+    actions.appendChild(copyBtn);
+  }
 
   const cancelBtn = document.createElement("button");
   cancelBtn.className = "code-block-edit-btn code-block-edit-cancel";
@@ -231,6 +268,12 @@ function exitEditMode(view: EditorView | null, revert: boolean): void {
 
   if (!node) {
     store.exitEditing();
+    dispatch(state.tr.setMeta(EDITING_STATE_CHANGED, true));
+    livePreviewToken++;
+    if (livePreviewTimeout) {
+      clearTimeout(livePreviewTimeout);
+      livePreviewTimeout = null;
+    }
     return;
   }
 
@@ -331,10 +374,17 @@ export const codePreviewExtension = Extension.create({
                 const headerWidget = Decoration.widget(
                   nodeStart,
                   (widgetView) => {
+                    const onCopy = language === "mermaid"
+                      ? () => {
+                          const node = widgetView?.state.doc.nodeAt(nodeStart);
+                          if (node) navigator.clipboard.writeText(node.textContent);
+                        }
+                      : undefined;
                     return createEditHeader(
                       language,
                       () => exitEditMode(widgetView, true), // Cancel
-                      () => exitEditMode(widgetView, false) // Save
+                      () => exitEditMode(widgetView, false), // Save
+                      onCopy,
                     );
                   },
                   { side: -1, key: `${nodeStart}:header` }
@@ -407,7 +457,7 @@ export const codePreviewExtension = Extension.create({
                 const rendered = renderCache.get(cacheKey)!;
                 const widget = Decoration.widget(
                   nodeEnd,
-                  (view) => createPreviewElement(language, rendered, () => handleEnterEdit(view)),
+                  (view) => createPreviewElement(language, rendered, () => handleEnterEdit(view), content),
                   { side: 1, key: cacheKey }
                 );
                 newDecorations.push(widget);
@@ -467,6 +517,8 @@ export const codePreviewExtension = Extension.create({
                         renderCache.set(cacheKey, svg);
                         placeholder.className = "code-block-preview mermaid-preview";
                         placeholder.innerHTML = sanitizeSvg(svg);
+                        setupMermaidPanZoom(placeholder);
+                        setupMermaidExport(placeholder, content);
                       } else {
                         placeholder.className = "code-block-preview mermaid-error";
                         placeholder.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Failed to render diagram`;

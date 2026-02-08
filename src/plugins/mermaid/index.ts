@@ -52,7 +52,6 @@ async function loadMermaid(): Promise<typeof import("mermaid")> {
 /**
  * Theme-specific fill and styling variables.
  * These ensure nodes and subgraphs have proper fills in both light and dark modes.
- * Note: fontSize is added dynamically in applyMermaidConfig() from currentFontSize.
  */
 const lightThemeVariables = {
   // Node fills
@@ -88,7 +87,11 @@ const darkThemeVariables = {
 
 /**
  * Initialize Mermaid with current settings.
- * Used internally to apply theme and font size.
+ *
+ * fontSize is set to the editor's mono font size so mermaid renders text
+ * at the correct size directly. CSS zoom is NOT used (--mermaid-scale is 1)
+ * to avoid double-scaling. Mermaid's default flowchart padding/wrapping
+ * are left untouched so its node-sizing algorithm stays accurate.
  */
 function applyMermaidConfig(): void {
   if (!mermaidModule) return;
@@ -166,7 +169,7 @@ function cleanupMermaidContainer(diagramId: string): void {
  * Render mermaid diagram content to SVG HTML.
  * Returns null if rendering fails.
  * Lazy-loads mermaid on first call.
- * Always syncs font size before rendering to respect current settings.
+ * Syncs font size before rendering to respect current settings.
  */
 export async function renderMermaid(
   content: string,
@@ -174,7 +177,7 @@ export async function renderMermaid(
 ): Promise<string | null> {
   await initMermaid();
 
-  // Always sync font size before rendering to respect current editor settings
+  // Sync font size before rendering to respect current editor settings
   const newFontSize = getMonoFontSize();
   if (Math.abs(newFontSize - currentFontSize) > 0.1) {
     currentFontSize = newFontSize;
@@ -195,6 +198,50 @@ export async function renderMermaid(
     console.warn("[Mermaid] Failed to render diagram:", error);
     return null;
   }
+}
+
+/**
+ * Render mermaid diagram with a specific theme for PNG export.
+ * Uses a concrete font stack (SVG-as-image can't inherit from document).
+ * Temporarily switches theme, renders, then restores.
+ */
+export async function renderMermaidForExport(
+  content: string,
+  theme: "light" | "dark"
+): Promise<string | null> {
+  await initMermaid();
+
+  const savedTheme = currentTheme;
+
+  currentTheme = theme === "dark" ? "dark" : "default";
+  const themeVars = currentTheme === "dark"
+    ? { ...darkThemeVariables, fontSize: `${currentFontSize}px` }
+    : { ...lightThemeVariables, fontSize: `${currentFontSize}px` };
+
+  mermaidModule!.default.initialize({
+    startOnLoad: false,
+    theme: currentTheme,
+    securityLevel: "antiscript",
+    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+    fontSize: currentFontSize,
+    themeVariables: themeVars,
+  });
+
+  const diagramId = `export-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  let svg: string | null = null;
+  try {
+    const result = await mermaidModule!.default.render(diagramId, content);
+    svg = result.svg;
+    cleanupMermaidContainer(diagramId);
+  } catch {
+    cleanupMermaidContainer(diagramId);
+  }
+
+  currentTheme = savedTheme;
+  applyMermaidConfig();
+
+  return svg;
 }
 
 /**

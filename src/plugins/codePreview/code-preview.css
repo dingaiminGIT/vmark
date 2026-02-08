@@ -136,6 +136,10 @@
   background: var(--hover-bg);
 }
 
+.code-block-edit-btn--success {
+  color: var(--success-color);
+}
+
 .code-block-edit-btn:focus-visible {
   outline: none;
   position: relative;

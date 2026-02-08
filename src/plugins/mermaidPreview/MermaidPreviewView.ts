@@ -259,6 +259,18 @@ export class MermaidPreviewView {
         this.setZoom(Math.max(ZOOM_MIN, this.zoom - ZOOM_STEP));
       }
     });
+
+    // Cmd/Ctrl+scroll to zoom
+    this.preview.addEventListener("wheel", (e) => {
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, this.zoom + delta));
+        if (newZoom !== this.zoom) {
+          this.setZoom(newZoom);
+        }
+      }
+    }, { passive: false });
   }
 
   private setZoom(level: number) {
