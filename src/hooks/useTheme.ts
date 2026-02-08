@@ -230,8 +230,10 @@ function applyTypography(
 
   // Calculate absolute line-height for use with reduced font sizes
   const lineHeightPx = fontSize * lineHeight;
-  // Calculate Mermaid scale factor (mono size / Mermaid's default 16px)
-  const mermaidScale = (fontSize * 0.85) / 16;
+  // Mermaid renders at the editor's mono font size directly (no CSS zoom needed).
+  // --mermaid-scale is kept at 1 for CSS compatibility; visual scaling is handled
+  // by mermaid's own fontSize config.
+  const mermaidScale = 1;
 
   // Calculate block spacing margin that produces correct visual gap.
   // Visual gap = margin + (lineHeight - 1) × fontSize (due to half-leading above and below)

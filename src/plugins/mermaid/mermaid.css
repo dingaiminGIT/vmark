@@ -26,6 +26,25 @@
   height: auto;
 }
 
+/*
+ * Prevent editor CSS from leaking into mermaid SVG foreignObject.
+ *
+ * Mermaid measures text in a temp SVG in document.body where editor CSS
+ * (.tiptap-editor .ProseMirror p { line-height: 1.6 }) doesn't apply.
+ * The foreignObject div has line-height: 1.5 (mermaid's hardcoded inline
+ * style). When the SVG is displayed inside .ProseMirror, the editor's p rule
+ * overrides the inherited 1.5 with 1.6, making text taller than the node
+ * box → bottom clipping of descenders.
+ *
+ * Fix: force foreignObject <p> to inherit line-height from its parent div
+ * (which keeps mermaid's measured 1.5).
+ * Specificity: (0,2,2) beats editor's (0,2,1).
+ */
+.code-block-preview.mermaid-preview foreignObject p,
+.mermaid-block-preview foreignObject p {
+  line-height: inherit;
+}
+
 /* Error state */
 .mermaid-error {
   color: var(--error-color);

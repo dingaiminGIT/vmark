@@ -52,7 +52,6 @@ async function loadMermaid(): Promise<typeof import("mermaid")> {
 /**
  * Theme-specific fill and styling variables.
  * These ensure nodes and subgraphs have proper fills in both light and dark modes.
- * Note: fontSize is added dynamically in applyMermaidConfig() from currentFontSize.
  */
 const lightThemeVariables = {
   // Node fills
@@ -88,7 +87,11 @@ const darkThemeVariables = {
 
 /**
  * Initialize Mermaid with current settings.
- * Used internally to apply theme and font size.
+ *
+ * fontSize is set to the editor's mono font size so mermaid renders text
+ * at the correct size directly. CSS zoom is NOT used (--mermaid-scale is 1)
+ * to avoid double-scaling. Mermaid's default flowchart padding/wrapping
+ * are left untouched so its node-sizing algorithm stays accurate.
  */
 function applyMermaidConfig(): void {
   if (!mermaidModule) return;
@@ -105,15 +108,6 @@ function applyMermaidConfig(): void {
     securityLevel: "antiscript",
     fontFamily: "inherit",
     fontSize: currentFontSize,
-    markdownAutoWrap: true,
-    flowchart: {
-      htmlLabels: true,
-      wrappingWidth: Math.round(currentFontSize * 14),
-      padding: Math.round(currentFontSize * 1.2),
-      nodeSpacing: Math.round(currentFontSize * 3),
-      rankSpacing: Math.round(currentFontSize * 3),
-      useMaxWidth: true,
-    },
     themeVariables,
   });
 }
@@ -175,7 +169,7 @@ function cleanupMermaidContainer(diagramId: string): void {
  * Render mermaid diagram content to SVG HTML.
  * Returns null if rendering fails.
  * Lazy-loads mermaid on first call.
- * Always syncs font size before rendering to respect current settings.
+ * Syncs font size before rendering to respect current settings.
  */
 export async function renderMermaid(
   content: string,
@@ -183,7 +177,7 @@ export async function renderMermaid(
 ): Promise<string | null> {
   await initMermaid();
 
-  // Always sync font size before rendering to respect current editor settings
+  // Sync font size before rendering to respect current editor settings
   const newFontSize = getMonoFontSize();
   if (Math.abs(newFontSize - currentFontSize) > 0.1) {
     currentFontSize = newFontSize;
