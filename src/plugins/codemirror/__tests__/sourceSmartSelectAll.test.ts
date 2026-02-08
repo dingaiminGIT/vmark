@@ -8,10 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { getCodeFenceInfo } from "@/plugins/sourceContextDetection/codeFenceDetection";
-import { getSourceTableInfo } from "@/plugins/sourceContextDetection/tableDetection";
-import { getBlockquoteInfo } from "@/plugins/sourceContextDetection/blockquoteDetection";
-import { getListBlockBounds } from "@/plugins/sourceContextDetection/listDetection";
+import { getSourceBlockBounds } from "../sourceShortcuts";
 
 function createView(content: string, cursorPos: number): EditorView {
   const state = EditorState.create({
@@ -33,37 +30,6 @@ function createViewWithSelection(content: string, from: number, to: number): Edi
     state,
     parent: document.createElement("div"),
   });
-}
-
-/**
- * Replicates the block detection logic from sourceShortcuts.ts
- */
-function getSourceBlockBounds(view: EditorView): { from: number; to: number } | null {
-  const fenceInfo = getCodeFenceInfo(view);
-  if (fenceInfo) {
-    const doc = view.state.doc;
-    if (fenceInfo.endLine - fenceInfo.startLine <= 1) return null;
-    const contentStartLine = doc.line(fenceInfo.startLine + 1);
-    const contentEndLine = doc.line(fenceInfo.endLine - 1);
-    return { from: contentStartLine.from, to: contentEndLine.to };
-  }
-
-  const tableInfo = getSourceTableInfo(view);
-  if (tableInfo) {
-    return { from: tableInfo.start, to: tableInfo.end };
-  }
-
-  const bqInfo = getBlockquoteInfo(view);
-  if (bqInfo) {
-    return { from: bqInfo.from, to: bqInfo.to };
-  }
-
-  const listBounds = getListBlockBounds(view);
-  if (listBounds) {
-    return listBounds;
-  }
-
-  return null;
 }
 
 describe("source mode block detection priority", () => {

@@ -367,7 +367,7 @@ const sourceSelectUndoState = new WeakMap<EditorView, SourceSelectUndo>();
  * Detection order: code fence -> table -> blockquote -> list.
  * Returns { from, to } or null if cursor is not in any block.
  */
-function getSourceBlockBounds(view: EditorView): { from: number; to: number } | null {
+export function getSourceBlockBounds(view: EditorView): { from: number; to: number } | null {
   // 1. Code fence
   const fenceInfo = getCodeFenceInfo(view);
   if (fenceInfo) {

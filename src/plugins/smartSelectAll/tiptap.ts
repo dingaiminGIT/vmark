@@ -118,7 +118,8 @@ function handleSelectionUndo(state: EditorState, dispatch?: (tr: Transaction) =>
     if (dispatch) {
       const tr = state.tr;
       tr.setMeta(smartSelectPluginKey, { stack: [], lastExpanded: null });
-      // Don't dispatch — just clear state and return false for normal undo
+      tr.setMeta("addToHistory", false);
+      dispatch(tr);
     }
     return false;
   }
