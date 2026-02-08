@@ -1,0 +1,59 @@
+/**
+ * Mermaid Pan+Zoom Styles
+ *
+ * Container overflow/position set via inline style in mermaidPanZoom.ts
+ * to avoid CSS specificity fights.
+ */
+
+/* Reset button — top-right, appears on hover */
+.mermaid-panzoom-reset {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
+}
+
+.panzoom-enabled:hover .mermaid-panzoom-reset {
+  opacity: 1;
+}
+
+.mermaid-panzoom-reset:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+/* Focus: U-shaped underline per 33-focus-indicators */
+.mermaid-panzoom-reset:focus-visible {
+  outline: none;
+  opacity: 1;
+}
+
+.mermaid-panzoom-reset:focus-visible::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
+}
+
+.mermaid-panzoom-reset svg {
+  width: 14px;
+  height: 14px;
+}

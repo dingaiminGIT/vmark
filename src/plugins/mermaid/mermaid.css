@@ -4,6 +4,7 @@
 
 /* Import shared fallback styles for all mermaid preview contexts */
 @import "./mermaid-fallback.css";
+@import "./mermaid-panzoom.css";
 
 /* Mermaid diagram container */
 .code-block-preview.mermaid-preview {
@@ -15,14 +16,14 @@
   background-color: var(--bg-secondary);
   border-radius: var(--radius-md);
   min-height: 100px;
+  /* Scale container based on --mermaid-scale (set by JS from editor font size) */
+  /* Using zoom instead of transform so container size adjusts */
+  zoom: var(--mermaid-scale, 1);
 }
 
 .code-block-preview.mermaid-preview svg {
   max-width: 100%;
   height: auto;
-  /* Scale SVG based on --mermaid-scale (set by JS from editor font size) */
-  /* Using zoom instead of transform so container size adjusts */
-  zoom: var(--mermaid-scale, 1);
 }
 
 /* Error state */
@@ -74,13 +75,13 @@
   align-items: center;
   justify-content: center;
   overflow: auto;
+  /* Scale container based on --mermaid-scale (set by JS from editor font size) */
+  zoom: var(--mermaid-scale, 1);
 }
 
 .mermaid-block-preview svg {
   max-width: 100%;
   height: auto;
-  /* Scale SVG based on --mermaid-scale (set by JS from editor font size) */
-  zoom: var(--mermaid-scale, 1);
 }
 
 .mermaid-block-placeholder {
