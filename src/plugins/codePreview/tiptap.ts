@@ -261,6 +261,12 @@ function exitEditMode(view: EditorView | null, revert: boolean): void {
 
   if (!node) {
     store.exitEditing();
+    dispatch(state.tr.setMeta(EDITING_STATE_CHANGED, true));
+    livePreviewToken++;
+    if (livePreviewTimeout) {
+      clearTimeout(livePreviewTimeout);
+      livePreviewTimeout = null;
+    }
     return;
   }
 
