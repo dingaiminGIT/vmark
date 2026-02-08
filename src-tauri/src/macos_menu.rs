@@ -267,14 +267,25 @@ pub fn apply_menu_icons() {
         return;
     };
 
-    apply_icons_to_menu(&main_menu);
+    apply_icons_to_menu(&main_menu, None);
 
     #[cfg(debug_assertions)]
     eprintln!("[macos_menu] Menu icons applied");
 }
 
+/// Fallback icon for dynamic menu items based on which submenu they're in.
+fn fallback_for_submenu_id(id: Option<&str>) -> Option<&'static str> {
+    match id {
+        Some(crate::menu::RECENT_FILES_SUBMENU_ID) => Some("doc"),
+        Some(crate::menu::RECENT_WORKSPACES_SUBMENU_ID) => Some("folder"),
+        Some(crate::menu::GENIES_SUBMENU_ID) => Some("sparkles"),
+        _ => None,
+    }
+}
+
 /// Recursively walk an NSMenu and set SF Symbol icons on leaf items.
-fn apply_icons_to_menu(menu: &NSMenu) {
+/// `submenu_id` tracks the Tauri submenu ID for context-aware fallback icons.
+fn apply_icons_to_menu(menu: &NSMenu, submenu_id: Option<&str>) {
     let count = menu.numberOfItems();
 
     for i in 0..count {
@@ -287,9 +298,12 @@ fn apply_icons_to_menu(menu: &NSMenu) {
             continue;
         }
 
-        // If item has a submenu, recurse but don't set icon on the folder itself
-        if let Some(submenu) = item.submenu() {
-            apply_icons_to_menu(&submenu);
+        // If item has a submenu, recurse with the submenu's title as context.
+        // Tauri submenu IDs aren't exposed on NSMenuItem, so we match by title
+        // for known submenus that need context-aware fallbacks.
+        if let Some(child_menu) = item.submenu() {
+            let child_id = submenu_title_to_id(&item.title().to_string());
+            apply_icons_to_menu(&child_menu, child_id.as_deref());
             continue;
         }
 
@@ -301,8 +315,13 @@ fn apply_icons_to_menu(menu: &NSMenu) {
         let title = item.title();
         let title_str = title.to_string();
 
-        let symbol_name = icon_for_title(&title_str)
-            .unwrap_or("sparkles"); // fallback for dynamic genie items
+        let symbol_name = match icon_for_title(&title_str) {
+            Some(name) => name,
+            None => match fallback_for_submenu_id(submenu_id) {
+                Some(fallback) => fallback,
+                None => continue, // No icon for unrecognized dynamic items
+            },
+        };
 
         let ns_name = NSString::from_str(symbol_name);
         if let Some(image) =
@@ -310,6 +329,16 @@ fn apply_icons_to_menu(menu: &NSMenu) {
         {
             item.setImage(Some(&image));
         }
+    }
+}
+
+/// Map known submenu titles to their Tauri submenu IDs.
+fn submenu_title_to_id(title: &str) -> Option<String> {
+    match title {
+        "Open Recent" => Some(crate::menu::RECENT_FILES_SUBMENU_ID.to_string()),
+        "Open Recent Workspace" => Some(crate::menu::RECENT_WORKSPACES_SUBMENU_ID.to_string()),
+        "Genies" => Some(crate::menu::GENIES_SUBMENU_ID.to_string()),
+        _ => None,
     }
 }
 
