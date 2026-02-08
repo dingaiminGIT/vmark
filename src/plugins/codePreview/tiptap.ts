@@ -5,6 +5,7 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { renderLatex } from "../latex";
 import { renderMermaid, updateMermaidTheme } from "../mermaid";
 import { setupMermaidPanZoom } from "@/plugins/mermaid/mermaidPanZoom";
+import { setupMermaidExport } from "@/plugins/mermaid/mermaidExport";
 import { sanitizeKatex, sanitizeSvg } from "@/utils/sanitize";
 import { useBlockMathEditingStore } from "@/stores/blockMathEditingStore";
 import { parseLatexError } from "@/plugins/latex/latexErrorParser";
@@ -64,6 +65,7 @@ function createPreviewElement(
   language: string,
   rendered: string,
   onDoubleClick?: () => void,
+  mermaidSource?: string,
 ): HTMLElement {
   const wrapper = document.createElement("div");
   // Use "latex" class for both "latex" and "$$math$$" languages
@@ -73,6 +75,7 @@ function createPreviewElement(
   wrapper.innerHTML = sanitized;
   if (language === "mermaid") {
     setupMermaidPanZoom(wrapper);
+    if (mermaidSource) setupMermaidExport(wrapper, mermaidSource);
   }
   installDoubleClickHandler(wrapper, onDoubleClick);
   return wrapper;
@@ -450,7 +453,7 @@ export const codePreviewExtension = Extension.create({
                 const rendered = renderCache.get(cacheKey)!;
                 const widget = Decoration.widget(
                   nodeEnd,
-                  (view) => createPreviewElement(language, rendered, () => handleEnterEdit(view)),
+                  (view) => createPreviewElement(language, rendered, () => handleEnterEdit(view), content),
                   { side: 1, key: cacheKey }
                 );
                 newDecorations.push(widget);
@@ -511,6 +514,7 @@ export const codePreviewExtension = Extension.create({
                         placeholder.className = "code-block-preview mermaid-preview";
                         placeholder.innerHTML = sanitizeSvg(svg);
                         setupMermaidPanZoom(placeholder);
+                        setupMermaidExport(placeholder, content);
                       } else {
                         placeholder.className = "code-block-preview mermaid-error";
                         placeholder.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Failed to render diagram`;

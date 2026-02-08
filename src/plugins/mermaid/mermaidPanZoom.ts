@@ -54,7 +54,7 @@ export function setupMermaidPanZoom(
   // --- Pointer events for drag-to-pan ---
   const onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
-    if ((e.target as Element).closest(".mermaid-panzoom-reset")) return;
+    if ((e.target as Element).closest(".mermaid-panzoom-reset, .mermaid-export-btn")) return;
     pz.handleDown(e);
   };
   const onPointerMove = (e: PointerEvent) => {

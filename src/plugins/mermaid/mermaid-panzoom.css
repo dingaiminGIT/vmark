@@ -57,3 +57,96 @@
   width: 14px;
   height: 14px;
 }
+
+/* Export button — to the left of reset */
+.mermaid-export-btn {
+  position: absolute;
+  top: 8px;
+  right: 40px; /* 8 + 24 (reset) + 8 gap */
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
+}
+
+.panzoom-enabled:hover .mermaid-export-btn {
+  opacity: 1;
+}
+
+.mermaid-export-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.mermaid-export-btn:focus-visible {
+  outline: none;
+  opacity: 1;
+}
+
+.mermaid-export-btn:focus-visible::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: var(--primary-color);
+  border-radius: 1px;
+}
+
+.mermaid-export-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Theme picker menu — fixed to escape overflow:hidden container */
+.mermaid-export-menu {
+  position: fixed;
+  z-index: 9999;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-color);
+  box-shadow: var(--popup-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+}
+
+.mermaid-export-menu-item {
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-color);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.mermaid-export-menu-item:hover {
+  background: var(--hover-bg);
+}
+
+.mermaid-export-menu-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid var(--border-color);
+}
