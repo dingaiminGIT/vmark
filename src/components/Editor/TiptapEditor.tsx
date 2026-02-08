@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor as TiptapEditor } from "@tiptap/core";
 import type { Node as PMNode } from "@tiptap/pm/model";
@@ -70,6 +70,29 @@ function getAdaptiveDebounceDelay(docSize: number): number {
   if (docSize > 50000) return 500;  // 50KB+: 500ms
   if (docSize > 20000) return 300;  // 20KB+: 300ms
   return 100;                        // Default: 100ms (using RAF for small docs)
+}
+
+/**
+ * Parse markdown and sync it into the editor without touching undo history.
+ * Updates lastExternalContent tracking ref on success.
+ * Returns true if content was synced, false if already current or on error.
+ */
+function syncMarkdownToEditor(
+  editor: TiptapEditor,
+  markdown: string,
+  lastExternalContent: MutableRefObject<string>,
+  preserveLineBreaks: boolean,
+): boolean {
+  if (markdown === lastExternalContent.current) return false;
+  try {
+    const doc = parseMarkdown(editor.schema, markdown, { preserveLineBreaks });
+    setContentWithoutHistory(editor, doc);
+    lastExternalContent.current = markdown;
+    return true;
+  } catch (error) {
+    console.error("[TiptapEditor] Failed to sync markdown:", error);
+    return false;
+  }
 }
 
 interface TiptapEditorInnerProps {
@@ -310,17 +333,11 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
 
   // Register editor stores — only when visible
   useEffect(() => {
-    if (hidden) {
-      // When hidden, clear registrations so hidden editor doesn't receive commands
-      useTiptapEditorStore.getState().clear();
+    if (!hidden) {
+      useTiptapEditorStore.getState().setEditor(editor ?? null);
       if (editor) {
-        useActiveEditorStore.getState().clearWysiwygEditorIfMatch(editor);
+        useActiveEditorStore.getState().setActiveWysiwygEditor(editor);
       }
-      return;
-    }
-    useTiptapEditorStore.getState().setEditor(editor ?? null);
-    if (editor) {
-      useActiveEditorStore.getState().setActiveWysiwygEditor(editor);
     }
     return () => {
       useTiptapEditorStore.getState().clear();
@@ -356,50 +373,25 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
     // Skip if onCreate hasn't run yet - let onCreate handle initial content loading
     if (!editorInitialized.current) return;
 
-    // Track content at the time of this effect to handle race conditions
-    const contentToLoad = content;
-    let cancelled = false;
+    const synced = syncMarkdownToEditor(
+      editor, content, lastExternalContent, preserveLineBreaksRef.current,
+    );
 
-    const loadContent = () => {
-      try {
-        const doc = parseMarkdown(editor.schema, contentToLoad, {
-          preserveLineBreaks: preserveLineBreaksRef.current,
-        });
-
-        if (cancelled) return;
-
-        // Use helper to avoid polluting undo history with external content sync
-        // (e.g., content changed in source mode, tab switch, etc.)
-        setContentWithoutHistory(editor, doc);
-        lastExternalContent.current = contentToLoad;
-
-        // For fresh document load (no saved cursor position), set cursor to start
-        if (!cursorInfoRef.current) {
-          const view = getTiptapEditorView(editor);
-          if (view) {
-            try {
-              const tr = view.state.tr
-                .setSelection(Selection.atStart(view.state.doc))
-                .scrollIntoView()
-                .setMeta("addToHistory", false); // Don't pollute undo history during load
-              view.dispatch(tr);
-            } catch {
-              // Ignore selection errors
-            }
-          }
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("[TiptapEditor] Failed to parse external markdown:", error);
+    // For fresh document load (no saved cursor position), set cursor to start
+    if (synced && !cursorInfoRef.current) {
+      const view = getTiptapEditorView(editor);
+      if (view) {
+        try {
+          const tr = view.state.tr
+            .setSelection(Selection.atStart(view.state.doc))
+            .scrollIntoView()
+            .setMeta("addToHistory", false);
+          view.dispatch(tr);
+        } catch {
+          // Ignore selection errors
         }
       }
-    };
-
-    loadContent();
-
-    return () => {
-      cancelled = true;
-    };
+    }
   }, [content, editor]);
 
   // Handle visibility transitions: hidden → visible
@@ -407,18 +399,9 @@ export function TiptapEditorInner({ hidden = false }: TiptapEditorInnerProps) {
     if (hidden) return;
     if (!editor || !editorInitialized.current) return;
 
-    // Sync content from document store to the editor
-    if (content !== lastExternalContent.current) {
-      try {
-        const doc = parseMarkdown(editor.schema, content, {
-          preserveLineBreaks: preserveLineBreaksRef.current,
-        });
-        setContentWithoutHistory(editor, doc);
-        lastExternalContent.current = content;
-      } catch (error) {
-        console.error("[TiptapEditor] Failed to sync content on visibility transition:", error);
-      }
-    }
+    syncMarkdownToEditor(
+      editor, content, lastExternalContent, preserveLineBreaksRef.current,
+    );
 
     // Focus and restore cursor
     scheduleTiptapFocusAndRestore(

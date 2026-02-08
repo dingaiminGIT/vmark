@@ -229,6 +229,7 @@ export function SourceEditor({ hidden = false }: SourceEditorProps) {
     autoPairEnabled,
     showLineNumbers,
     getCursorInfo: () => cursorInfoRef.current,
+    hiddenRef,
   });
 
   useSourceEditorSearch(viewRef);
