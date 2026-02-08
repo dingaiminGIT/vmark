@@ -227,13 +227,38 @@ If your diagram has a syntax error:
 
 Check the [Mermaid documentation](https://mermaid.js.org/intro/) for correct syntax.
 
+### Pan and Zoom
+
+In WYSIWYG mode, rendered diagrams support interactive navigation:
+
+| Action | How |
+|--------|-----|
+| **Zoom** | Hold `Cmd` (macOS) or `Ctrl` (Windows/Linux) and scroll |
+| **Pan** | Click and drag the diagram |
+| **Reset** | Click the reset button that appears on hover (top-right corner) |
+
+### Copy Mermaid Source
+
+When editing a mermaid code block in WYSIWYG mode, a **copy** button appears in the edit header. Click it to copy the mermaid source code to the clipboard.
+
 ### Theme Integration
 
 Mermaid diagrams automatically adapt to VMark's current theme (light or dark mode).
 
-### Export
+### Export as PNG
 
-When exporting to HTML or PDF, Mermaid diagrams are rendered as SVG images for crisp display at any resolution.
+Hover over a rendered mermaid diagram in WYSIWYG mode to reveal an **export** button (top-right, to the left of the reset button). Click it to choose a theme:
+
+| Theme | Background |
+|-------|------------|
+| **Light** | White background |
+| **Dark** | Dark background |
+
+The diagram is exported as a 2x resolution PNG via the system save dialog. The exported image uses a concrete system font stack, so text renders correctly regardless of the fonts installed on the viewer's machine.
+
+### Export as HTML/PDF
+
+When exporting the full document to HTML or PDF, Mermaid diagrams are rendered as SVG images for crisp display at any resolution.
 
 ## Fixing AI-Generated Diagrams
 
