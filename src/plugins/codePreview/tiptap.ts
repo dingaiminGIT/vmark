@@ -74,8 +74,12 @@ function createPreviewElement(
   const sanitized = language === "mermaid" ? sanitizeSvg(rendered) : sanitizeKatex(rendered);
   wrapper.innerHTML = sanitized;
   if (language === "mermaid") {
-    setupMermaidPanZoom(wrapper);
-    if (mermaidSource) setupMermaidExport(wrapper, mermaidSource);
+    // Defer panzoom/export setup — Panzoom requires DOM-attached elements,
+    // but ProseMirror attaches the widget after the factory returns.
+    requestAnimationFrame(() => {
+      setupMermaidPanZoom(wrapper);
+      if (mermaidSource) setupMermaidExport(wrapper, mermaidSource);
+    });
   }
   installDoubleClickHandler(wrapper, onDoubleClick);
   return wrapper;
