@@ -7,6 +7,8 @@
  */
 
 import { renderMermaid } from "@/plugins/mermaid";
+import { renderSvgBlock } from "@/plugins/svg/svgRender";
+import { sanitizeSvg } from "@/utils/sanitize";
 import {
   calculatePopupPosition,
   getBoundaryRects,
@@ -34,6 +36,7 @@ export class MermaidPreviewView {
   private editorDom: HTMLElement | null = null;
   private host: HTMLElement | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private currentLanguage = "mermaid";
 
   // Zoom state
   private zoom = DEFAULT_ZOOM;
@@ -316,7 +319,8 @@ export class MermaidPreviewView {
     return this.hasDragged;
   }
 
-  show(content: string, anchorRect: AnchorRect, editorDom?: HTMLElement) {
+  show(content: string, anchorRect: AnchorRect, editorDom?: HTMLElement, language?: string) {
+    this.currentLanguage = language ?? "mermaid";
     this.editorDom = editorDom ?? null;
     this.host = getPopupHostForDom(this.editorDom) ?? this.editorDom ?? document.body;
     if (this.container.parentElement !== this.host) {
@@ -357,7 +361,19 @@ export class MermaidPreviewView {
     this.container.style.left = `${hostPos.left}px`;
   }
 
-  updateContent(content: string) {
+  updateContent(content: string, language?: string) {
+    if (language) this.currentLanguage = language;
+
+    // SVG rendering is synchronous — update immediately
+    if (this.currentLanguage === "svg") {
+      if (this.debounceTimer) {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = null;
+      }
+      this.renderPreview(content);
+      return;
+    }
+
     // Debounce mermaid rendering
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
@@ -394,9 +410,24 @@ export class MermaidPreviewView {
     }
 
     this.preview.classList.remove("mermaid-preview-empty");
-    const currentToken = ++this.renderToken;
 
-    // Show loading state
+    // SVG blocks: synchronous render, no loading state
+    if (this.currentLanguage === "svg") {
+      const rendered = renderSvgBlock(trimmed);
+      if (rendered) {
+        this.preview.innerHTML = sanitizeSvg(rendered);
+        this.error.textContent = "";
+        this.applyZoom();
+      } else {
+        this.preview.innerHTML = "";
+        this.preview.classList.add("mermaid-preview-error-state");
+        this.error.textContent = "Invalid SVG";
+      }
+      return;
+    }
+
+    // Mermaid blocks: async render with loading state
+    const currentToken = ++this.renderToken;
     this.preview.innerHTML = '<div class="mermaid-preview-loading">Rendering...</div>';
 
     renderMermaid(trimmed)

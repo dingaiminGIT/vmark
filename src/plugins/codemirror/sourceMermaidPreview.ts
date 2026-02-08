@@ -1,22 +1,32 @@
 /**
- * Source Mode Mermaid Preview Plugin
+ * Source Mode Diagram Preview Plugin
  *
- * Shows a floating preview of mermaid diagrams when cursor is inside
- * a ```mermaid code block in Source mode.
+ * Shows a floating preview of mermaid diagrams and SVG blocks when cursor
+ * is inside a ```mermaid or ```svg code block in Source mode.
  */
 
 import { EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { getMermaidPreviewView } from "@/plugins/mermaidPreview";
 import { useEditorStore } from "@/stores/editorStore";
 
+const DIAGRAM_LANGUAGES = new Set(["mermaid", "svg"]);
+
+interface DiagramBlock {
+  from: number;
+  to: number;
+  content: string;
+  language: string;
+}
+
 /**
- * Find mermaid code block at cursor position.
- * Returns the block's content and range if cursor is inside a mermaid block.
+ * Find diagram code block at cursor position.
+ * Returns the block's content, range, and language if cursor is inside
+ * a mermaid or svg block.
  */
-function findMermaidBlockAtCursor(
+function findDiagramBlockAtCursor(
   view: EditorView,
   pos: number
-): { from: number; to: number; content: string } | null {
+): DiagramBlock | null {
   const doc = view.state.doc;
   const currentLine = doc.lineAt(pos);
 
@@ -37,7 +47,7 @@ function findMermaidBlockAtCursor(
     }
   }
 
-  if (!fenceStart || language !== "mermaid") {
+  if (!fenceStart || !DIAGRAM_LANGUAGES.has(language)) {
     return null;
   }
 
@@ -77,16 +87,16 @@ function findMermaidBlockAtCursor(
 
   if (contentStart > contentEnd) {
     // Empty block
-    return { from: fenceStart.from, to: fenceEnd.to, content: "" };
+    return { from: fenceStart.from, to: fenceEnd.to, content: "", language };
   }
 
   const content = doc.sliceString(contentStart, contentEnd);
-  return { from: fenceStart.from, to: fenceEnd.to, content };
+  return { from: fenceStart.from, to: fenceEnd.to, content, language };
 }
 
-class SourceMermaidPreviewPlugin {
+class SourceDiagramPreviewPlugin {
   private view: EditorView;
-  private currentBlockRange: { from: number; to: number; content: string } | null = null;
+  private currentBlock: DiagramBlock | null = null;
   private pendingUpdate = false;
   private unsubscribe: (() => void) | null = null;
   private lastPreviewEnabled = false;
@@ -115,11 +125,11 @@ class SourceMermaidPreviewPlugin {
     this.pendingUpdate = true;
     requestAnimationFrame(() => {
       this.pendingUpdate = false;
-      this.checkMermaidAtCursor();
+      this.checkDiagramAtCursor();
     });
   }
 
-  private checkMermaidAtCursor() {
+  private checkDiagramAtCursor() {
     // Check if diagram preview is enabled
     if (!useEditorStore.getState().diagramPreviewEnabled) {
       this.hidePreview();
@@ -134,24 +144,24 @@ class SourceMermaidPreviewPlugin {
       return;
     }
 
-    const blockRange = findMermaidBlockAtCursor(this.view, from);
-    if (blockRange) {
-      this.currentBlockRange = blockRange;
-      this.showPreview(blockRange.content);
+    const block = findDiagramBlockAtCursor(this.view, from);
+    if (block) {
+      this.currentBlock = block;
+      this.showPreview(block.content, block.language);
       return;
     }
 
     this.hidePreview();
   }
 
-  private showPreview(content: string) {
-    if (!this.currentBlockRange) return;
+  private showPreview(content: string, language: string) {
+    if (!this.currentBlock) return;
 
     const preview = getMermaidPreviewView();
 
     // Get coordinates for the code block
-    const fromCoords = this.view.coordsAtPos(this.currentBlockRange.from);
-    const toCoords = this.view.coordsAtPos(this.currentBlockRange.to);
+    const fromCoords = this.view.coordsAtPos(this.currentBlock.from);
+    const toCoords = this.view.coordsAtPos(this.currentBlock.to);
 
     if (!fromCoords || !toCoords) {
       this.hidePreview();
@@ -168,15 +178,15 @@ class SourceMermaidPreviewPlugin {
     };
 
     if (preview.isVisible()) {
-      preview.updateContent(content);
+      preview.updateContent(content, language);
       preview.updatePosition(anchorRect);
     } else {
-      preview.show(content, anchorRect, this.view.dom);
+      preview.show(content, anchorRect, this.view.dom, language);
     }
   }
 
   private hidePreview() {
-    this.currentBlockRange = null;
+    this.currentBlock = null;
     getMermaidPreviewView().hide();
   }
 
@@ -186,11 +196,15 @@ class SourceMermaidPreviewPlugin {
   }
 }
 
-export function createSourceMermaidPreviewPlugin() {
-  return ViewPlugin.fromClass(SourceMermaidPreviewPlugin);
+export function createSourceDiagramPreviewPlugin() {
+  return ViewPlugin.fromClass(SourceDiagramPreviewPlugin);
 }
 
 /**
- * All extensions for source mermaid preview.
+ * All extensions for source diagram preview.
  */
-export const sourceMermaidPreviewExtensions = [createSourceMermaidPreviewPlugin()];
+export const sourceDiagramPreviewExtensions = [createSourceDiagramPreviewPlugin()];
+
+// Keep old names as aliases for backward compatibility
+export const createSourceMermaidPreviewPlugin = createSourceDiagramPreviewPlugin;
+export const sourceMermaidPreviewExtensions = sourceDiagramPreviewExtensions;

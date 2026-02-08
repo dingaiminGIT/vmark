@@ -6,12 +6,14 @@ import { renderLatex } from "../latex";
 import { renderMermaid, updateMermaidTheme } from "../mermaid";
 import { setupMermaidPanZoom } from "@/plugins/mermaid/mermaidPanZoom";
 import { setupMermaidExport } from "@/plugins/mermaid/mermaidExport";
+import { renderSvgBlock } from "@/plugins/svg/svgRender";
+import { setupSvgExport } from "@/plugins/svg/svgExport";
 import { sanitizeKatex, sanitizeSvg } from "@/utils/sanitize";
 import { useBlockMathEditingStore } from "@/stores/blockMathEditingStore";
 import { parseLatexError } from "@/plugins/latex/latexErrorParser";
 
 const codePreviewPluginKey = new PluginKey("codePreview");
-const PREVIEW_ONLY_LANGUAGES = new Set(["latex", "mermaid", "$$math$$"]);
+const PREVIEW_ONLY_LANGUAGES = new Set(["latex", "mermaid", "svg", "$$math$$"]);
 const DEBOUNCE_MS = 200;
 
 // Store current editor view for button callbacks
@@ -65,20 +67,29 @@ function createPreviewElement(
   language: string,
   rendered: string,
   onDoubleClick?: () => void,
-  mermaidSource?: string,
+  sourceContent?: string,
 ): HTMLElement {
   const wrapper = document.createElement("div");
   // Use "latex" class for both "latex" and "$$math$$" languages
-  const previewClass = isLatexLanguage(language) ? "latex" : language;
+  // Use "mermaid" class for SVG too (reuses same pan+zoom styles)
+  const previewClass = isLatexLanguage(language) ? "latex"
+    : language === "svg" ? "mermaid" : language;
   wrapper.className = `code-block-preview ${previewClass}-preview`;
-  const sanitized = language === "mermaid" ? sanitizeSvg(rendered) : sanitizeKatex(rendered);
+  const sanitized = (language === "mermaid" || language === "svg")
+    ? sanitizeSvg(rendered) : sanitizeKatex(rendered);
   wrapper.innerHTML = sanitized;
-  if (language === "mermaid") {
+  if (language === "mermaid" || language === "svg") {
     // Defer panzoom/export setup — Panzoom requires DOM-attached elements,
     // but ProseMirror attaches the widget after the factory returns.
     requestAnimationFrame(() => {
       setupMermaidPanZoom(wrapper);
-      if (mermaidSource) setupMermaidExport(wrapper, mermaidSource);
+      if (sourceContent) {
+        if (language === "mermaid") {
+          setupMermaidExport(wrapper, sourceContent);
+        } else {
+          setupSvgExport(wrapper, sourceContent);
+        }
+      }
     });
   }
   installDoubleClickHandler(wrapper, onDoubleClick);
@@ -111,7 +122,8 @@ function createEditHeader(
 
   const title = document.createElement("span");
   title.className = "code-block-edit-title";
-  title.textContent = language === "mermaid" ? "Mermaid" : "LaTeX";
+  title.textContent = language === "mermaid" ? "Mermaid"
+    : language === "svg" ? "SVG" : "LaTeX";
 
   const actions = document.createElement("div");
   actions.className = "code-block-edit-actions";
@@ -120,7 +132,7 @@ function createEditHeader(
   if (onCopy) {
     const copyBtn = document.createElement("button");
     copyBtn.className = "code-block-edit-btn code-block-edit-copy";
-    copyBtn.title = "Copy mermaid code";
+    copyBtn.title = "Copy source code";
     copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
     copyBtn.addEventListener("mousedown", (e) => {
       e.preventDefault();
@@ -182,7 +194,8 @@ function createEditHeader(
 /** Create live preview element for edit mode */
 function createLivePreview(language: string): HTMLElement {
   const wrapper = document.createElement("div");
-  const previewClass = isLatexLanguage(language) ? "latex" : language;
+  const previewClass = isLatexLanguage(language) ? "latex"
+    : language === "svg" ? "mermaid" : language;
   wrapper.className = `code-block-live-preview ${previewClass}-live-preview`;
   wrapper.innerHTML = '<div class="code-block-live-preview-loading">Rendering...</div>';
   return wrapper;
@@ -233,6 +246,14 @@ function updateLivePreview(
         element.innerHTML = sanitizeSvg(svg);
       } else {
         element.innerHTML = '<div class="code-block-live-preview-error">Invalid syntax</div>';
+      }
+    } else if (language === "svg") {
+      const rendered = renderSvgBlock(trimmed);
+      if (currentToken !== livePreviewToken) return;
+      if (rendered) {
+        element.innerHTML = sanitizeSvg(rendered);
+      } else {
+        element.innerHTML = '<div class="code-block-live-preview-error">Invalid SVG</div>';
       }
     }
   }, DEBOUNCE_MS);
@@ -374,7 +395,7 @@ export const codePreviewExtension = Extension.create({
                 const headerWidget = Decoration.widget(
                   nodeStart,
                   (widgetView) => {
-                    const onCopy = language === "mermaid"
+                    const onCopy = (language === "mermaid" || language === "svg")
                       ? () => {
                           const node = widgetView?.state.doc.nodeAt(nodeStart);
                           if (node) navigator.clipboard.writeText(node.textContent);
@@ -443,7 +464,8 @@ export const codePreviewExtension = Extension.create({
               );
 
               if (!content.trim()) {
-                const placeholderLabel = language === "mermaid" ? "Empty diagram" : "Empty math block";
+                const placeholderLabel = language === "mermaid" ? "Empty diagram"
+                  : language === "svg" ? "Empty SVG" : "Empty math block";
                 const widget = Decoration.widget(
                   nodeEnd,
                   (view) => createPreviewPlaceholder(language, placeholderLabel, () => handleEnterEdit(view)),
@@ -503,7 +525,31 @@ export const codePreviewExtension = Extension.create({
                 return;
               }
 
-              if (language === "mermaid") {
+              if (language === "svg") {
+                const rendered = renderSvgBlock(content);
+                if (rendered) {
+                  renderCache.set(cacheKey, rendered);
+                  const widget = Decoration.widget(
+                    nodeEnd,
+                    (view) => createPreviewElement(language, rendered, () => handleEnterEdit(view), content),
+                    { side: 1, key: cacheKey }
+                  );
+                  newDecorations.push(widget);
+                } else {
+                  const errorWidget = document.createElement("div");
+                  errorWidget.className = "code-block-preview mermaid-error";
+                  errorWidget.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Invalid SVG`;
+                  const widget = Decoration.widget(
+                    nodeEnd,
+                    (view) => {
+                      installDoubleClickHandler(errorWidget, () => handleEnterEdit(view));
+                      return errorWidget;
+                    },
+                    { side: 1, key: cacheKey }
+                  );
+                  newDecorations.push(widget);
+                }
+              } else if (language === "mermaid") {
                 const placeholder = document.createElement("div");
                 placeholder.className = "code-block-preview mermaid-preview mermaid-loading";
                 placeholder.textContent = "Rendering diagram...";

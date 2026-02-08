@@ -1,14 +1,16 @@
 /**
- * Mermaid Export
+ * SVG Export
  *
- * Adds a PNG export button to mermaid diagram containers.
- * Shows a light/dark theme picker, renders SVG with the chosen theme,
- * converts to 2x PNG, and saves via Tauri dialog.
+ * Adds a PNG export button to SVG code block containers.
+ * Shows a light/dark theme picker, converts to 2x PNG, and saves via Tauri dialog.
+ *
+ * Reuses the same CSS classes as mermaid export (.mermaid-export-btn, etc.)
+ * and the same event handling pattern (mousedown + pointerdown + click stopPropagation).
  */
 
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
-import { renderMermaidForExport } from "./index";
+import { sanitizeSvg } from "@/utils/sanitize";
 import { svgToPngBytes } from "@/utils/svgToPng";
 
 const EXPORT_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
@@ -20,9 +22,9 @@ interface ExportInstance {
   destroy(): void;
 }
 
-export function setupMermaidExport(
+export function setupSvgExport(
   container: HTMLElement,
-  mermaidSource: string,
+  svgContent: string,
 ): ExportInstance {
   const resetBtn = container.querySelector<HTMLElement>(".mermaid-panzoom-reset");
 
@@ -55,7 +57,6 @@ export function setupMermaidExport(
     menu = document.createElement("div");
     menu.className = "mermaid-export-menu";
 
-    // Position fixed relative to the button's viewport coords
     const rect = btn.getBoundingClientRect();
     menu.style.top = `${rect.bottom + 4}px`;
     menu.style.left = `${rect.right}px`;
@@ -66,10 +67,8 @@ export function setupMermaidExport(
     menu.appendChild(lightItem);
     menu.appendChild(darkItem);
 
-    // Append to document.body to escape overflow:hidden container
     document.body.appendChild(menu);
 
-    // Align right edge of menu with right edge of button
     const menuRect = menu.getBoundingClientRect();
     menu.style.left = `${rect.right - menuRect.width}px`;
   }
@@ -92,7 +91,6 @@ export function setupMermaidExport(
     item.appendChild(swatch);
     item.appendChild(text);
 
-    // Prevent ProseMirror from capturing mousedown
     item.addEventListener("mousedown", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -109,24 +107,19 @@ export function setupMermaidExport(
   async function doExport(theme: "light" | "dark") {
     closeMenu();
 
-    const svg = await renderMermaidForExport(mermaidSource, theme);
-    if (!svg) {
-      console.warn("[mermaid-export] render returned no SVG");
-      return;
-    }
-
     const bgColor = theme === "dark" ? DARK_BG : LIGHT_BG;
+    const sanitized = sanitizeSvg(svgContent);
 
     let pngData: Uint8Array;
     try {
-      pngData = await svgToPngBytes(svg, 2, bgColor);
+      pngData = await svgToPngBytes(sanitized, 2, bgColor);
     } catch (e) {
-      console.warn("[mermaid-export] SVG→PNG conversion failed", e);
+      console.warn("[svg-export] SVG→PNG conversion failed", e);
       return;
     }
 
     const filePath = await save({
-      defaultPath: "diagram.png",
+      defaultPath: "image.png",
       filters: [{ name: "PNG Image", extensions: ["png"] }],
     });
     if (!filePath) return;
@@ -134,13 +127,11 @@ export function setupMermaidExport(
     try {
       await writeFile(filePath, pngData);
     } catch (e) {
-      console.warn("[mermaid-export] failed to write file", e);
+      console.warn("[svg-export] failed to write file", e);
     }
   }
 
-  // --- Button event listeners ---
-  // Must stop both mousedown AND pointerdown to prevent ProseMirror
-  // and panzoom from processing the event
+  // Prevent ProseMirror and panzoom from processing button events
   btn.addEventListener("mousedown", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -179,4 +170,3 @@ export function setupMermaidExport(
 
   return { destroy };
 }
-
