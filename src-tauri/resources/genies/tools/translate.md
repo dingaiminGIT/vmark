@@ -3,7 +3,6 @@ name: translate
 description: Translate to English
 scope: selection
 category: tools
-icon: languages
 ---
 
 Translate the following text into English.

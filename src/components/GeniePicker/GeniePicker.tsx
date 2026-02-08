@@ -320,7 +320,7 @@ export function GeniePicker() {
             <span className="genie-picker-running">Running...</span>
           )}
           <span className="genie-picker-hint">
-            Tab ↹ cycle scope
+            <kbd className="genie-picker-kbd">Tab</kbd> cycle scope
           </span>
         </div>
       </div>

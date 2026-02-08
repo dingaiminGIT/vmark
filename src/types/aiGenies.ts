@@ -18,7 +18,6 @@ export interface GenieMetadata {
   description: string;
   scope: GenieScope;
   category?: string;
-  icon?: string;
   model?: string;
   /** Suggestion type: "replace" (default) or "insert" (append after source). */
   action?: GenieAction;

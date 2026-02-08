@@ -3,7 +3,6 @@ name: outline
 description: Generate an outline
 scope: document
 category: structure
-icon: list-tree
 ---
 
 Generate a clear, hierarchical outline of the following document.

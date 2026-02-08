@@ -3,7 +3,6 @@ name: rewrite-in-english
 description: Rewrite text in English
 scope: selection
 category: tools
-icon: pen-line
 ---
 
 Rewrite the following text in clear, natural English.

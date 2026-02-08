@@ -20,7 +20,6 @@ interface GenieContent {
     description: string;
     scope: string;
     category: string | null;
-    icon: string | null;
     model: string | null;
   };
   template: string;

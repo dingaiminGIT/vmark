@@ -3,7 +3,6 @@ name: fix-grammar
 description: Fix grammar and spelling
 scope: selection
 category: editing
-icon: check
 ---
 
 Fix all grammar, spelling, and punctuation errors in the following text.

@@ -34,7 +34,6 @@ pub struct GenieMetadata {
     pub description: String,
     pub scope: String,
     pub category: Option<String>,
-    pub icon: Option<String>,
     pub model: Option<String>,
     /// Suggestion type: "replace" (default) or "insert" (append after source).
     pub action: Option<String>,
@@ -268,7 +267,6 @@ fn parse_genie(content: &str, path: &str) -> Result<GenieContent, String> {
                 description: String::new(),
                 scope: "selection".to_string(),
                 category: None,
-                icon: None,
                 model: None,
                 action: None,
             },
@@ -320,7 +318,6 @@ fn parse_genie(content: &str, path: &str) -> Result<GenieContent, String> {
                 .cloned()
                 .unwrap_or_else(|| "selection".to_string()),
             category: fields.get("category").cloned(),
-            icon: fields.get("icon").cloned(),
             model: fields.get("model").cloned(),
             action: fields.get("action").filter(|v| v.as_str() == "replace" || v.as_str() == "insert").cloned(),
         },
@@ -442,7 +439,6 @@ name: improve-writing
 description: Improve clarity and flow
 scope: selection
 category: writing
-icon: sparkles
 ---
 
 You are an expert editor. Improve the following text:
@@ -454,7 +450,6 @@ You are an expert editor. Improve the following text:
         assert_eq!(result.metadata.description, "Improve clarity and flow");
         assert_eq!(result.metadata.scope, "selection");
         assert_eq!(result.metadata.category.as_deref(), Some("writing"));
-        assert_eq!(result.metadata.icon.as_deref(), Some("sparkles"));
         assert_eq!(result.metadata.action, None); // no action field → defaults to None
         assert!(result.template.contains("{{content}}"));
     }

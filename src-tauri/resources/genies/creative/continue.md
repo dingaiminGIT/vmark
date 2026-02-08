@@ -3,7 +3,6 @@ name: continue
 description: Continue writing from here
 scope: block
 category: creative
-icon: pen-line
 action: insert
 ---
 

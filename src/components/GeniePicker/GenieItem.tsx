@@ -5,7 +5,6 @@
  */
 
 import type { GenieDefinition } from "@/types/aiGenies";
-import { GenieIcon } from "./GenieIcon";
 
 interface GenieItemProps {
   genie: GenieDefinition;
@@ -30,7 +29,6 @@ export function GenieItem({
       onMouseEnter={() => onHover(index)}
     >
       <div className="genie-picker-item-name">
-        <GenieIcon name={genie.metadata.icon} className="genie-picker-item-icon" />
         {formatName(genie.metadata.name)}
       </div>
       <div className="genie-picker-item-meta">

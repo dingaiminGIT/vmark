@@ -3,7 +3,6 @@ name: condense
 description: Make text more concise
 scope: selection
 category: editing
-icon: scissors
 ---
 
 Shorten the following text while preserving all key information.

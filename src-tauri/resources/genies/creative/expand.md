@@ -3,7 +3,6 @@ name: expand
 description: Develop idea into fuller prose
 scope: selection
 category: creative
-icon: unfold-vertical
 ---
 
 Expand the following brief text into fuller, well-developed prose.

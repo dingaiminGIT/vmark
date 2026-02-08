@@ -33,7 +33,6 @@ export function AdvancedSettings() {
   const [devTools, setDevTools] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const customLinkProtocols = useSettingsStore((state) => state.advanced.customLinkProtocols);
-  const enableGenies = useSettingsStore((state) => state.advanced.enableGenies);
   const keepBothEditorsAlive = useSettingsStore((state) => state.advanced.keepBothEditorsAlive);
   const updateAdvancedSetting = useSettingsStore((state) => state.updateAdvancedSetting);
 
@@ -72,15 +71,6 @@ export function AdvancedSettings() {
           />
         </SettingRow>
       </SettingsGroup>
-
-      {/* Feature flags - only visible when developer mode is enabled */}
-      {devTools && (
-        <SettingsGroup title="Feature Flags">
-          <SettingRow label="AI Genies" description="Enable the AI Genies feature (Cmd+Y picker, Genies menu, toolbar button)">
-            <Toggle checked={enableGenies} onChange={(v) => updateAdvancedSetting("enableGenies", v)} />
-          </SettingRow>
-        </SettingsGroup>
-      )}
 
       {/* Hot Exit Dev Tools - only visible when developer mode is enabled */}
       {devTools && (

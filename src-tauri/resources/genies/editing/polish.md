@@ -3,7 +3,6 @@ name: polish
 description: Improve clarity and flow
 scope: selection
 category: editing
-icon: sparkles
 ---
 
 You are an expert editor. Improve the clarity, flow, and conciseness

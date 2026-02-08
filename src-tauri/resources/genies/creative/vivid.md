@@ -3,7 +3,6 @@ name: vivid
 description: Add sensory details and imagery
 scope: selection
 category: creative
-icon: palette
 ---
 
 Enrich the following text with vivid sensory details, concrete imagery,

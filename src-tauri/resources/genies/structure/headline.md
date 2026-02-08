@@ -3,7 +3,6 @@ name: headline
 description: Suggest title options
 scope: document
 category: structure
-icon: heading
 ---
 
 Read the following document and suggest 5 compelling title options.
