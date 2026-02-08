@@ -160,6 +160,15 @@ Mermaid diagram support with live preview:
 - Live preview panel in Source mode (drag, resize, zoom)
 - [Learn more →](/guide/mermaid)
 
+### SVG Graphics
+
+Render raw SVG inline via ` ```svg ` code blocks:
+
+- Instant rendering with pan, zoom, and PNG export
+- Live preview in both WYSIWYG and Source modes
+- Ideal for AI-generated charts and custom illustrations
+- [Learn more →](/guide/svg)
+
 ## AI Genies
 
 Built-in AI writing assistance powered by your choice of provider:

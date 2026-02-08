@@ -35,6 +35,7 @@ export default defineConfig({
             { text: 'Multi-Cursor Editing', link: '/guide/multi-cursor' },
             { text: 'Inline Popups', link: '/guide/popups' },
             { text: 'Mermaid Diagrams', link: '/guide/mermaid' },
+            { text: 'SVG Graphics', link: '/guide/svg' },
             { text: 'Integrated Terminal', link: '/guide/terminal' },
             { text: 'CJK Formatting', link: '/guide/cjk-formatting' },
           ]
