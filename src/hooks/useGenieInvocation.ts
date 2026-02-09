@@ -114,10 +114,12 @@ function formatContext(before: string, after: string): string {
 }
 
 function fillTemplate(template: string, content: string, context?: string): string {
-  let result = template.replace(/\{\{content\}\}/g, content);
+  let result = template.replace(/\{\{\s*content\s*\}\}/g, content);
   if (context !== undefined) {
-    result = result.replace(/\{\{context\}\}/g, context);
+    result = result.replace(/\{\{\s*context\s*\}\}/g, context);
   }
+  // Strip unreplaced placeholders (e.g., context with no neighbors)
+  result = result.replace(/\{\{\s*context\s*\}\}/g, "");
   return result;
 }
 
@@ -129,16 +131,6 @@ export function useGenieInvocation() {
   const isRunning = useAiInvocationStore((s) => s.isRunning);
   const unlistenRef = useRef<UnlistenFn | null>(null);
 
-  // Cleanup listener on unmount
-  useEffect(() => {
-    return () => {
-      if (unlistenRef.current) {
-        unlistenRef.current();
-        unlistenRef.current = null;
-      }
-    };
-  }, []);
-
   const cancel = useCallback(() => {
     if (unlistenRef.current) {
       unlistenRef.current();
@@ -146,6 +138,13 @@ export function useGenieInvocation() {
     }
     useAiInvocationStore.getState().cancel();
   }, []);
+
+  // Cancel running invocation on unmount (releases lock + unlistens)
+  useEffect(() => {
+    return () => {
+      cancel();
+    };
+  }, [cancel]);
 
   const runGenie = useCallback(
     async (filledPrompt: string, extraction: ExtractionResult, model?: string, action: GenieAction = "replace") => {
@@ -244,8 +243,8 @@ export function useGenieInvocation() {
       }
 
       // Build context string only if template uses {{context}}
-      const hasContextVar = /\{\{context\}\}/.test(genie.template);
-      const contextStr = hasContextVar && (extracted.contextBefore || extracted.contextAfter)
+      const hasContextVar = /\{\{\s*context\s*\}\}/.test(genie.template);
+      const contextStr = hasContextVar
         ? formatContext(extracted.contextBefore ?? "", extracted.contextAfter ?? "")
         : undefined;
 

@@ -33,11 +33,15 @@ pub struct GenieMetadata {
     pub name: String,
     pub description: String,
     pub scope: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub category: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
     /// Suggestion type: "replace" (default) or "insert" (append after source).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub action: Option<String>,
     /// Number of surrounding blocks to include as context (0–2).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<u8>,
 }
 
@@ -237,7 +241,7 @@ fn extract_frontmatter_name(content: &str) -> Option<String> {
         let line = line.trim();
         if let Some((key, value)) = line.split_once(':') {
             if key.trim().eq_ignore_ascii_case("name") {
-                let name = value.trim().to_string();
+                let name = value.trim().trim_matches(|c| c == '"' || c == '\'').to_string();
                 if !name.is_empty() {
                     return Some(name);
                 }
@@ -296,7 +300,7 @@ fn parse_genie(content: &str, path: &str) -> Result<GenieContent, String> {
         if let Some((key, value)) = line.split_once(':') {
             fields.insert(
                 key.trim().to_lowercase(),
-                value.trim().to_string(),
+                value.trim().trim_matches(|c| c == '"' || c == '\'').to_string(),
             );
         }
     }
@@ -556,5 +560,19 @@ You are an expert editor. Improve the following text:
         let content = "---\nname: canonical-test\nscope: document\n---\nSafe content";
         let result = parse_genie(content, "canonical-test.md").unwrap();
         assert_eq!(result.metadata.name, "canonical-test");
+    }
+
+    #[test]
+    fn test_parse_genie_strips_quotes() {
+        let content = "---\nname: \"quoted name\"\ndescription: 'single quoted'\nscope: selection\n---\n\nTemplate";
+        let result = parse_genie(content, "test.md").unwrap();
+        assert_eq!(result.metadata.name, "quoted name");
+        assert_eq!(result.metadata.description, "single quoted");
+    }
+
+    #[test]
+    fn test_extract_frontmatter_name_strips_quotes() {
+        let content = "---\nname: \"My Genie\"\nscope: selection\n---\n\nTemplate";
+        assert_eq!(extract_frontmatter_name(content), Some("My Genie".to_string()));
     }
 }

@@ -66,6 +66,9 @@ function applySuggestionToTr(
   tr: Transaction,
   suggestion: AiSuggestion,
 ): Transaction {
+  // Guard against stale positions after doc edits
+  if (!isValidPosition(suggestion, state.doc.content.size)) return tr;
+
   switch (suggestion.type) {
     case "insert": {
       if (suggestion.newContent != null) {
