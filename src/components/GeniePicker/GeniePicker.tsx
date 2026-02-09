@@ -23,6 +23,7 @@ import type { GenieDefinition, GenieScope } from "@/types/aiGenies";
 import { GenieChips } from "./GenieChips";
 import { GenieItem } from "./GenieItem";
 import { PromptHistoryDropdown } from "./PromptHistoryDropdown";
+import { ProviderSwitcher } from "./ProviderSwitcher";
 import "./genie-picker.css";
 
 const SCOPES: GenieScope[] = ["selection", "block", "document"];
@@ -37,6 +38,7 @@ export function GeniePicker() {
   const [filter, setFilter] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activeScope, setActiveScope] = useState<GenieScope | null>(null);
+  const [showProviderSwitcher, setShowProviderSwitcher] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const freeformRef = useRef<HTMLTextAreaElement>(null);
@@ -360,8 +362,20 @@ export function GeniePicker() {
             scope: {activeScope ?? "all"}
           </span>
           {activeProvider && (
-            <span className="genie-picker-provider">
-              via {useAiProviderStore.getState().getActiveProviderName()}
+            <span className="provider-switcher-anchor">
+              <button
+                type="button"
+                className="provider-switcher-trigger"
+                onClick={() => setShowProviderSwitcher((v) => !v)}
+              >
+                via {useAiProviderStore.getState().getActiveProviderName()}
+              </button>
+              {showProviderSwitcher && (
+                <ProviderSwitcher
+                  onClose={() => setShowProviderSwitcher(false)}
+                  onCloseAll={handleClose}
+                />
+              )}
             </span>
           )}
           {isRunning && (
