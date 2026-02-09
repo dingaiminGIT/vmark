@@ -35,7 +35,7 @@ function createDocFromSlice(schema: Schema, slice: Slice): PMNode {
  * Block types that should be edited as a complete unit.
  * When cursor is inside one of these, expand to include the entire block.
  */
-const COMPOUND_BLOCK_TYPES = new Set([
+export const COMPOUND_BLOCK_TYPES = new Set([
   "table",
   "bulletList",
   "orderedList",

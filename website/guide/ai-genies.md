@@ -163,6 +163,7 @@ Return only the improved text — no explanations.
 | `scope` | No | `selection`, `block`, `document` | `selection` |
 | `category` | No | Category name for grouping | Subdirectory name |
 | `action` | No | `replace`, `insert` | `replace` |
+| `context` | No | `1`, `2` | `0` (none) |
 | `model` | No | Model identifier to override provider default | Provider default |
 
 ### The `{{content}}` Placeholder
@@ -191,6 +192,38 @@ Hello, how are you?
 ```
 
 The AI responds with "Bonjour, comment allez-vous ?" and it appears as an inline suggestion replacing the selected text.
+
+### The `{{context}}` Placeholder
+
+The `{{context}}` placeholder gives the AI read-only surrounding text — so it can match the tone, style, and structure of nearby blocks without modifying them.
+
+**How it works:**
+
+1. Set `context: 1` or `context: 2` in the frontmatter to include ±1 or ±2 neighboring blocks
+2. Use `{{context}}` in your template where you want the surrounding text injected
+3. The AI sees the context but the suggestion only replaces `{{content}}`
+
+**Compound blocks are atomic** — if a neighbor is a list, table, blockquote, or details block, the entire structure counts as one block.
+
+**Scope restrictions** — Context only works with `selection` and `block` scope. For `document` scope, the content already IS the full document.
+
+**Freeform prompts** — When you type a freeform instruction in the picker, VMark automatically includes ±1 surrounding block as context for `selection` and `block` scope. No configuration needed.
+
+**Backward compatible** — Genies without `{{context}}` work exactly as before. If the template doesn't contain `{{context}}`, no surrounding text is extracted.
+
+**Example — what the AI receives:**
+
+With `context: 1` and the cursor on the second paragraph of a three-paragraph document:
+
+```
+[Before]
+First paragraph content here.
+
+[After]
+Third paragraph content here.
+```
+
+The `[Before]` and `[After]` sections are omitted when there are no neighbors in that direction (e.g., content is at the start or end of the document).
 
 ### The `action` Field
 
@@ -409,6 +442,28 @@ Use natural, idiomatic Chinese — not word-for-word translation.
 
 Return only the translated text — no explanations.
 
+{{content}}
+```
+
+### Context-Aware — Fit to Surroundings
+
+```markdown
+---
+name: fit-context
+description: Rewrite to match surrounding tone and style
+scope: selection
+context: 1
+---
+
+Rewrite the following content to fit naturally with its surrounding context.
+Match the tone, style, and level of detail.
+
+Return only the rewritten text — no explanations.
+
+## Surrounding context (do not include in output):
+{{context}}
+
+## Content to rewrite:
 {{content}}
 ```
 

@@ -21,6 +21,8 @@ export interface GenieMetadata {
   model?: string;
   /** Suggestion type: "replace" (default) or "insert" (append after source). */
   action?: GenieAction;
+  /** Number of surrounding blocks to include as context (0–2). */
+  context?: number;
 }
 
 export interface GenieDefinition {

@@ -19,6 +19,7 @@ import { useTiptapEditorStore } from "@/stores/tiptapEditorStore";
 import { useGeniesStore } from "@/stores/geniesStore";
 import { useTabStore } from "@/stores/tabStore";
 import { getExpandedSourcePeekRange, serializeSourcePeekRange } from "@/utils/sourcePeek";
+import { extractSurroundingContext } from "@/utils/extractContext";
 import { serializeMarkdown } from "@/utils/markdownPipeline";
 
 // ============================================================================
@@ -29,9 +30,11 @@ interface ExtractionResult {
   text: string;
   from: number;
   to: number;
+  contextBefore?: string;
+  contextAfter?: string;
 }
 
-function extractContent(scope: GenieScope): ExtractionResult | null {
+function extractContent(scope: GenieScope, contextRadius = 0): ExtractionResult | null {
   const editor = useTiptapEditorStore.getState().editor;
   const sourceMode = useEditorStore.getState().sourceMode;
 
@@ -45,43 +48,77 @@ function extractContent(scope: GenieScope): ExtractionResult | null {
   const { state } = editor;
   const { doc, selection } = state;
 
+  let result: ExtractionResult | null = null;
+
   switch (scope) {
     case "selection": {
       if (!selection.empty) {
         // Explicit selection — serialize selected range as markdown
         const range = { from: selection.from, to: selection.to };
         const text = serializeSourcePeekRange(state, range);
-        return { text, from: range.from, to: range.to };
+        result = { text, from: range.from, to: range.to };
+      } else {
+        // No selection — expand to compound block (whole list, blockquote, etc.)
+        const range = getExpandedSourcePeekRange(state);
+        const text = serializeSourcePeekRange(state, range);
+        result = { text, from: range.from, to: range.to };
       }
-      // No selection — expand to compound block (whole list, blockquote, etc.)
-      const range = getExpandedSourcePeekRange(state);
-      const text = serializeSourcePeekRange(state, range);
-      return { text, from: range.from, to: range.to };
+      break;
     }
 
     case "block": {
       // Expand to compound block — whole list, table, blockquote
       const range = getExpandedSourcePeekRange(state);
       const text = serializeSourcePeekRange(state, range);
-      return { text, from: range.from, to: range.to };
+      result = { text, from: range.from, to: range.to };
+      break;
     }
 
     case "document": {
       const text = serializeMarkdown(state.schema, doc);
+      // Document scope — no context needed (content IS the document)
       return { text, from: 0, to: doc.content.size };
     }
 
     default:
       return null;
   }
+
+  // Attach surrounding context for non-document scopes
+  if (result && contextRadius > 0) {
+    const ctx = extractSurroundingContext(
+      state,
+      { from: result.from, to: result.to },
+      contextRadius
+    );
+    result.contextBefore = ctx.before;
+    result.contextAfter = ctx.after;
+  }
+
+  return result;
 }
 
 // ============================================================================
 // Template Filling
 // ============================================================================
 
-function fillTemplate(template: string, content: string): string {
-  return template.replace(/\{\{content\}\}/g, content);
+function formatContext(before: string, after: string): string {
+  const parts: string[] = [];
+  if (before) {
+    parts.push(`[Before]\n${before}`);
+  }
+  if (after) {
+    parts.push(`[After]\n${after}`);
+  }
+  return parts.join("\n\n");
+}
+
+function fillTemplate(template: string, content: string, context?: string): string {
+  let result = template.replace(/\{\{content\}\}/g, content);
+  if (context !== undefined) {
+    result = result.replace(/\{\{context\}\}/g, context);
+  }
+  return result;
 }
 
 // ============================================================================
@@ -199,13 +236,20 @@ export function useGenieInvocation() {
       }
 
       const scope = scopeOverride ?? genie.metadata.scope;
-      const extracted = extractContent(scope);
+      const contextRadius = genie.metadata.context ?? 0;
+      const extracted = extractContent(scope, contextRadius);
       if (!extracted) {
         console.warn("No content to extract for scope:", scope);
         return;
       }
 
-      const filled = fillTemplate(genie.template, extracted.text);
+      // Build context string only if template uses {{context}}
+      const hasContextVar = /\{\{context\}\}/.test(genie.template);
+      const contextStr = hasContextVar && (extracted.contextBefore || extracted.contextAfter)
+        ? formatContext(extracted.contextBefore ?? "", extracted.contextAfter ?? "")
+        : undefined;
+
+      const filled = fillTemplate(genie.template, extracted.text, contextStr);
 
       // Track genie as recent
       useGeniesStore.getState().addRecent(genie.metadata.name);
@@ -230,13 +274,22 @@ export function useGenieInvocation() {
         return;
       }
 
-      const extracted = extractContent(scope);
+      // Auto-include ±1 context for selection/block scope
+      const contextRadius = scope !== "document" ? 1 : 0;
+      const extracted = extractContent(scope, contextRadius);
       if (!extracted) {
         console.warn("No content to extract for scope:", scope);
         return;
       }
 
-      const filled = `${userPrompt}\n\n${extracted.text}`;
+      const hasContext = extracted.contextBefore || extracted.contextAfter;
+      let filled: string;
+      if (hasContext) {
+        const ctx = formatContext(extracted.contextBefore ?? "", extracted.contextAfter ?? "");
+        filled = `${userPrompt}\n\n## Context (do not modify):\n${ctx}\n\n## Content:\n${extracted.text}`;
+      } else {
+        filled = `${userPrompt}\n\n${extracted.text}`;
+      }
       await runGenie(filled, extracted);
     },
     [runGenie]

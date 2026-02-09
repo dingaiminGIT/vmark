@@ -37,6 +37,8 @@ pub struct GenieMetadata {
     pub model: Option<String>,
     /// Suggestion type: "replace" (default) or "insert" (append after source).
     pub action: Option<String>,
+    /// Number of surrounding blocks to include as context (0–2).
+    pub context: Option<u8>,
 }
 
 // ============================================================================
@@ -269,6 +271,7 @@ fn parse_genie(content: &str, path: &str) -> Result<GenieContent, String> {
                 category: None,
                 model: None,
                 action: None,
+                context: None,
             },
             template: content.to_string(),
         });
@@ -320,6 +323,9 @@ fn parse_genie(content: &str, path: &str) -> Result<GenieContent, String> {
             category: fields.get("category").cloned(),
             model: fields.get("model").cloned(),
             action: fields.get("action").filter(|v| v.as_str() == "replace" || v.as_str() == "insert").cloned(),
+            context: fields.get("context")
+                .and_then(|v| v.parse::<u8>().ok())
+                .filter(|&v| v <= 2),
         },
         template,
     })
@@ -452,6 +458,27 @@ You are an expert editor. Improve the following text:
         assert_eq!(result.metadata.category.as_deref(), Some("writing"));
         assert_eq!(result.metadata.action, None); // no action field → defaults to None
         assert!(result.template.contains("{{content}}"));
+    }
+
+    #[test]
+    fn test_parse_genie_with_context() {
+        let content = "---\nname: fit\nscope: selection\ncontext: 1\n---\n\n{{context}}\n\n{{content}}";
+        let result = parse_genie(content, "fit.md").unwrap();
+        assert_eq!(result.metadata.context, Some(1));
+    }
+
+    #[test]
+    fn test_parse_genie_context_clamped_to_2() {
+        let content = "---\nname: fit\nscope: selection\ncontext: 5\n---\n\nTemplate";
+        let result = parse_genie(content, "fit.md").unwrap();
+        assert_eq!(result.metadata.context, None); // >2 is filtered out
+    }
+
+    #[test]
+    fn test_parse_genie_no_context_field() {
+        let content = "---\nname: basic\nscope: selection\n---\n\n{{content}}";
+        let result = parse_genie(content, "basic.md").unwrap();
+        assert_eq!(result.metadata.context, None);
     }
 
     #[test]
