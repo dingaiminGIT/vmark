@@ -61,24 +61,39 @@ pub fn detect_ai_providers() -> Vec<CliProviderEntry> {
 
 /// Resolve the user's full login-shell `$PATH`.
 ///
-/// macOS app bundles launched from Finder/Dock inherit a minimal PATH
-/// (`/usr/bin:/bin:/usr/sbin:/sbin`).  Instead of guessing install
-/// locations, we spawn the user's interactive login shell and ask for
-/// its PATH.  Using `-li` ensures both `.zprofile` AND `.zshrc` are
-/// sourced, which is needed for tools initialized in `.zshrc` (nvm,
-/// fnm, pyenv, etc.).  Markers isolate PATH from shell startup noise.
+/// macOS/Linux app bundles launched from Finder/Dock (or some Linux
+/// desktop environments) inherit a minimal PATH.  We spawn the user's
+/// interactive login shell and ask for its PATH.  Using `-li` ensures
+/// both profile AND rc files are sourced (needed for nvm, fnm, pyenv,
+/// etc.).  Markers isolate PATH from shell startup noise.
+///
+/// On Windows, GUI apps inherit the full system PATH — no shell dance
+/// needed.  On fish shell, `$PATH` is a list so we use `string join`.
+///
 /// The result is cached for the lifetime of the process.
 fn login_shell_path() -> String {
     use std::sync::OnceLock;
     static CACHED: OnceLock<String> = OnceLock::new();
 
-    const START: &str = "__VMARK_PATH_START__";
-    const END: &str = "__VMARK_PATH_END__";
-
     CACHED
         .get_or_init(|| {
+            // Windows GUI apps inherit full system PATH — skip the shell dance
+            if cfg!(target_os = "windows") {
+                return std::env::var("PATH").unwrap_or_default();
+            }
+
+            const START: &str = "__VMARK_PATH_START__";
+            const END: &str = "__VMARK_PATH_END__";
+
             let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
-            let cmd = format!("echo {START}${{PATH}}{END}");
+
+            // Fish uses list-based $PATH — need `string join` for colon-separated
+            let cmd = if shell.ends_with("/fish") {
+                format!("echo {START}(string join : $PATH){END}")
+            } else {
+                format!("echo {START}${{PATH}}{END}")
+            };
+
             let output = Command::new(&shell)
                 .args(["-lic", &cmd])
                 .output()
@@ -112,8 +127,14 @@ fn check_command(cmd: &str) -> (bool, Option<String>) {
         .output()
     {
         Ok(output) if output.status.success() => {
-            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            (true, Some(path))
+            let raw = String::from_utf8_lossy(&output.stdout);
+            // `where` on Windows may return multiple lines — take the first
+            let path = raw.lines().next().unwrap_or("").trim().to_string();
+            if path.is_empty() {
+                (false, None)
+            } else {
+                (true, Some(path))
+            }
         }
         _ => (false, None),
     }
@@ -482,6 +503,8 @@ pub async fn validate_model(
 ///
 /// For CLI providers: pipes prompt to stdin of the CLI tool.
 /// For REST providers: sends HTTP request via reqwest.
+/// `cli_path` is the resolved absolute path from detection (used on
+/// Windows where bare command names may not find `.cmd`/`.bat` shims).
 #[command]
 pub async fn run_ai_prompt(
     window: WebviewWindow,
@@ -491,12 +514,14 @@ pub async fn run_ai_prompt(
     model: Option<String>,
     api_key: Option<String>,
     endpoint: Option<String>,
+    cli_path: Option<String>,
 ) -> Result<(), String> {
+    let path_ref = cli_path.as_deref();
     match provider.as_str() {
         // CLI providers
-        "claude" => run_cli_provider(&window, &request_id, "claude", &["--print", "--output-format", "text"], Some(&prompt)),
-        "codex" => run_cli_provider(&window, &request_id, "codex", &["exec", &prompt], None),
-        "gemini" => run_cli_provider(&window, &request_id, "gemini", &["-p", &prompt], None),
+        "claude" => run_cli_provider(&window, &request_id, "claude", &["--print", "--output-format", "text"], Some(&prompt), path_ref),
+        "codex" => run_cli_provider(&window, &request_id, "codex", &["exec", &prompt], None, path_ref),
+        "gemini" => run_cli_provider(&window, &request_id, "gemini", &["-p", &prompt], None, path_ref),
 
         // REST providers
         "anthropic" => {
@@ -559,23 +584,47 @@ pub async fn run_ai_prompt(
 // CLI Execution
 // ============================================================================
 
+/// Build a `Command` for the given executable and args.
+///
+/// On Windows, `.cmd`/`.bat` shims (created by npm/yarn global installs)
+/// must run through `cmd.exe /c`.  On macOS/Linux this is a plain spawn.
+fn build_command(exe: &str, args: &[&str]) -> Command {
+    if cfg!(target_os = "windows") {
+        let lower = exe.to_lowercase();
+        if lower.ends_with(".cmd") || lower.ends_with(".bat") {
+            let mut c = Command::new("cmd");
+            c.args(["/c", exe]);
+            c.args(args);
+            return c;
+        }
+    }
+    let mut c = Command::new(exe);
+    c.args(args);
+    c
+}
+
 /// Run a CLI AI provider and stream stdout back as `ai:response` events.
 ///
 /// When `stdin_prompt` is `Some`, the prompt is piped to stdin (for
 /// providers like `claude --print` and `ollama run`).  When `None`,
 /// the prompt must already be embedded in `args` (for providers like
 /// `codex exec` and `gemini -p`).
+///
+/// `cli_path` is the resolved path from detection.  When available it
+/// is used instead of the bare command name so that Windows `.cmd`
+/// shims are handled correctly.
 fn run_cli_provider(
     window: &WebviewWindow,
     request_id: &str,
     cmd: &str,
     args: &[&str],
     stdin_prompt: Option<&str>,
+    cli_path: Option<&str>,
 ) -> Result<(), String> {
     let stdin_cfg = if stdin_prompt.is_some() { Stdio::piped() } else { Stdio::null() };
+    let effective_cmd = cli_path.unwrap_or(cmd);
 
-    let mut child = Command::new(cmd)
-        .args(args)
+    let mut child = build_command(effective_cmd, args)
         .env("PATH", login_shell_path())
         .stdin(stdin_cfg)
         .stdout(Stdio::piped())

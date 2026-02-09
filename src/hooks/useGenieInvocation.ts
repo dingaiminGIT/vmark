@@ -220,6 +220,9 @@ export function useGenieInvocation() {
 
       unlistenRef.current = unlisten;
 
+      // Look up resolved CLI path (used on Windows for .cmd/.bat shims)
+      const cliInfo = providerState.cliProviders.find((p) => p.type === provider);
+
       try {
         await invoke("run_ai_prompt", {
           requestId,
@@ -228,6 +231,7 @@ export function useGenieInvocation() {
           model: model ?? restConfig?.model ?? null,
           apiKey: restConfig?.apiKey ?? null,
           endpoint: restConfig?.endpoint ?? null,
+          cliPath: cliInfo?.path ?? null,
         });
       } catch (e) {
         toast.error(`Failed to invoke AI genie: ${e}`);
