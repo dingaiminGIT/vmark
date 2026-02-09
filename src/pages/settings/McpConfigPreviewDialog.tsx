@@ -63,9 +63,14 @@ export function McpConfigPreviewDialog({
   }, []);
 
   const providerName = PROVIDER_NAMES[preview.provider] || preview.provider;
-  const shortPath = preview.path.replace(/^\/Users\/[^/]+/, "~");
-  const shortBinaryPath = preview.binaryPath.replace(/^\/Users\/[^/]+/, "~");
-  const shortBackupPath = preview.backupPath.replace(/^\/Users\/[^/]+/, "~");
+  // Shorten home paths: macOS /Users/x, Windows C:/Users/x, Linux /home/x → ~
+  const shortenHome = (p: string) =>
+    p.replace(/^\/Users\/[^/]+/, "~")
+      .replace(/^[A-Za-z]:\/Users\/[^/]+/, "~")
+      .replace(/^\/home\/[^/]+/, "~");
+  const shortPath = shortenHome(preview.path);
+  const shortBinaryPath = shortenHome(preview.binaryPath);
+  const shortBackupPath = shortenHome(preview.backupPath);
 
   return createPortal(
     <div

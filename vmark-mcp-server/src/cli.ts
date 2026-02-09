@@ -304,6 +304,9 @@ function parseArgs(): { port: number | undefined } {
 
 /**
  * Get parent process name (cross-platform).
+ *
+ * - macOS/Linux: `ps -p <ppid> -o comm=`
+ * - Windows: PowerShell `Get-Process` (wmic is deprecated on modern Windows)
  */
 function getParentProcessName(): string | undefined {
   try {
@@ -314,15 +317,16 @@ function getParentProcessName(): string | undefined {
       const result = execSync(`ps -p ${ppid} -o comm=`, { encoding: 'utf8' }).trim();
       return result || undefined;
     } else if (process.platform === 'win32') {
+      // Use PowerShell — wmic is deprecated on Windows 11+
       const result = execSync(
-        `wmic process where ProcessId=${ppid} get Name /format:value`,
+        `powershell -NoProfile -Command "(Get-Process -Id ${ppid}).ProcessName"`,
         { encoding: 'utf8' }
       );
-      const match = result.match(/Name=(.+)/);
-      return match ? match[1].trim() : undefined;
+      const name = result.trim();
+      return name || undefined;
     }
   } catch {
-    // Ignore errors - parent process detection is best-effort
+    // Ignore errors — parent process detection is best-effort
   }
   return undefined;
 }

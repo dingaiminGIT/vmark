@@ -98,10 +98,11 @@ function shortenPath(path: string): string {
 /** Format path for tooltip (replace home with ~) */
 function formatPath(path: string): string {
   const normalized = normalizePath(path);
-  // Handle both Unix (/Users/...) and Windows (C:/Users/...) home paths
+  // Shorten home paths: macOS /Users/x, Windows C:/Users/x, Linux /home/x → ~
   return normalized
     .replace(/^\/Users\/[^/]+/, "~")
-    .replace(/^[A-Za-z]:\/Users\/[^/]+/, "~");
+    .replace(/^[A-Za-z]:\/Users\/[^/]+/, "~")
+    .replace(/^\/home\/[^/]+/, "~");
 }
 
 interface ProviderRowProps {

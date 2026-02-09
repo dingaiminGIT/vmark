@@ -2,16 +2,20 @@
 //!
 //! This module provides PDF generation using WeasyPrint CLI.
 //! WeasyPrint must be installed on the system (`pip install weasyprint`).
+//!
+//! Cross-platform: uses `login_shell_path()` to find pip-installed tools
+//! and `build_command()` to handle Windows `.cmd` shims.
 
 use std::path::PathBuf;
-use std::process::Command;
 use tauri::command;
+
+use crate::ai_provider::{build_command, login_shell_path};
 
 /// Check if WeasyPrint is available on the system.
 #[command]
 pub fn check_weasyprint() -> Result<bool, String> {
-    let output = Command::new("weasyprint")
-        .arg("--version")
+    let output = build_command("weasyprint", &["--version"])
+        .env("PATH", login_shell_path())
         .output();
 
     match output {
@@ -23,8 +27,8 @@ pub fn check_weasyprint() -> Result<bool, String> {
 /// Get WeasyPrint version string.
 #[command]
 pub fn get_weasyprint_version() -> Result<String, String> {
-    let output = Command::new("weasyprint")
-        .arg("--version")
+    let output = build_command("weasyprint", &["--version"])
+        .env("PATH", login_shell_path())
         .output()
         .map_err(|e| format!("Failed to run weasyprint: {}", e))?;
 
@@ -62,10 +66,9 @@ pub fn convert_html_to_pdf(html_path: String, pdf_path: String) -> Result<String
         }
     }
 
-    // Run WeasyPrint
-    let output = Command::new("weasyprint")
-        .arg(&html_path)
-        .arg(&pdf_path)
+    // Run WeasyPrint (uses login shell PATH + .cmd handling for Windows)
+    let output = build_command("weasyprint", &[&html_path, &pdf_path])
+        .env("PATH", login_shell_path())
         .output()
         .map_err(|e| format!("Failed to execute weasyprint: {}", e))?;
 

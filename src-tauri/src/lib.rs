@@ -60,10 +60,18 @@ fn print_webview(window: tauri::WebviewWindow) -> Result<(), String> {
     window.print().map_err(|e| e.to_string())
 }
 
-/// Return the user's default shell from $SHELL (fallback: /bin/sh)
+/// Return the user's default shell.
+///
+/// - macOS/Linux: reads `$SHELL` (fallback: `/bin/sh`)
+/// - Windows: uses `powershell.exe` (fallback: `cmd.exe`)
 #[tauri::command]
 fn get_default_shell() -> String {
-    std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
+    if cfg!(target_os = "windows") {
+        // Prefer PowerShell if available, fall back to cmd.exe
+        std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string())
+    } else {
+        std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
+    }
 }
 
 /// Register a file with macOS Dock recent documents

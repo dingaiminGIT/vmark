@@ -93,14 +93,26 @@ pub struct ProviderDiagnostic {
 struct ProviderConfig {
     name: &'static str,
     id: &'static str,
+    /// Path relative to `$HOME`. Claude Desktop differs per platform.
     relative_path: &'static str,
 }
+
+/// Claude Desktop config path per platform:
+/// - macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+/// - Windows: %APPDATA%/Claude/claude_desktop_config.json  (via dirs::config_dir)
+/// - Linux: ~/.config/Claude/claude_desktop_config.json
+#[cfg(target_os = "macos")]
+const CLAUDE_DESKTOP_PATH: &str = "Library/Application Support/Claude/claude_desktop_config.json";
+#[cfg(target_os = "windows")]
+const CLAUDE_DESKTOP_PATH: &str = "AppData/Roaming/Claude/claude_desktop_config.json";
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+const CLAUDE_DESKTOP_PATH: &str = ".config/Claude/claude_desktop_config.json";
 
 const PROVIDERS: &[ProviderConfig] = &[
     ProviderConfig {
         name: "Claude Desktop",
         id: "claude-desktop",
-        relative_path: "Library/Application Support/Claude/claude_desktop_config.json",
+        relative_path: CLAUDE_DESKTOP_PATH,
     },
     ProviderConfig {
         name: "Claude Code",
