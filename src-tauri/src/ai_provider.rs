@@ -151,6 +151,114 @@ pub fn read_env_api_keys() -> std::collections::HashMap<String, String> {
 }
 
 // ============================================================================
+// API Key Testing
+// ============================================================================
+
+/// Test an API key by hitting the cheapest possible endpoint per provider.
+///
+/// Returns a short success message or an error string.
+#[command]
+pub async fn test_api_key(
+    provider: String,
+    api_key: Option<String>,
+    endpoint: Option<String>,
+) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    match provider.as_str() {
+        "openai" => {
+            let key = api_key
+                .filter(|k| !k.is_empty())
+                .ok_or("API key is required")?;
+            let base = endpoint
+                .filter(|e| !e.is_empty())
+                .unwrap_or_else(|| "https://api.openai.com".to_string());
+            let resp = client
+                .get(format!("{}/v1/models", base))
+                .header("Authorization", format!("Bearer {}", key))
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            Ok("Connected".to_string())
+        }
+
+        "google-ai" => {
+            let key = api_key
+                .filter(|k| !k.is_empty())
+                .ok_or("API key is required")?;
+            let resp = client
+                .get("https://generativelanguage.googleapis.com/v1beta/models")
+                .header("x-goog-api-key", &key)
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            Ok("Connected".to_string())
+        }
+
+        "ollama-api" => {
+            let base = endpoint
+                .filter(|e| !e.is_empty())
+                .unwrap_or_else(|| "http://localhost:11434".to_string());
+            let resp = client
+                .get(format!("{}/api/tags", base))
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            Ok("Connected".to_string())
+        }
+
+        "anthropic" => {
+            let key = api_key
+                .filter(|k| !k.is_empty())
+                .ok_or("API key is required")?;
+            let base = endpoint
+                .filter(|e| !e.is_empty())
+                .unwrap_or_else(|| "https://api.anthropic.com".to_string());
+            let body = serde_json::json!({
+                "model": "claude-sonnet-4-5-20250929",
+                "max_tokens": 1,
+                "messages": [{"role": "user", "content": "Hi"}]
+            });
+            let resp = client
+                .post(format!("{}/v1/messages", base))
+                .header("x-api-key", &key)
+                .header("anthropic-version", "2023-06-01")
+                .header("content-type", "application/json")
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| format!("Request failed: {}", e))?;
+            if !resp.status().is_success() {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                return Err(format!("HTTP {}: {}", status.as_u16(), text));
+            }
+            Ok("Connected".to_string())
+        }
+
+        _ => Err(format!("Unknown provider: {}", provider)),
+    }
+}
+
+// ============================================================================
 // Prompt Execution
 // ============================================================================
 
