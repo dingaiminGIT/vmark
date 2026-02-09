@@ -431,12 +431,13 @@ async fn run_rest_google(
     });
 
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        model, api_key
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
+        model
     );
 
     let resp = client
         .post(&url)
+        .header("x-goog-api-key", api_key)
         .header("content-type", "application/json")
         .json(&body)
         .send()
