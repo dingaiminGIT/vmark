@@ -171,7 +171,7 @@ pub async fn run_ai_prompt(
     match provider.as_str() {
         // CLI providers
         "claude" => run_cli_provider(&window, &request_id, "claude", &["--print", "--output-format", "text"], Some(&prompt)),
-        "codex" => run_cli_provider(&window, &request_id, "codex", &["exec", "-q", &prompt], None),
+        "codex" => run_cli_provider(&window, &request_id, "codex", &["exec", &prompt], None),
         "gemini" => run_cli_provider(&window, &request_id, "gemini", &["-p", &prompt], None),
         "ollama" => {
             let m = model.as_deref().unwrap_or("llama3.2");
