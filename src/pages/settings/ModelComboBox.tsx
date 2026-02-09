@@ -34,13 +34,13 @@ export function ModelComboBox({
   const [highlightIdx, setHighlightIdx] = useState(-1);
   const [dropUp, setDropUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   // Curated first, then fetched (deduped), always keeping curated visible
   const curated = MODEL_SUGGESTIONS[provider] ?? [];
+  const curatedSet = new Set(curated);
   const merged = fetchedModels
-    ? [...curated, ...fetchedModels.filter((m) => !curated.includes(m))]
+    ? [...curated, ...fetchedModels.filter((m) => !curatedSet.has(m))]
     : curated;
   const filtered = merged.filter((m) =>
     m.toLowerCase().includes(filter.toLowerCase()),
@@ -159,7 +159,6 @@ export function ModelComboBox({
     <div ref={containerRef} className={`relative ${className}`}>
       <div className="flex items-center gap-0.5">
         <input
-          ref={inputRef}
           className="w-full px-2 py-1 text-xs rounded bg-[var(--bg-tertiary)] text-[var(--text-color)] border border-[var(--border-color)] focus:border-[var(--primary-color)] outline-none font-mono"
           placeholder="Model"
           value={value}

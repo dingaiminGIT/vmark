@@ -34,7 +34,7 @@ export function ProviderSwitcher({ onClose, onCloseAll }: ProviderSwitcherProps)
     if (cliProviders.length === 0 && !detecting) {
       useAiProviderStore.getState().detectProviders();
     }
-  }, []);
+  }, [cliProviders.length, detecting]);
 
   // Close on outside click
   useEffect(() => {

@@ -150,6 +150,38 @@ pub fn read_env_api_keys() -> std::collections::HashMap<String, String> {
 }
 
 // ============================================================================
+// Shared Helpers (test / list / validate)
+// ============================================================================
+
+fn make_client(timeout_secs: u64) -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(timeout_secs))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))
+}
+
+fn resolve_endpoint(endpoint: Option<String>, default: &str) -> String {
+    endpoint
+        .filter(|e| !e.is_empty())
+        .unwrap_or_else(|| default.to_string())
+}
+
+fn require_key(api_key: Option<String>) -> Result<String, String> {
+    api_key
+        .filter(|k| !k.is_empty())
+        .ok_or_else(|| "API key is required".to_string())
+}
+
+async fn check_response(resp: reqwest::Response) -> Result<reqwest::Response, String> {
+    if resp.status().is_success() {
+        return Ok(resp);
+    }
+    let status = resp.status();
+    let text = resp.text().await.unwrap_or_default();
+    Err(format!("HTTP {}: {}", status.as_u16(), text))
+}
+
+// ============================================================================
 // API Key Testing
 // ============================================================================
 
@@ -162,75 +194,48 @@ pub async fn test_api_key(
     api_key: Option<String>,
     endpoint: Option<String>,
 ) -> Result<String, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let client = make_client(10)?;
 
     match provider.as_str() {
         "openai" => {
-            let key = api_key
-                .filter(|k| !k.is_empty())
-                .ok_or("API key is required")?;
-            let base = endpoint
-                .filter(|e| !e.is_empty())
-                .unwrap_or_else(|| "https://api.openai.com".to_string());
+            let key = require_key(api_key)?;
+            let base = resolve_endpoint(endpoint, "https://api.openai.com");
             let resp = client
                 .get(format!("{}/v1/models", base))
                 .header("Authorization", format!("Bearer {}", key))
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            check_response(resp).await?;
             Ok("Connected".to_string())
         }
 
         "google-ai" => {
-            let key = api_key
-                .filter(|k| !k.is_empty())
-                .ok_or("API key is required")?;
+            let key = require_key(api_key)?;
             let resp = client
                 .get("https://generativelanguage.googleapis.com/v1beta/models")
                 .header("x-goog-api-key", &key)
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            check_response(resp).await?;
             Ok("Connected".to_string())
         }
 
         "ollama-api" => {
-            let base = endpoint
-                .filter(|e| !e.is_empty())
-                .unwrap_or_else(|| "http://localhost:11434".to_string());
+            let base = resolve_endpoint(endpoint, "http://localhost:11434");
             let resp = client
                 .get(format!("{}/api/tags", base))
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            check_response(resp).await?;
             Ok("Connected".to_string())
         }
 
         "anthropic" => {
-            let key = api_key
-                .filter(|k| !k.is_empty())
-                .ok_or("API key is required")?;
-            let base = endpoint
-                .filter(|e| !e.is_empty())
-                .unwrap_or_else(|| "https://api.anthropic.com".to_string());
+            let key = require_key(api_key)?;
+            let base = resolve_endpoint(endpoint, "https://api.anthropic.com");
             let body = serde_json::json!({
                 "model": "claude-sonnet-4-5-20250929",
                 "max_tokens": 1,
@@ -245,11 +250,7 @@ pub async fn test_api_key(
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            check_response(resp).await?;
             Ok("Connected".to_string())
         }
 
@@ -273,26 +274,17 @@ pub async fn list_models(
     api_key: Option<String>,
     endpoint: Option<String>,
 ) -> Result<Vec<String>, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let client = make_client(10)?;
 
     match provider.as_str() {
         "ollama-api" => {
-            let base = endpoint
-                .filter(|e| !e.is_empty())
-                .unwrap_or_else(|| "http://localhost:11434".to_string());
+            let base = resolve_endpoint(endpoint, "http://localhost:11434");
             let resp = client
                 .get(format!("{}/api/tags", base))
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            let resp = check_response(resp).await?;
             let json: serde_json::Value = resp
                 .json()
                 .await
@@ -310,35 +302,32 @@ pub async fn list_models(
         }
 
         "openai" => {
-            let key = api_key
-                .filter(|k| !k.is_empty())
-                .ok_or("API key is required")?;
-            let base = endpoint
-                .filter(|e| !e.is_empty())
-                .unwrap_or_else(|| "https://api.openai.com".to_string());
+            let key = require_key(api_key)?;
+            let base = resolve_endpoint(endpoint, "https://api.openai.com");
             let resp = client
                 .get(format!("{}/v1/models", base))
                 .header("Authorization", format!("Bearer {}", key))
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            let resp = check_response(resp).await?;
             let json: serde_json::Value = resp
                 .json()
                 .await
                 .map_err(|e| format!("Failed to parse response: {}", e))?;
-            let prefixes = ["gpt-", "o1", "o3", "o4", "chatgpt-"];
+            // Use dash-suffixed prefixes to avoid false matches (e.g. "o1" matching "o100-*")
+            let prefixes = ["gpt-", "o1-", "o3-", "o4-", "chatgpt-"];
+            let exact = ["o1", "o3", "o4"];
             let mut models: Vec<String> = json
                 .get("data")
                 .and_then(|d| d.as_array())
                 .map(|arr| {
                     arr.iter()
                         .filter_map(|m| m.get("id").and_then(|id| id.as_str()).map(String::from))
-                        .filter(|id| prefixes.iter().any(|p| id.starts_with(p)))
+                        .filter(|id| {
+                            prefixes.iter().any(|p| id.starts_with(p))
+                                || exact.iter().any(|e| id.as_str() == *e)
+                        })
                         .collect()
                 })
                 .unwrap_or_default();
@@ -347,20 +336,14 @@ pub async fn list_models(
         }
 
         "google-ai" => {
-            let key = api_key
-                .filter(|k| !k.is_empty())
-                .ok_or("API key is required")?;
+            let key = require_key(api_key)?;
             let resp = client
                 .get("https://generativelanguage.googleapis.com/v1beta/models")
                 .header("x-goog-api-key", &key)
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            let resp = check_response(resp).await?;
             let json: serde_json::Value = resp
                 .json()
                 .await
@@ -408,19 +391,12 @@ pub async fn validate_model(
     api_key: Option<String>,
     endpoint: Option<String>,
 ) -> Result<String, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let client = make_client(15)?;
 
     match provider.as_str() {
         "openai" => {
-            let key = api_key
-                .filter(|k| !k.is_empty())
-                .ok_or("API key is required")?;
-            let base = endpoint
-                .filter(|e| !e.is_empty())
-                .unwrap_or_else(|| "https://api.openai.com".to_string());
+            let key = require_key(api_key)?;
+            let base = resolve_endpoint(endpoint, "https://api.openai.com");
             let body = serde_json::json!({
                 "model": model,
                 "max_tokens": 1,
@@ -434,21 +410,13 @@ pub async fn validate_model(
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            check_response(resp).await?;
             Ok("Model OK".to_string())
         }
 
         "anthropic" => {
-            let key = api_key
-                .filter(|k| !k.is_empty())
-                .ok_or("API key is required")?;
-            let base = endpoint
-                .filter(|e| !e.is_empty())
-                .unwrap_or_else(|| "https://api.anthropic.com".to_string());
+            let key = require_key(api_key)?;
+            let base = resolve_endpoint(endpoint, "https://api.anthropic.com");
             let body = serde_json::json!({
                 "model": model,
                 "max_tokens": 1,
@@ -463,18 +431,12 @@ pub async fn validate_model(
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            check_response(resp).await?;
             Ok("Model OK".to_string())
         }
 
         "google-ai" => {
-            let key = api_key
-                .filter(|k| !k.is_empty())
-                .ok_or("API key is required")?;
+            let key = require_key(api_key)?;
             let body = serde_json::json!({
                 "contents": [{"parts": [{"text": "Hi"}]}]
             });
@@ -490,18 +452,12 @@ pub async fn validate_model(
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            check_response(resp).await?;
             Ok("Model OK".to_string())
         }
 
         "ollama-api" => {
-            let base = endpoint
-                .filter(|e| !e.is_empty())
-                .unwrap_or_else(|| "http://localhost:11434".to_string());
+            let base = resolve_endpoint(endpoint, "http://localhost:11434");
             let body = serde_json::json!({ "name": model });
             let resp = client
                 .post(format!("{}/api/show", base))
@@ -510,11 +466,7 @@ pub async fn validate_model(
                 .send()
                 .await
                 .map_err(|e| format!("Request failed: {}", e))?;
-            if !resp.status().is_success() {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(format!("HTTP {}: {}", status.as_u16(), text));
-            }
+            check_response(resp).await?;
             Ok("Model OK".to_string())
         }
 

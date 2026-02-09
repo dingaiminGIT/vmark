@@ -2,16 +2,15 @@
  * ProviderSwitcher — Tests
  *
  * Covers:
- * - Rendering CLI providers with availability badges
- * - Rendering REST providers with masked API key hints
+ * - Rendering available CLI providers (unavailable ones hidden)
+ * - Rendering REST providers with API keys or key-optional (keyless hidden)
  * - Active provider check mark
  * - Selecting a provider (activateProvider + onClose)
- * - Disabled state for unavailable CLI providers
  * - Settings button (onCloseAll + openSettingsWindow)
  * - Escape key closes switcher (stopPropagation)
  * - Outside click closes switcher
  * - API key masking (maskKey via rendered output)
- * - No CLI section when cliProviders is empty
+ * - No CLI section when no available CLI providers
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -24,12 +23,15 @@ import type { CliProviderInfo, RestProviderConfig, ProviderType } from "@/types/
 // ============================================================================
 
 const activateProvider = vi.fn();
+const detectProviders = vi.fn();
 
 let mockState: {
   activeProvider: ProviderType | null;
   cliProviders: CliProviderInfo[];
   restProviders: RestProviderConfig[];
+  detecting: boolean;
   activateProvider: ReturnType<typeof vi.fn>;
+  detectProviders: ReturnType<typeof vi.fn>;
 };
 
 vi.mock("@/stores/aiProviderStore", () => {
@@ -47,8 +49,6 @@ vi.mock("@/utils/settingsWindow", () => ({
   openSettingsWindow: vi.fn(),
 }));
 
-// Lucide icons render as SVGs — let them render naturally
-
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -56,6 +56,7 @@ vi.mock("@/utils/settingsWindow", () => ({
 function defaultMockState(): typeof mockState {
   return {
     activeProvider: "claude",
+    detecting: false,
     cliProviders: [
       { type: "claude", name: "Claude Code", command: "claude", available: true, path: "/usr/local/bin/claude" },
       { type: "codex", name: "Codex CLI", command: "codex", available: false },
@@ -67,6 +68,7 @@ function defaultMockState(): typeof mockState {
       { type: "ollama-api", name: "Ollama (API)", endpoint: "http://localhost:11434", apiKey: "", model: "llama3.2" },
     ],
     activateProvider,
+    detectProviders,
   };
 }
 
@@ -93,29 +95,24 @@ describe("ProviderSwitcher", () => {
   // --------------------------------------------------------------------------
 
   describe("rendering", () => {
-    it("renders CLI section with label and providers", () => {
+    it("renders only available CLI providers", () => {
       render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
 
       expect(screen.getByText("CLI")).toBeInTheDocument();
       expect(screen.getByText("Claude Code")).toBeInTheDocument();
-      expect(screen.getByText("Codex CLI")).toBeInTheDocument();
+      // Codex CLI is unavailable — should NOT be rendered
+      expect(screen.queryByText("Codex CLI")).toBeNull();
     });
 
-    it("renders REST/API section with label and providers", () => {
+    it("renders only REST providers with API key or key-optional", () => {
       render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
 
       expect(screen.getByText("API")).toBeInTheDocument();
       expect(screen.getByText("Anthropic")).toBeInTheDocument();
-      expect(screen.getByText("OpenAI")).toBeInTheDocument();
       expect(screen.getByText("Google AI")).toBeInTheDocument();
       expect(screen.getByText("Ollama (API)")).toBeInTheDocument();
-    });
-
-    it("shows availability badges for CLI providers", () => {
-      render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
-
-      expect(screen.getByText("Available")).toBeInTheDocument();
-      expect(screen.getByText("Not found")).toBeInTheDocument();
+      // OpenAI has no API key — should NOT be rendered
+      expect(screen.queryByText("OpenAI")).toBeNull();
     });
 
     it("renders Settings... footer button", () => {
@@ -124,13 +121,24 @@ describe("ProviderSwitcher", () => {
       expect(screen.getByText("Settings...")).toBeInTheDocument();
     });
 
-    it("hides CLI section when no CLI providers exist", () => {
-      mockState.cliProviders = [];
+    it("hides CLI section when no available CLI providers", () => {
+      mockState.cliProviders = [
+        { type: "codex", name: "Codex CLI", command: "codex", available: false },
+      ];
       render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
 
       expect(screen.queryByText("CLI")).toBeNull();
       // API section still present
       expect(screen.getByText("API")).toBeInTheDocument();
+    });
+
+    it("hides API section when no REST providers have keys", () => {
+      mockState.restProviders = [
+        { type: "openai", name: "OpenAI", endpoint: "", apiKey: "", model: "gpt-4o" },
+      ];
+      render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
+
+      expect(screen.queryByText("API")).toBeNull();
     });
   });
 
@@ -145,29 +153,23 @@ describe("ProviderSwitcher", () => {
         <ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />
       );
 
-      // The check icons rendered by Lucide will be SVGs inside .provider-switcher-check
       const claudeBtn = screen.getByText("Claude Code").closest("button")!;
       const checkSpan = claudeBtn.querySelector(".provider-switcher-check")!;
       expect(checkSpan.querySelector("svg")).not.toBeNull();
-
-      // Codex CLI should not have check
-      const codexBtn = screen.getByText("Codex CLI").closest("button")!;
-      const codexCheck = codexBtn.querySelector(".provider-switcher-check")!;
-      expect(codexCheck.querySelector("svg")).toBeNull();
     });
 
     it("shows check mark next to the active REST provider", () => {
-      mockState.activeProvider = "openai";
+      mockState.activeProvider = "anthropic";
       render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
 
-      const openaiBtn = screen.getByText("OpenAI").closest("button")!;
-      const checkSpan = openaiBtn.querySelector(".provider-switcher-check")!;
+      const anthropicBtn = screen.getByText("Anthropic").closest("button")!;
+      const checkSpan = anthropicBtn.querySelector(".provider-switcher-check")!;
       expect(checkSpan.querySelector("svg")).not.toBeNull();
 
-      // Anthropic should not have check
-      const anthropicBtn = screen.getByText("Anthropic").closest("button")!;
-      const anthropicCheck = anthropicBtn.querySelector(".provider-switcher-check")!;
-      expect(anthropicCheck.querySelector("svg")).toBeNull();
+      // Google AI should not have check
+      const googleBtn = screen.getByText("Google AI").closest("button")!;
+      const googleCheck = googleBtn.querySelector(".provider-switcher-check")!;
+      expect(googleCheck.querySelector("svg")).toBeNull();
     });
   });
 
@@ -181,13 +183,6 @@ describe("ProviderSwitcher", () => {
 
       // Anthropic has apiKey "sk-ant-1234567890" → should show ••••7890
       expect(screen.getByText("••••7890")).toBeInTheDocument();
-    });
-
-    it("shows 'No key' for REST provider without API key", () => {
-      render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
-
-      // OpenAI has empty apiKey → should show "No key"
-      expect(screen.getByText("No key")).toBeInTheDocument();
     });
 
     it("does not show key hint for KEY_OPTIONAL_REST providers (ollama-api)", () => {
@@ -204,6 +199,19 @@ describe("ProviderSwitcher", () => {
       // Google AI has apiKey "goog-key-abcdefgh" → should show ••••efgh
       expect(screen.getByText("••••efgh")).toBeInTheDocument();
     });
+
+    it("handles REST provider with short API key (< 5 chars)", () => {
+      mockState.restProviders = [
+        { type: "anthropic", name: "Anthropic", endpoint: "", apiKey: "abc", model: "" },
+      ];
+      render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
+
+      // maskKey("abc") returns "" → span is empty
+      const anthropicBtn = screen.getByText("Anthropic").closest("button")!;
+      const keySpan = anthropicBtn.querySelector(".provider-switcher-key");
+      expect(keySpan).not.toBeNull();
+      expect(keySpan!.textContent).toBe("");
+    });
   });
 
   // --------------------------------------------------------------------------
@@ -211,7 +219,7 @@ describe("ProviderSwitcher", () => {
   // --------------------------------------------------------------------------
 
   describe("selection", () => {
-    it("clicking an available CLI provider calls activateProvider and onClose", () => {
+    it("clicking a CLI provider calls activateProvider and onClose", () => {
       render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
 
       fireEvent.click(screen.getByText("Claude Code").closest("button")!);
@@ -223,34 +231,10 @@ describe("ProviderSwitcher", () => {
     it("clicking a REST provider calls activateProvider and onClose", () => {
       render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
 
-      fireEvent.click(screen.getByText("OpenAI").closest("button")!);
+      fireEvent.click(screen.getByText("Anthropic").closest("button")!);
 
-      expect(activateProvider).toHaveBeenCalledWith("openai");
+      expect(activateProvider).toHaveBeenCalledWith("anthropic");
       expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it("clicking an unavailable CLI provider does NOT call activateProvider", () => {
-      render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
-
-      const codexBtn = screen.getByText("Codex CLI").closest("button")!;
-      fireEvent.click(codexBtn);
-
-      expect(activateProvider).not.toHaveBeenCalled();
-      expect(onClose).not.toHaveBeenCalled();
-    });
-
-    it("unavailable CLI provider has disabled attribute", () => {
-      render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
-
-      const codexBtn = screen.getByText("Codex CLI").closest("button")!;
-      expect(codexBtn).toBeDisabled();
-    });
-
-    it("unavailable CLI provider has --unavailable class", () => {
-      render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
-
-      const codexBtn = screen.getByText("Codex CLI").closest("button")!;
-      expect(codexBtn.classList.contains("provider-switcher-item--unavailable")).toBe(true);
     });
   });
 
@@ -287,18 +271,11 @@ describe("ProviderSwitcher", () => {
     it("stops propagation so the parent picker does not close", () => {
       render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
 
-      // Use a capture listener on the container to verify propagation was stopped
       const parentHandler = vi.fn();
-      // Add parent handler at bubble phase — it should NOT fire
       document.addEventListener("keydown", parentHandler);
 
       fireEvent.keyDown(document, { key: "Escape" });
 
-      // The component adds its handler at capture phase with stopPropagation,
-      // so the bubble-phase handler should not see Escape
-      // Note: fireEvent dispatches from the target, and capture listeners
-      // run in order of registration. Since the component registers at capture,
-      // it intercepts before bubble.
       expect(onClose).toHaveBeenCalledTimes(1);
 
       document.removeEventListener("keydown", parentHandler);
@@ -318,7 +295,6 @@ describe("ProviderSwitcher", () => {
         </div>
       );
 
-      // Advance the deferred setTimeout(0) so the listener is registered
       act(() => {
         vi.runAllTimers();
       });
@@ -374,7 +350,6 @@ describe("ProviderSwitcher", () => {
 
       unmount();
 
-      // Should have removed both mousedown and keydown listeners
       const removedTypes = removeSpy.mock.calls.map((c) => c[0]);
       expect(removedTypes).toContain("mousedown");
       expect(removedTypes).toContain("keydown");
@@ -389,16 +364,15 @@ describe("ProviderSwitcher", () => {
   // --------------------------------------------------------------------------
 
   describe("edge cases", () => {
-    it("handles all CLI providers unavailable", () => {
+    it("hides CLI section when all CLI providers are unavailable", () => {
       mockState.cliProviders = [
         { type: "claude", name: "Claude Code", command: "claude", available: false },
         { type: "codex", name: "Codex CLI", command: "codex", available: false },
       ];
       render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
 
-      // Both should show "Not found"
-      const badges = screen.getAllByText("Not found");
-      expect(badges).toHaveLength(2);
+      // No available CLIs → CLI section hidden
+      expect(screen.queryByText("CLI")).toBeNull();
     });
 
     it("handles no active provider (null)", () => {
@@ -412,20 +386,17 @@ describe("ProviderSwitcher", () => {
       expect(checkSpans).toHaveLength(0);
     });
 
-    it("handles REST provider with short API key (< 5 chars)", () => {
-      mockState.restProviders = [
-        { type: "anthropic", name: "Anthropic", endpoint: "", apiKey: "abc", model: "" },
-      ];
+    it("triggers detectProviders on mount when CLI list is empty", () => {
+      mockState.cliProviders = [];
       render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
 
-      // maskKey returns "" for keys < 5 chars, so "No key" is not shown either
-      // The key hint should show empty (maskKey returns "")
-      // Since hasKey is true (!!p.apiKey is true for "abc"), it shows maskKey result
-      // maskKey("abc") returns "" → so the span is empty
-      const anthropicBtn = screen.getByText("Anthropic").closest("button")!;
-      const keySpan = anthropicBtn.querySelector(".provider-switcher-key");
-      expect(keySpan).not.toBeNull();
-      expect(keySpan!.textContent).toBe("");
+      expect(detectProviders).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not re-detect when CLI providers already populated", () => {
+      render(<ProviderSwitcher onClose={onClose} onCloseAll={onCloseAll} />);
+
+      expect(detectProviders).not.toHaveBeenCalled();
     });
   });
 });
