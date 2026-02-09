@@ -152,6 +152,15 @@ export function useGenieInvocation() {
       const provider = providerState.activeProvider;
       if (!provider) return; // Callers ensure provider exists
 
+      // Validate CLI provider is available before invoking
+      if (!REST_TYPES.has(provider)) {
+        const cliInfo = providerState.cliProviders.find((p) => p.type === provider);
+        if (cliInfo && !cliInfo.available) {
+          toast.error(`${cliInfo.name} CLI not found. Install it or choose another provider in Settings.`);
+          return;
+        }
+      }
+
       // Get REST config if applicable
       const restConfig = providerState.restProviders.find(
         (p) => p.type === provider

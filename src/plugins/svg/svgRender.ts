@@ -10,7 +10,7 @@ export function renderSvgBlock(content: string): string | null {
   if (!trimmed) return null;
 
   // Must start with <svg or <?xml (check for <svg followed by space, >, or /)
-  if (!/^<svg[\s>\/]/.test(trimmed) && !trimmed.startsWith("<?xml")) return null;
+  if (!/^<svg[\s>/]/.test(trimmed) && !trimmed.startsWith("<?xml")) return null;
 
   const doc = new DOMParser().parseFromString(trimmed, "image/svg+xml");
   if (doc.querySelector("parsererror")) return null;

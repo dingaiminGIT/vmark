@@ -124,28 +124,11 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
           }));
           set({ cliProviders: providers, detecting: false });
 
-          // Validate active provider is still available
+          // Auto-select only when no provider is set.
+          // Never overwrite an explicit user selection — if the CLI
+          // they chose is unavailable, surface the error at invocation time.
           const { activeProvider, restProviders } = get();
-          if (activeProvider) {
-            const isCli = !REST_TYPES.has(activeProvider);
-            // CLI provider that is no longer available → fall back
-            if (isCli) {
-              const stillAvailable = providers.some(
-                (p) => p.type === activeProvider && p.available
-              );
-              if (!stillAvailable) {
-                // Try another CLI, then any REST with an API key, then null
-                const firstCli = providers.find((p) => p.available);
-                const firstReadyRest = restProviders.find(
-                  (p) => p.apiKey && !KEY_OPTIONAL_REST.has(p.type)
-                ) ?? restProviders.find((p) => KEY_OPTIONAL_REST.has(p.type));
-                set({
-                  activeProvider: firstCli?.type ?? firstReadyRest?.type ?? null,
-                });
-              }
-            }
-            // REST providers are always selectable — no validation needed
-          } else {
+          if (!activeProvider) {
             // No active provider — auto-select first available CLI,
             // or first REST with an API key configured
             const firstCli = providers.find((p) => p.available);
@@ -170,13 +153,15 @@ export const useAiProviderStore = create<AiProviderState & AiProviderActions>()(
 
       ensureProvider: async () => {
         const { activeProvider, cliProviders } = get();
-        // If a CLI provider is selected but detection hasn't run yet,
-        // run it to validate availability.
-        if (activeProvider && !REST_TYPES.has(activeProvider) && cliProviders.length === 0) {
-          await get().detectProviders();
-          return get().activeProvider !== null;
+        if (activeProvider) {
+          // CLI provider selected but detection hasn't populated the list yet —
+          // run detection to populate cliProviders (won't overwrite selection).
+          if (!REST_TYPES.has(activeProvider) && cliProviders.length === 0) {
+            await get().detectProviders();
+          }
+          return true;
         }
-        if (activeProvider) return true;
+        // No provider at all — detect and auto-select
         await get().detectProviders();
         return get().activeProvider !== null;
       },
