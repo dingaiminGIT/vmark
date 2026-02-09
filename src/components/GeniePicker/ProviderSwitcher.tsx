@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef } from "react";
-import { useAiProviderStore, REST_TYPES, KEY_OPTIONAL_REST } from "@/stores/aiProviderStore";
+import { useAiProviderStore, KEY_OPTIONAL_REST } from "@/stores/aiProviderStore";
 import { openSettingsWindow } from "@/utils/settingsWindow";
 import { Check, Settings } from "lucide-react";
 import type { ProviderType } from "@/types/aiGenies";
@@ -75,38 +75,19 @@ export function ProviderSwitcher({ onClose, onCloseAll }: ProviderSwitcherProps)
     openSettingsWindow("integrations");
   };
 
+  // Only show available CLIs and API providers with a key (or key-optional)
+  const availableCli = cliProviders.filter((p) => p.available);
+  const readyRest = restProviders.filter(
+    (p) => !!p.apiKey || KEY_OPTIONAL_REST.has(p.type),
+  );
+
   return (
     <div ref={containerRef} className="provider-switcher">
       {/* CLI providers */}
-      {cliProviders.length > 0 && (
+      {availableCli.length > 0 && (
         <div className="provider-switcher-section">
           <div className="provider-switcher-label">CLI</div>
-          {cliProviders.map((p) => (
-            <button
-              key={p.type}
-              type="button"
-              className={`provider-switcher-item${!p.available ? " provider-switcher-item--unavailable" : ""}`}
-              onClick={() => p.available && handleSelect(p.type)}
-              disabled={!p.available}
-            >
-              <span className="provider-switcher-check">
-                {activeProvider === p.type && <Check size={12} />}
-              </span>
-              <span className="provider-switcher-name">{p.name}</span>
-              <span className={`provider-switcher-badge${p.available ? " provider-switcher-badge--available" : ""}`}>
-                {p.available ? "Available" : "Not found"}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* REST providers */}
-      <div className="provider-switcher-section">
-        <div className="provider-switcher-label">API</div>
-        {restProviders.map((p) => {
-          const hasKey = !!p.apiKey || KEY_OPTIONAL_REST.has(p.type);
-          return (
+          {availableCli.map((p) => (
             <button
               key={p.type}
               type="button"
@@ -117,15 +98,35 @@ export function ProviderSwitcher({ onClose, onCloseAll }: ProviderSwitcherProps)
                 {activeProvider === p.type && <Check size={12} />}
               </span>
               <span className="provider-switcher-name">{p.name}</span>
-              {REST_TYPES.has(p.type) && !KEY_OPTIONAL_REST.has(p.type) && (
-                <span className={`provider-switcher-key${hasKey ? " provider-switcher-key--set" : ""}`}>
-                  {hasKey ? maskKey(p.apiKey) : "No key"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* REST providers */}
+      {readyRest.length > 0 && (
+        <div className="provider-switcher-section">
+          <div className="provider-switcher-label">API</div>
+          {readyRest.map((p) => (
+            <button
+              key={p.type}
+              type="button"
+              className="provider-switcher-item"
+              onClick={() => handleSelect(p.type)}
+            >
+              <span className="provider-switcher-check">
+                {activeProvider === p.type && <Check size={12} />}
+              </span>
+              <span className="provider-switcher-name">{p.name}</span>
+              {!KEY_OPTIONAL_REST.has(p.type) && (
+                <span className="provider-switcher-key provider-switcher-key--set">
+                  {maskKey(p.apiKey)}
                 </span>
               )}
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Settings link */}
       <div className="provider-switcher-footer">
