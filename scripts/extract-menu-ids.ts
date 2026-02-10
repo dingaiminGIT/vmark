@@ -35,7 +35,6 @@ const EXCLUDED_IDS = new Set([
   "close",
   "cleanup-images",
   "export-html",
-  "save-pdf",
   "export-pdf",
   "copy-html",
   // Find operations (handled by find bar)

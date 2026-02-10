@@ -5,7 +5,6 @@ mod mcp_config;
 mod mcp_server;
 mod menu;
 mod menu_events;
-mod pdf_export;
 mod genies;
 mod quit;
 mod watcher;
@@ -54,10 +53,17 @@ fn debug_log(message: String) {
     eprintln!("[Frontend] {}", message);
 }
 
-/// Print the current webview content using native print dialog
+/// Write HTML content to a temp file for browser-based printing.
+/// Returns the file path so the frontend can open it via plugin-opener.
 #[tauri::command]
-fn print_webview(window: tauri::WebviewWindow) -> Result<(), String> {
-    window.print().map_err(|e| e.to_string())
+fn write_temp_html(html: String) -> Result<String, String> {
+    use std::io::Write;
+    let dir = std::env::temp_dir().join("vmark-print");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let path = dir.join("print.html");
+    let mut file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
+    file.write_all(html.as_bytes()).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().into_owned())
 }
 
 /// Return the user's default shell.
@@ -152,10 +158,6 @@ pub fn run() {
             hot_exit::commands::hot_exit_window_restore_complete,
             tab_transfer::detach_tab_to_new_window,
             tab_transfer::claim_tab_transfer,
-            pdf_export::check_weasyprint,
-            pdf_export::get_weasyprint_version,
-            pdf_export::convert_html_to_pdf,
-            pdf_export::convert_html_string_to_pdf,
             get_default_shell,
             genies::get_genies_dir,
             genies::list_genies,
@@ -168,7 +170,7 @@ pub fn run() {
             ai_provider::validate_model,
             #[cfg(debug_assertions)]
             debug_log,
-            print_webview,
+            write_temp_html,
             #[cfg(target_os = "macos")]
             register_dock_recent,
         ])

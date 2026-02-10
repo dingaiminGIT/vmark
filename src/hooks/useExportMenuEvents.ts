@@ -1,7 +1,7 @@
 /**
  * Hook for export menu event handling.
  *
- * Handles menu:export-html, menu:save-pdf, menu:export-pdf, and menu:copy-html events.
+ * Handles menu:export-html, menu:export-pdf, and menu:copy-html events.
  * Extracted from useMenuEvents to keep file sizes under 300 lines.
  *
  * Uses ExportSurface for visual parity.

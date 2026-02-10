@@ -147,7 +147,7 @@ export interface HtmlExportResult {
  * Get the base editor CSS for styled exports.
  * This includes all styles needed for content rendering.
  */
-function getEditorContentCSS(): string {
+export function getEditorContentCSS(): string {
   return `
 /* Container layout */
 .export-surface {
