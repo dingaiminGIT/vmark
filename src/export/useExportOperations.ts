@@ -238,13 +238,9 @@ function rewriteAssetUrls(html: string): string {
  *  3. Write it to a temp file
  *  4. Open it in the default browser, which auto-triggers `window.print()`
  *
- * @param markdown  - The markdown content
- * @param sourceFilePath - Optional path to the source file (for image resolution)
+ * @param markdown - The markdown content
  */
-export async function exportToPdf(
-  markdown: string,
-  _sourceFilePath?: string | null,
-): Promise<void> {
+export async function exportToPdf(markdown: string): Promise<void> {
   // Check for empty content
   const trimmedContent = markdown.trim();
   if (!trimmedContent) {

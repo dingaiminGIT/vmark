@@ -73,7 +73,7 @@ export function useExportMenuEvents(): void {
           if (!doc) return;
           try {
             const { exportToPdf } = await import("@/export");
-            await exportToPdf(doc.content, doc.filePath);
+            await exportToPdf(doc.content);
           } catch (error) {
             console.error("[Menu] Failed to export PDF:", error);
           }

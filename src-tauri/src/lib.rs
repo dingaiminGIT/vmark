@@ -53,12 +53,6 @@ fn debug_log(message: String) {
     eprintln!("[Frontend] {}", message);
 }
 
-/// Print the current webview content using native print dialog
-#[tauri::command]
-fn print_webview(window: tauri::WebviewWindow) -> Result<(), String> {
-    window.print().map_err(|e| e.to_string())
-}
-
 /// Write HTML content to a temp file for browser-based printing.
 /// Returns the file path so the frontend can open it via plugin-opener.
 #[tauri::command]
@@ -176,7 +170,6 @@ pub fn run() {
             ai_provider::validate_model,
             #[cfg(debug_assertions)]
             debug_log,
-            print_webview,
             write_temp_html,
             #[cfg(target_os = "macos")]
             register_dock_recent,
