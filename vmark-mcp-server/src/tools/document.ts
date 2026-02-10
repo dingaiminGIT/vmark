@@ -334,4 +334,81 @@ export function registerDocumentTools(server: VMarkMcpServer): void {
       }
     }
   );
+
+  // document_replace_in_source - Replace text at the markdown source level
+  server.registerTool(
+    {
+      name: 'document_replace_in_source',
+      description:
+        'Replace text at the markdown source level, bypassing ProseMirror node boundaries. ' +
+        'Use this when `document_replace` returns "No matches found" because the search text ' +
+        'spans formatting boundaries (e.g. partially bold text). ' +
+        'Serializes the document to markdown, performs string find/replace, then re-parses. ' +
+        'IMPORTANT: The search string must match the raw markdown source, including any ' +
+        'syntax markers like ** for bold, _ for italic, []() for links, etc. ' +
+        'Supports the suggestion/approval flow.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          search: {
+            type: 'string',
+            description: 'The text to search for in the markdown source.',
+          },
+          replace: {
+            type: 'string',
+            description: 'The replacement text (markdown supported).',
+          },
+          all: {
+            type: 'boolean',
+            description: 'Replace all occurrences. Defaults to false (first only).',
+          },
+          windowId: {
+            type: 'string',
+            description: 'Optional window identifier. Defaults to focused window.',
+          },
+        },
+        required: ['search', 'replace'],
+      },
+    },
+    async (args) => {
+      const search = args.search as string;
+      const replace = args.replace as string;
+      const all = (args.all as boolean) ?? false;
+      const windowId = resolveWindowId(args.windowId as string | undefined);
+
+      if (typeof search !== 'string' || search.length === 0) {
+        return VMarkMcpServer.errorResult('search must be a non-empty string');
+      }
+      if (typeof replace !== 'string') {
+        return VMarkMcpServer.errorResult('replace must be a string');
+      }
+
+      try {
+        const result = await server.sendBridgeRequest<ReplaceResult>({
+          type: 'document.replaceInSource',
+          search,
+          replace,
+          all,
+          windowId,
+        });
+
+        const message =
+          result.message ??
+          (result.count === 0
+            ? 'No matches found'
+            : `Replaced ${result.count} occurrence${result.count > 1 ? 's' : ''} in source`);
+
+        return VMarkMcpServer.successJsonResult({
+          count: result.count,
+          message,
+          suggestionIds: result.suggestionIds,
+          applied: !result.suggestionIds || result.suggestionIds.length === 0,
+        });
+      } catch (error) {
+        return VMarkMcpServer.errorResult(
+          `Failed to replace in source: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+  );
 }

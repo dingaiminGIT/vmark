@@ -2,7 +2,7 @@
  * MCP Bridge - Workspace and Window Operation Handlers
  */
 
-import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
+import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
@@ -10,6 +10,7 @@ import { useRecentFilesStore } from "@/stores/recentFilesStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { serializeMarkdown } from "@/utils/markdownPipeline";
 import { getFileName } from "@/utils/paths";
+import { reloadTabFromDisk } from "@/utils/reloadFromDisk";
 import { respond, getEditor, resolveWindowId } from "./utils";
 
 /**
@@ -348,6 +349,54 @@ export async function handleWorkspaceGetInfo(id: string): Promise<void> {
         rootPath,
         workspaceName,
       },
+    });
+  } catch (error) {
+    await respond({
+      id,
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Handle workspace.reloadDocument request.
+ * Reloads the active document from disk, discarding in-editor changes.
+ */
+export async function handleWorkspaceReloadDocument(
+  id: string,
+  args: Record<string, unknown>
+): Promise<void> {
+  try {
+    const windowId = resolveWindowId(args.windowId as string | undefined);
+    const tabStore = useTabStore.getState();
+    const docStore = useDocumentStore.getState();
+    const activeTabId = tabStore.activeTabId[windowId];
+
+    if (!activeTabId) {
+      throw new Error("No active document");
+    }
+
+    const doc = docStore.getDocument(activeTabId);
+    if (!doc?.filePath) {
+      throw new Error("Document has no file path (untitled documents cannot be reloaded)");
+    }
+
+    // Guard: refuse to discard unsaved changes unless force=true
+    const force = (args.force as boolean) ?? false;
+    if (doc.isDirty && !force) {
+      throw new Error(
+        "Document has unsaved changes. Save first with workspace_save_document, " +
+        "or pass force: true to discard changes and reload from disk."
+      );
+    }
+
+    await reloadTabFromDisk(activeTabId, doc.filePath);
+
+    await respond({
+      id,
+      success: true,
+      data: { filePath: doc.filePath },
     });
   } catch (error) {
     await respond({

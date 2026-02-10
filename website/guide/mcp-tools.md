@@ -142,6 +142,29 @@ Replace text occurrences in the document.
 - `suggestionIds` - Array of suggestion IDs when edits are staged (auto-approve disabled).
 - `applied` - `true` if immediately applied, `false` if staged as suggestions.
 
+### document_replace_in_source
+
+Replace text at the markdown source level, bypassing ProseMirror node boundaries. Use when `document_replace` returns "No matches found" because the search text spans formatting boundaries (e.g. partially bold text).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `search` | string | Yes | Text to find in the markdown source. |
+| `replace` | string | Yes | Replacement text (markdown supported). |
+| `all` | boolean | No | Replace all occurrences. Default: false. |
+| `windowId` | string | No | Window identifier. |
+
+**Returns:** `{ count, message, suggestionIds?, applied }`
+
+- `count` - Number of replacements made.
+- `suggestionIds` - Array of suggestion IDs when edits are staged (auto-approve disabled).
+- `applied` - `true` if immediately applied, `false` if staged as suggestions.
+
+::: tip When to use
+Use `document_replace` first — it's faster and more precise. Fall back to `document_replace_in_source` only when the search text crosses formatting boundaries (bold, italic, links, etc.) and `document_replace` can't find it.
+
+**Important:** The `search` string must match the raw markdown source, including syntax markers like `**` for bold, `_` for italic, `[]()` for links, etc. Use `document_get_content` to see the exact markdown source before searching.
+:::
+
 ---
 
 ## Selection Tools
@@ -629,6 +652,21 @@ Get information about the current workspace state.
 - `rootPath` - The workspace root directory path (null if not in workspace mode).
 - `workspaceName` - The folder name (null if not in workspace mode).
 
+### workspace_reload_document
+
+Reload the active document from disk. Use after editing the file externally (e.g. with sed or a script) to pick up changes.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `force` | boolean | No | Force reload even if document has unsaved changes. Default: false. |
+| `windowId` | string | No | Window identifier. |
+
+**Returns:** Success message with the reloaded file path.
+
+Fails if:
+- The document is untitled (no file path on disk).
+- The document has unsaved changes and `force` is not `true`. Save first with `workspace_save_document` or pass `force: true`.
+
 ---
 
 ## Tab Management Tools
@@ -710,7 +748,7 @@ VMark keeps track of the last 10 closed tabs per window. Use this to restore acc
 
 ## AI Suggestion Tools
 
-Tools for managing AI-generated content suggestions. When AI uses `document_insert_at_cursor`, `document_insert_at_position`, `document_replace`, `selection_replace`, or `selection_delete`, the changes are staged as suggestions that require user approval.
+Tools for managing AI-generated content suggestions. When AI uses `document_insert_at_cursor`, `document_insert_at_position`, `document_replace`, `document_replace_in_source`, `selection_replace`, or `selection_delete`, the changes are staged as suggestions that require user approval.
 
 ::: info Undo/Redo Safety
 Suggestions don't modify the document until accepted. This preserves full undo/redo functionality - users can undo after accepting, and rejecting leaves no trace in history.

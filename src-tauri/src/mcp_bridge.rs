@@ -614,28 +614,65 @@ async fn handle_message(text: &str, client_id: u64, app: &AppHandle) -> Result<(
         return Err(format!("Failed to emit event: {}", e));
     }
 
+    #[cfg(debug_assertions)]
+    eprintln!(
+        "[MCP Bridge] Emitted mcp-bridge:request for {} (id: {})",
+        request.request_type, request_id
+    );
+
     // Wait for response with timeout (10 seconds - operations should be fast)
     let response = match tokio::time::timeout(std::time::Duration::from_secs(10), response_rx).await
     {
         Ok(Ok(response)) => response,
         Ok(Err(_)) => {
-            // Channel closed - clean up pending request
+            // Channel closed - clean up and send error to sidecar
             let state = get_bridge_state();
             let mut guard = state.lock().await;
             guard.pending.remove(&request_id);
-            return Err("Response channel closed".to_string());
+            drop(guard);
+
+            let error_response = McpResponse {
+                success: false,
+                data: None,
+                error: Some("Response channel closed".to_string()),
+            };
+            let ws_response = WsMessage {
+                id: msg.id.clone(),
+                msg_type: "response".to_string(),
+                payload: serde_json::to_value(&error_response).unwrap_or_default(),
+            };
+            if let Ok(json) = serde_json::to_string(&ws_response) {
+                let _ = client_tx.send(json);
+            }
+            return Ok(());
         }
         Err(_) => {
-            // Timeout - clean up pending request
+            // Timeout - clean up and send error to sidecar
             let state = get_bridge_state();
             let mut guard = state.lock().await;
             guard.pending.remove(&request_id);
+            drop(guard);
+
             #[cfg(debug_assertions)]
             eprintln!(
                 "[MCP Bridge] Client {} request {} timed out after 10s",
                 client_id, request_type_for_log
             );
-            return Err("Request timeout".to_string());
+
+            let error_response = McpResponse {
+                success: false,
+                data: None,
+                error: Some("Request timeout after 10s".to_string()),
+            };
+            let ws_response = WsMessage {
+                id: msg.id.clone(),
+                msg_type: "response".to_string(),
+                payload: serde_json::to_value(&error_response).unwrap_or_default(),
+            };
+            if let Ok(json) = serde_json::to_string(&ws_response) {
+                let _ = client_tx.send(json);
+            }
+            return Ok(());
         }
     };
 
@@ -671,6 +708,16 @@ async fn handle_message(text: &str, client_id: u64, app: &AppHandle) -> Result<(
 pub async fn mcp_bridge_respond(payload: McpResponsePayload) -> Result<(), String> {
     let state = get_bridge_state();
     let mut guard = state.lock().await;
+
+    #[cfg(debug_assertions)]
+    if guard.pending.contains_key(&payload.id) {
+        eprintln!("[MCP Bridge] Response received for {}", payload.id);
+    } else {
+        eprintln!(
+            "[MCP Bridge] Response for unknown/expired request {}",
+            payload.id
+        );
+    }
 
     if let Some(pending) = guard.pending.remove(&payload.id) {
         let response = McpResponse {

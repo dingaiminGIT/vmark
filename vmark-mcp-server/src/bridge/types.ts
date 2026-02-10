@@ -591,6 +591,7 @@ export type BridgeRequest =
   | { type: 'document.insertAtPosition'; text: string; position: number; windowId?: WindowId }
   | { type: 'document.search'; query: string; caseSensitive?: boolean; windowId?: WindowId }
   | { type: 'document.replace'; search: string; replace: string; all?: boolean; windowId?: WindowId }
+  | { type: 'document.replaceInSource'; search: string; replace: string; all?: boolean; windowId?: WindowId }
   // Selection commands
   | { type: 'selection.get'; windowId?: WindowId }
   | { type: 'selection.set'; from: number; to: number; windowId?: WindowId }
@@ -642,6 +643,7 @@ export type BridgeRequest =
   | { type: 'workspace.closeWindow'; windowId?: WindowId }
   | { type: 'workspace.listRecentFiles' }
   | { type: 'workspace.getInfo'; windowId?: WindowId }
+  | { type: 'workspace.reloadDocument'; force?: boolean; windowId?: WindowId }
   // Tab commands
   | { type: 'tabs.list'; windowId?: WindowId }
   | { type: 'tabs.getActive'; windowId?: WindowId }

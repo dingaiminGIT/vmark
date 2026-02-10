@@ -9,6 +9,7 @@
 
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { createMarkdownPasteSlice } from "@/plugins/markdownPaste/tiptap";
+import { serializeMarkdown } from "@/utils/markdownPipeline";
 import { respond, getEditor, isAutoApproveEnabled, getActiveTabId } from "./utils";
 
 /**
@@ -443,6 +444,111 @@ export async function handleSelectionDeleteWithSuggestion(id: string): Promise<v
         message: "Content marked for deletion. Awaiting user approval.",
         range: { from, to },
         content: originalContent,
+      },
+    });
+  } catch (error) {
+    await respond({
+      id,
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Handle document.replaceInSource - find/replace at the markdown source level.
+ * Serializes the document to markdown, performs string replacement, then re-parses.
+ * This bypasses ProseMirror node boundaries so it can match text across formatting marks.
+ */
+export async function handleDocumentReplaceInSourceWithSuggestion(
+  id: string,
+  args: Record<string, unknown>
+): Promise<void> {
+  try {
+    const editor = getEditor();
+    if (!editor) throw new Error("No active editor");
+
+    const search = args.search as string;
+    const replace = args.replace as string;
+    const replaceAll = (args.all as boolean) ?? false;
+
+    if (typeof search !== "string" || search.length === 0) {
+      throw new Error("search must be a non-empty string");
+    }
+    if (typeof replace !== "string") {
+      throw new Error("replace must be a string");
+    }
+
+    // Serialize current document to markdown
+    const markdown = serializeMarkdown(editor.state.schema, editor.state.doc);
+
+    // Count non-overlapping matches (consistent with split/join replacement)
+    const parts = markdown.split(search);
+    const totalMatches = parts.length - 1;
+
+    if (totalMatches === 0) {
+      await respond({
+        id,
+        success: true,
+        data: { count: 0, message: "No matches found" },
+      });
+      return;
+    }
+
+    const count = replaceAll ? totalMatches : 1;
+
+    // Perform the replacement on the markdown string
+    let newMarkdown: string;
+    if (replaceAll) {
+      newMarkdown = parts.join(replace);
+    } else {
+      const firstIdx = markdown.indexOf(search);
+      newMarkdown =
+        markdown.substring(0, firstIdx) +
+        replace +
+        markdown.substring(firstIdx + search.length);
+    }
+
+    // Auto-approve: parse and replace entire document
+    if (isAutoApproveEnabled()) {
+      const slice = createMarkdownPasteSlice(editor.state, newMarkdown);
+      const tr = editor.state.tr.replaceWith(
+        0,
+        editor.state.doc.content.size,
+        slice.content
+      );
+      editor.view.dispatch(tr);
+
+      await respond({
+        id,
+        success: true,
+        data: {
+          count,
+          message: `${count} replacement(s) applied in source (auto-approved).`,
+          applied: true,
+        },
+      });
+      return;
+    }
+
+    // Suggestion mode: create a single whole-document replacement suggestion
+    const suggestionId = useAiSuggestionStore.getState().addSuggestion({
+      tabId: getActiveTabId(),
+      type: "replace",
+      from: 0,
+      to: editor.state.doc.content.size,
+      newContent: newMarkdown,
+      originalContent: markdown,
+    });
+
+    await respond({
+      id,
+      success: true,
+      data: {
+        count,
+        suggestionIds: [suggestionId],
+        message: `${count} replacement(s) staged as suggestion. Awaiting user approval.`,
+        applied: false,
       },
     });
   } catch (error) {

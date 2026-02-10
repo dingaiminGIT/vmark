@@ -66,8 +66,17 @@ function applySuggestionToTr(
   tr: Transaction,
   suggestion: AiSuggestion,
 ): Transaction {
+  const docSize = state.doc.content.size;
+
+  // Whole-document replace (from=0): clamp `to` to current doc size.
+  // The doc may have changed since the suggestion was created, but the
+  // intent is to replace the entire content — so we use the live size.
+  if (suggestion.from === 0 && suggestion.to > docSize) {
+    suggestion = { ...suggestion, to: docSize };
+  }
+
   // Guard against stale positions after doc edits
-  if (!isValidPosition(suggestion, state.doc.content.size)) return tr;
+  if (!isValidPosition(suggestion, docSize)) return tr;
 
   switch (suggestion.type) {
     case "insert": {
