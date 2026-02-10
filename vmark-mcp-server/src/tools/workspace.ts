@@ -400,4 +400,49 @@ export function registerWorkspaceTools(server: VMarkMcpServer): void {
       }
     }
   );
+
+  // workspace_reload_document - Reload the active document from disk
+  server.registerTool(
+    {
+      name: 'workspace_reload_document',
+      description:
+        'Reload the active document from disk. ' +
+        'Use after editing the file externally (e.g. with sed or a script) to pick up changes. ' +
+        'Fails if the document is untitled (no file path). ' +
+        'If the document has unsaved changes, you must pass force: true or save first.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          force: {
+            type: 'boolean',
+            description:
+              'Force reload even if the document has unsaved changes. ' +
+              'Defaults to false (refuses to discard unsaved edits).',
+          },
+          windowId: {
+            type: 'string',
+            description: 'Optional window identifier. Defaults to focused window.',
+          },
+        },
+      },
+    },
+    async (args) => {
+      const force = (args.force as boolean) ?? false;
+      const windowId = resolveWindowId(args.windowId as string | undefined);
+
+      try {
+        const result = await server.sendBridgeRequest<{ filePath: string }>({
+          type: 'workspace.reloadDocument',
+          force,
+          windowId,
+        });
+
+        return VMarkMcpServer.successResult(`Reloaded document from: ${result.filePath}`);
+      } catch (error) {
+        return VMarkMcpServer.errorResult(
+          `Failed to reload document: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+    }
+  );
 }

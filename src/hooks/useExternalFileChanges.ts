@@ -20,6 +20,7 @@ import { resolveExternalChangeAction } from "@/utils/openPolicy";
 import { normalizePath } from "@/utils/paths";
 import { saveToPath } from "@/utils/saveToPath";
 import { detectLinebreaks } from "@/utils/linebreakDetection";
+import { reloadTabFromDisk } from "@/utils/reloadFromDisk";
 import { matchesPendingSave } from "@/utils/pendingSaves";
 import { getFileName } from "@/utils/paths";
 
@@ -74,9 +75,7 @@ export function useExternalFileChanges(): void {
   // Handle reload for a specific tab
   const handleReload = useCallback(async (tabId: string, filePath: string) => {
     try {
-      const content = await readTextFile(filePath);
-      useDocumentStore.getState().loadContent(tabId, content, filePath, detectLinebreaks(content));
-      useDocumentStore.getState().clearMissing(tabId);
+      await reloadTabFromDisk(tabId, filePath);
     } catch (error) {
       console.error("[ExternalChange] Failed to reload file:", filePath, error);
       // File might have been deleted - mark as missing
@@ -141,10 +140,7 @@ export function useExternalFileChanges(): void {
       if (result === "No" || result === dialogButtons.reload) {
         // User explicitly chose to reload - discard their changes
         try {
-          const content = await readTextFile(filePath);
-          useDocumentStore.getState().loadContent(tabId, content, filePath, detectLinebreaks(content));
-          // Clear missing flag in case file was previously deleted and recreated
-          useDocumentStore.getState().clearMissing(tabId);
+          await reloadTabFromDisk(tabId, filePath);
         } catch (error) {
           console.error("[ExternalChange] Failed to reload file:", filePath, error);
           useDocumentStore.getState().markMissing(tabId);
@@ -195,9 +191,7 @@ export function useExternalFileChanges(): void {
           // Reload all files from disk
           for (const { tabId, filePath } of pending) {
             try {
-              const content = await readTextFile(filePath);
-              useDocumentStore.getState().loadContent(tabId, content, filePath, detectLinebreaks(content));
-              useDocumentStore.getState().clearMissing(tabId);
+              await reloadTabFromDisk(tabId, filePath);
             } catch (error) {
               console.error("[ExternalChange] Failed to reload file:", filePath, error);
               useDocumentStore.getState().markMissing(tabId);

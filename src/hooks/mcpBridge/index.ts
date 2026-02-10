@@ -27,6 +27,7 @@ import {
   handleInsertAtCursorWithSuggestion,
   handleInsertAtPositionWithSuggestion,
   handleDocumentReplaceWithSuggestion,
+  handleDocumentReplaceInSourceWithSuggestion,
   handleSelectionReplaceWithSuggestion,
   handleSelectionDeleteWithSuggestion,
   handleSuggestionAccept,
@@ -86,6 +87,7 @@ import {
   handleWorkspaceCloseWindow,
   handleWorkspaceListRecentFiles,
   handleWorkspaceGetInfo,
+  handleWorkspaceReloadDocument,
 } from "./workspaceHandlers";
 
 // Tab handlers
@@ -184,6 +186,10 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
       case "document.replace":
         // Wrapped with suggestion for approval
         await handleDocumentReplaceWithSuggestion(id, args);
+        break;
+      case "document.replaceInSource":
+        // Wrapped with suggestion for approval (source-level replace)
+        await handleDocumentReplaceInSourceWithSuggestion(id, args);
         break;
 
       // Outline and metadata operations
@@ -349,6 +355,9 @@ async function handleRequest(event: McpRequestEvent): Promise<void> {
         break;
       case "workspace.getInfo":
         await handleWorkspaceGetInfo(id);
+        break;
+      case "workspace.reloadDocument":
+        await handleWorkspaceReloadDocument(id, args);
         break;
 
       // Tab operations
