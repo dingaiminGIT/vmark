@@ -60,33 +60,13 @@ export {
 export type { FontConfig, FontEmbedResult, FontFile, DownloadedFont, EmbeddedFont } from "./fontEmbedder";
 
 // HTML Export
-export { exportHtml, copyHtmlToClipboard } from "./htmlExport";
+export { exportHtml, copyHtmlToClipboard, getEditorContentCSS } from "./htmlExport";
 export type { HtmlExportOptions, HtmlExportResult } from "./htmlExport";
-
-// PDF Export
-export {
-  checkWeasyprint,
-  getWeasyprintVersion,
-  generatePdfCompatibleHtml,
-  exportToPdf as exportToPdfFile,
-} from "./pdf/pdfExport";
-export type { PdfExportOptions, PdfExportResult } from "./pdf/pdfExport";
-
-// PDF Utilities
-export {
-  transformCssForPdf,
-  resolveCssVariables,
-  resolveColorMix,
-} from "./pdf/cssResolver";
-export { transformSvgForPdf, transformAllSvgs, hasForeignObject } from "./pdf/svgTransformer";
-export { extractTOC, renderTOC, generateTOC, insertTOC } from "./pdf/tocGenerator";
-export type { TOCItem, TOCOptions } from "./pdf/tocGenerator";
 
 // Export Operations
 export {
   exportToHtml,
   exportToPdf,
-  exportToPdfFile as exportWithWeasyprint,
   copyAsHtml,
   getRenderedHtml,
 } from "./useExportOperations";

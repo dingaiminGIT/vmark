@@ -1,7 +1,7 @@
 /**
  * Hook for export menu event handling.
  *
- * Handles menu:export-html, menu:save-pdf, menu:export-pdf, and menu:copy-html events.
+ * Handles menu:export-html, menu:export-pdf, and menu:copy-html events.
  * Extracted from useMenuEvents to keep file sizes under 300 lines.
  *
  * Uses ExportSurface for visual parity.
@@ -73,7 +73,7 @@ export function useExportMenuEvents(): void {
           if (!doc) return;
           try {
             const { exportToPdf } = await import("@/export");
-            await exportToPdf(doc.content);
+            await exportToPdf(doc.content, doc.filePath);
           } catch (error) {
             console.error("[Menu] Failed to export PDF:", error);
           }

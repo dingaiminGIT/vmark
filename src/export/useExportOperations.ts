@@ -1,7 +1,7 @@
 /**
  * Export Operations
  *
- * Print: Uses Typora-style direct printing (window.print() with @media print CSS).
+ * Print: Opens a self-contained HTML file in the system browser for printing.
  * HTML Export: Uses ExportSurface for visual-parity rendering.
  */
 
@@ -14,7 +14,6 @@ import React from "react";
 
 import { ExportSurface, type ExportSurfaceRef } from "./ExportSurface";
 import { exportHtml } from "./htmlExport";
-import { exportToPdf as exportToPdfWithWeasyprint, checkWeasyprint } from "./pdf/pdfExport";
 import { waitForAssets } from "./waitForAssets";
 import { captureThemeCSS } from "./themeSnapshot";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -216,13 +215,36 @@ export async function exportToHtml(
 }
 
 /**
- * Print document via native print dialog.
- * Uses Typora-style direct printing - no re-rendering needed.
- * The current editor view IS the print source, with @media print CSS hiding UI.
+ * Rewrite asset:// URLs to file:// so the system browser can load local images.
  *
- * @param markdown - The markdown content (used only for empty check)
+ * In the Tauri webview, images are served via `asset://localhost/path` or
+ * `https://asset.localhost/path`. Browsers can't resolve these, but they can
+ * load `file:///path` from a locally-opened HTML file.
  */
-export async function exportToPdf(markdown: string): Promise<void> {
+function rewriteAssetUrls(html: string): string {
+  return html
+    .replace(/asset:\/\/localhost/g, "file://")
+    .replace(/https:\/\/asset\.localhost/g, "file://");
+}
+
+/**
+ * Print document by opening a self-contained HTML file in the system browser.
+ *
+ * WKWebView has an internal rendering height cap (~16 384 px at 2× Retina)
+ * that truncates long documents when using the native print dialog.
+ * Browsers (Safari, Chrome) have a correct CSS pagination engine, so we:
+ *  1. Render the markdown via ExportSurface (same as HTML export)
+ *  2. Build a styled, self-contained HTML page
+ *  3. Write it to a temp file
+ *  4. Open it in the default browser, which auto-triggers `window.print()`
+ *
+ * @param markdown  - The markdown content
+ * @param sourceFilePath - Optional path to the source file (for image resolution)
+ */
+export async function exportToPdf(
+  markdown: string,
+  _sourceFilePath?: string | null,
+): Promise<void> {
   // Check for empty content
   const trimmedContent = markdown.trim();
   if (!trimmedContent) {
@@ -230,110 +252,66 @@ export async function exportToPdf(markdown: string): Promise<void> {
     return;
   }
 
-  // Lazy-load print styles before invoking print dialog.
-  // This keeps @media print CSS out of the main bundle.
-  await import("@/styles/printStyles.css");
-
-  // Use Tauri's native print API (wry WebView.print())
-  // This triggers the native macOS print dialog properly,
-  // unlike window.print() which silently fails in WKWebView
   try {
-    await invoke("print_webview");
+    // 1. Render markdown to HTML via ExportSurface (always light theme for print)
+    const html = await renderMarkdownToHtml(markdown, true);
+
+    // 2. Capture CSS
+    const themeCSS = captureThemeCSS();
+    const { getEditorContentCSS } = await import("./htmlExport");
+    const contentCSS = getEditorContentCSS();
+
+    // 3. Rewrite asset:// URLs to file:// for browser access
+    const resolvedHtml = rewriteAssetUrls(html);
+
+    // 4. Build self-contained HTML with auto-print
+    const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Print</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+  <style>
+/* Theme Variables */
+${themeCSS}
+
+/* Content Styles */
+${contentCSS}
+
+/* Print-specific overrides */
+@media print {
+  @page { margin: 1.5cm; }
+  body { background: white; }
+  .export-surface { max-width: none; padding: 0; }
+}
+  </style>
+</head>
+<body>
+  <div class="export-surface">
+    <div class="export-surface-editor">
+${resolvedHtml}
+    </div>
+  </div>
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function() { window.print(); }, 300);
+    });
+  </script>
+</body>
+</html>`;
+
+    // 5. Write to temp file via Rust
+    const filePath: string = await invoke("write_temp_html", { html: fullHtml });
+
+    // 6. Open in system browser
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(`file://${filePath}`);
+
+    toast.success("Opened in browser for printing");
   } catch (error) {
     console.error("[Print] Failed to print:", error);
     toast.error("Failed to open print dialog");
-  }
-}
-
-export interface ExportToPdfFileOptions {
-  /** Markdown content */
-  markdown: string;
-  /** Default filename */
-  defaultName?: string;
-  /** Default parent directory */
-  defaultDirectory?: string;
-  /** Source file path for resource resolution */
-  sourceFilePath?: string | null;
-  /** Include table of contents */
-  includeToc?: boolean;
-}
-
-/**
- * Export markdown to PDF file using WeasyPrint.
- *
- * Generates PDF-compatible HTML with WeasyPrint CSS transformations,
- * then converts to PDF via the WeasyPrint CLI.
- */
-export async function exportToPdfFile(
-  options: ExportToPdfFileOptions
-): Promise<boolean> {
-  const {
-    markdown,
-    defaultName = "document",
-    defaultDirectory,
-    sourceFilePath,
-    includeToc = false,
-  } = options;
-
-  // Check for empty content
-  const trimmedContent = markdown.trim();
-  if (!trimmedContent) {
-    toast.error("No content to export!");
-    return false;
-  }
-
-  // Check if WeasyPrint is available
-  const weasyprintAvailable = await checkWeasyprint();
-  if (!weasyprintAvailable) {
-    toast.error("WeasyPrint not installed. Install with: pip install weasyprint");
-    return false;
-  }
-
-  try {
-    // User picks output path
-    const safeName = `${defaultName}.pdf`;
-    const defaultPath = defaultDirectory
-      ? joinPath(defaultDirectory, safeName)
-      : safeName;
-
-    const selectedPath = await save({
-      defaultPath,
-      title: "Export PDF",
-      filters: [{ name: "PDF Document", extensions: ["pdf"] }],
-    });
-
-    if (!selectedPath) return false;
-
-    // Render markdown to HTML
-    const html = await renderMarkdownToHtml(markdown, true);
-
-    // Export to PDF via WeasyPrint
-    const result = await exportToPdfWithWeasyprint(html, selectedPath, {
-      title: defaultName.replace(/\.[^.]+$/, ""),
-      sourceFilePath,
-      includeToc,
-    });
-
-    if (!result.success) {
-      throw new Error(result.error ?? "PDF export failed");
-    }
-
-    if (result.warnings.length > 0) {
-      console.warn("[PDF Export] Warnings:", result.warnings);
-      const count = result.warnings.length;
-      toast.warning(
-        count === 1
-          ? "1 resource could not be included"
-          : `${count} resources could not be included`
-      );
-    }
-
-    toast.success("Exported to PDF");
-    return true;
-  } catch (error) {
-    console.error("[PDF Export] Failed to export PDF:", error);
-    await showError(FileErrors.exportFailed("PDF"));
-    return false;
   }
 }
 
