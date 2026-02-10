@@ -60,6 +60,9 @@ export class MathPopupView {
     });
 
     document.addEventListener("mousedown", this.handleClickOutside);
+
+    // Close popup on scroll (popup position becomes stale)
+    this.editorView.dom.closest(".editor-container")?.addEventListener("scroll", this.handleScroll, true);
   }
 
   private buildContainer(): HTMLElement {
@@ -243,6 +246,12 @@ export class MathPopupView {
     this.editorView.focus();
   };
 
+  private handleScroll = () => {
+    if (useMathPopupStore.getState().isOpen) {
+      useMathPopupStore.getState().closePopup();
+    }
+  };
+
   private handleClickOutside = (e: MouseEvent) => {
     if (this.justOpened) return;
     const { isOpen } = useMathPopupStore.getState();
@@ -257,6 +266,7 @@ export class MathPopupView {
   destroy() {
     this.unsubscribe();
     document.removeEventListener("mousedown", this.handleClickOutside);
+    this.editorView.dom.closest(".editor-container")?.removeEventListener("scroll", this.handleScroll, true);
     this.container.remove();
   }
 }

@@ -74,6 +74,9 @@ export class ImagePopupView {
 
     // Handle click outside
     document.addEventListener("mousedown", this.handleClickOutside);
+
+    // Close popup on scroll (popup position becomes stale)
+    this.editorView.dom.closest(".editor-container")?.addEventListener("scroll", this.handleScroll, true);
   }
 
   private show(imageSrc: string, imageAlt: string, anchorRect: AnchorRect) {
@@ -308,6 +311,12 @@ export class ImagePopupView {
     }
   };
 
+  private handleScroll = () => {
+    if (useImagePopupStore.getState().isOpen) {
+      useImagePopupStore.getState().closePopup();
+    }
+  };
+
   private handleClickOutside = (e: MouseEvent) => {
     // Guard against race condition where same click opens and closes popup
     if (this.justOpened) return;
@@ -343,6 +352,7 @@ export class ImagePopupView {
       this.pendingCloseRaf = null;
     }
     document.removeEventListener("mousedown", this.handleClickOutside);
+    this.editorView.dom.closest(".editor-container")?.removeEventListener("scroll", this.handleScroll, true);
     this.container.remove();
   }
 }

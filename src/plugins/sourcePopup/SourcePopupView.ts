@@ -66,6 +66,7 @@ export abstract class SourcePopupView<TState extends PopupStoreBase> {
   // Event handlers (bound for cleanup)
   private boundHandleClickOutside: (e: MouseEvent) => void;
   private boundHandleKeydown: (e: KeyboardEvent) => void;
+  private boundHandleScroll: () => void;
 
   constructor(view: EditorView, store: StoreApi<TState>) {
     this.editorView = view;
@@ -78,6 +79,7 @@ export abstract class SourcePopupView<TState extends PopupStoreBase> {
     // Bind event handlers
     this.boundHandleClickOutside = this.handleClickOutside.bind(this);
     this.boundHandleKeydown = this.handleKeydown.bind(this);
+    this.boundHandleScroll = this.handleScroll.bind(this);
 
     // Subscribe to store
     this.unsubscribe = store.subscribe((state) => {
@@ -182,6 +184,11 @@ export abstract class SourcePopupView<TState extends PopupStoreBase> {
     // Attach event listeners
     document.addEventListener("mousedown", this.boundHandleClickOutside);
     document.addEventListener("keydown", this.boundHandleKeydown);
+    this.editorView.dom.closest(".editor-container")?.addEventListener(
+      "scroll",
+      this.boundHandleScroll,
+      true
+    );
 
     // Attach Tab cycling handler to container
     this.container.addEventListener("keydown", this.handleTabNavigation);
@@ -215,6 +222,11 @@ export abstract class SourcePopupView<TState extends PopupStoreBase> {
     // Remove event listeners
     document.removeEventListener("mousedown", this.boundHandleClickOutside);
     document.removeEventListener("keydown", this.boundHandleKeydown);
+    this.editorView.dom.closest(".editor-container")?.removeEventListener(
+      "scroll",
+      this.boundHandleScroll,
+      true
+    );
     this.container.removeEventListener("keydown", this.handleTabNavigation);
 
     // Call subclass hook
@@ -240,6 +252,15 @@ export abstract class SourcePopupView<TState extends PopupStoreBase> {
 
     const target = e.target as Node;
     if (!this.container.contains(target)) {
+      this.closePopup();
+    }
+  }
+
+  /**
+   * Handle scroll to close popup.
+   */
+  private handleScroll(): void {
+    if (this.store.getState().isOpen) {
       this.closePopup();
     }
   }
@@ -316,6 +337,11 @@ export abstract class SourcePopupView<TState extends PopupStoreBase> {
     this.unsubscribe();
     document.removeEventListener("mousedown", this.boundHandleClickOutside);
     document.removeEventListener("keydown", this.boundHandleKeydown);
+    this.editorView.dom.closest(".editor-container")?.removeEventListener(
+      "scroll",
+      this.boundHandleScroll,
+      true
+    );
     this.container.removeEventListener("keydown", this.handleTabNavigation);
     this.container.remove();
   }

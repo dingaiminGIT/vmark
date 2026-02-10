@@ -64,6 +64,9 @@ export class FootnotePopupView {
     // Handle click outside
     document.addEventListener("mousedown", this.handleClickOutside);
 
+    // Close popup on scroll (popup position becomes stale)
+    this.view.dom.closest(".editor-container")?.addEventListener("scroll", this.handleScroll, true);
+
     // Subscribe to store - show() on open transition, label change, or autoFocus change
     this.unsubscribe = useFootnotePopupStore.subscribe((state) => {
       if (state.isOpen && state.anchorRect) {
@@ -350,6 +353,12 @@ export class FootnotePopupView {
     }
   };
 
+  private handleScroll = () => {
+    if (useFootnotePopupStore.getState().isOpen) {
+      useFootnotePopupStore.getState().closePopup();
+    }
+  };
+
   private handleClickOutside = (e: MouseEvent) => {
     if (this.justOpened) return;
 
@@ -376,6 +385,7 @@ export class FootnotePopupView {
     this.unsubscribe();
     this.container.removeEventListener("mouseleave", this.handlePopupMouseLeave);
     document.removeEventListener("mousedown", this.handleClickOutside);
+    this.view.dom.closest(".editor-container")?.removeEventListener("scroll", this.handleScroll, true);
     this.container.remove();
   }
 }
