@@ -497,6 +497,10 @@ export function useMcpBridge(): void {
       // Parse args_json to avoid Tauri IPC double-encoding issues
       const raw = event.payload;
 
+      if (import.meta.env.DEV) {
+        console.debug("[MCP Bridge] Event received:", raw.type, raw.id);
+      }
+
       // Try both snake_case and camelCase (Tauri might convert)
       const argsJsonStr = raw.args_json ?? raw.argsJson ?? "{}";
 
@@ -531,6 +535,8 @@ export function useMcpBridge(): void {
         return;
       }
       unlisten = fn;
+    }).catch((err) => {
+      console.error("[MCP Bridge] Failed to register event listener:", err);
     });
 
     return () => {

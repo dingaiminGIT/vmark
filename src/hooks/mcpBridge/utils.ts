@@ -15,6 +15,9 @@ import type { Editor } from "@tiptap/react";
  * Send response back to the MCP bridge.
  */
 export async function respond(response: McpResponse): Promise<void> {
+  if (import.meta.env.DEV) {
+    console.debug("[MCP Bridge] Sending response:", response.id, response.success);
+  }
   try {
     await invoke("mcp_bridge_respond", { payload: response });
   } catch (error) {
