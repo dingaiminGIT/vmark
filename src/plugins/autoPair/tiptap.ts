@@ -35,6 +35,9 @@ function isComposingOrGrace(view: Parameters<typeof isProseMirrorComposing>[0]):
 export const autoPairExtension = Extension.create({
   name: "autoPair",
   addProseMirrorPlugins() {
+    // Create key handler once — it reads config lazily via the getter
+    const keyHandler = createKeyHandler(getConfig);
+
     return [
       new Plugin({
         key: autoPairPluginKey,
@@ -56,8 +59,7 @@ export const autoPairExtension = Extension.create({
             keydown(view, event) {
               // Block during IME composition, grace period, or IME key events
               if (isComposingOrGrace(view) || isImeKeyEvent(event)) return false;
-              const handler = createKeyHandler(getConfig());
-              return handler(view as unknown as Parameters<typeof handler>[0], event);
+              return keyHandler(view as unknown as Parameters<typeof keyHandler>[0], event);
             },
             compositionend(view) {
               // Mark composition end for grace period tracking

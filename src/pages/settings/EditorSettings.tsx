@@ -118,6 +118,8 @@ export function EditorSettings() {
   // Normalize optional settings
   const autoPairEnabled = markdown.autoPairEnabled ?? true;
   const autoPairCJKStyle = markdown.autoPairCJKStyle ?? "auto";
+  const cjkPairingEnabled = autoPairCJKStyle !== "off";
+  const curlyQuotesEnabled = markdown.autoPairCurlyQuotes ?? false;
 
   return (
     <div>
@@ -186,20 +188,20 @@ export function EditorSettings() {
             disabled={!autoPairEnabled}
           />
         </SettingRow>
-        {autoPairCJKStyle !== "off" && (
+        {cjkPairingEnabled && (
           <SettingRow
             label="Include curly quotes"
             description={`Auto-pair \u201C\u201D and \u2018\u2019 (may conflict with IME smart quotes)`}
             disabled={!autoPairEnabled}
           >
             <Toggle
-              checked={markdown.autoPairCurlyQuotes ?? false}
+              checked={curlyQuotesEnabled}
               onChange={(v) => updateMarkdownSetting("autoPairCurlyQuotes", v)}
               disabled={!autoPairEnabled}
             />
           </SettingRow>
         )}
-        {autoPairCJKStyle !== "off" && markdown.autoPairCurlyQuotes && (
+        {cjkPairingEnabled && curlyQuotesEnabled && (
           <SettingRow
             label="Also pair \u201D"
             description="Typing \u201D inserts \u201C\u201D pair (helps when IME alternates open/close)"

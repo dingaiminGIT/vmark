@@ -11,8 +11,6 @@ import {
   isClosingChar,
   getOpeningChar,
   normalizeForPairing,
-  CJK_BRACKET_PAIRS,
-  CJK_CURLY_QUOTE_PAIRS,
   type PairConfig,
 } from "./pairs";
 import { shouldAutoPair, getCharAt, getCharBefore } from "./utils";
@@ -30,6 +28,17 @@ function toPairConfig(config: AutoPairConfig): PairConfig {
     includeCJK: config.includeCJK,
     includeCurlyQuotes: config.includeCurlyQuotes,
   };
+}
+
+/**
+ * Check if a closing character is allowed by the current config.
+ * Verifies the char has a known opening pair and that pair is enabled.
+ */
+function isAllowedClosingChar(char: string, config: AutoPairConfig): boolean {
+  const openingChar = getOpeningChar(char);
+  if (!openingChar) return false;
+  // Re-use getClosingChar which already centralizes config gating
+  return getClosingChar(openingChar, toPairConfig(config)) === char;
 }
 
 /**
@@ -102,20 +111,8 @@ export function handleClosingBracket(
 ): boolean {
   if (!config.enabled) return false;
 
-  // Check if this is a closing character
-  if (!isClosingChar(char)) return false;
-
-  // Verify we have a valid opening char (respecting CJK config)
-  const openingChar = getOpeningChar(char);
-  if (!openingChar) return false;
-
-  // Check if CJK bracket pair but CJK not enabled
-  if (!config.includeCJK && CJK_BRACKET_PAIRS[openingChar]) return false;
-
-  // Check if curly quote pair but curly quotes not enabled
-  if (CJK_CURLY_QUOTE_PAIRS[openingChar]) {
-    if (!config.includeCJK || !config.includeCurlyQuotes) return false;
-  }
+  // Check if this closing char is enabled by config
+  if (!isAllowedClosingChar(char, config)) return false;
 
   const { state } = view;
   const { from, to } = state.selection;
@@ -179,21 +176,9 @@ export function handleTabJump(
   // Only handle when no selection
   if (from !== to) return false;
 
-  // Check if next character is a closing bracket
+  // Check if next character is an allowed closing bracket
   const nextChar = getCharAt(state, from);
-  if (!isClosingChar(nextChar)) return false;
-
-  // Verify it's a valid closing char based on config
-  const openingChar = getOpeningChar(nextChar);
-  if (!openingChar) return false;
-
-  // Check if CJK bracket pair but CJK not enabled
-  if (!config.includeCJK && CJK_BRACKET_PAIRS[openingChar]) return false;
-
-  // Check if curly quote pair but curly quotes not enabled
-  if (CJK_CURLY_QUOTE_PAIRS[openingChar]) {
-    if (!config.includeCJK || !config.includeCurlyQuotes) return false;
-  }
+  if (!isAllowedClosingChar(nextChar, config)) return false;
 
   // Jump over the closing bracket (navigation, not content change)
   const tr = state.tr.setSelection(TextSelection.create(state.doc, from + 1));
@@ -203,13 +188,17 @@ export function handleTabJump(
 
 /**
  * Create keyboard event handler.
+ * Accepts a config getter so the handler always reads fresh settings
+ * without allocating a new closure on every keydown.
  */
-export function createKeyHandler(config: AutoPairConfig) {
+export function createKeyHandler(getConfig: () => AutoPairConfig) {
   return function handleKeyDown(view: EditorView, event: KeyboardEvent): boolean {
     // Skip if modifiers are pressed (except Shift)
     if (event.ctrlKey || event.altKey || event.metaKey) {
       return false;
     }
+
+    const config = getConfig();
 
     // Handle Tab to jump over closing bracket
     if (event.key === "Tab" && !event.shiftKey) {
