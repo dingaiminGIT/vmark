@@ -19,7 +19,6 @@ mod macos_menu;
 #[cfg(target_os = "macos")]
 mod dock_recent;
 
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::{Listener, Manager};
@@ -321,98 +320,86 @@ pub fn run() {
                     quit::handle_window_destroyed(app, &label);
                     menu_events::clear_window_ready(&label);
                 }
-                // macOS: Clicking dock icon when no windows visible -> create new window
+                // macOS: Clicking dock icon when no windows visible -> create main window
                 #[cfg(target_os = "macos")]
                 tauri::RunEvent::Reopen {
                     has_visible_windows,
                     ..
                 } => {
                     if !has_visible_windows {
-                        let _ = window_manager::create_document_window(app, None, None);
+                        // Prefer creating a "main" window so useFinderFileOpen works.
+                        // Fall back to doc-N if "main" already exists (shouldn't happen
+                        // when has_visible_windows is false, but be safe).
+                        if app.get_webview_window("main").is_none() {
+                            // Reset readiness so any subsequent Opened events are queued
+                            // until the new main window's React mounts and drains them.
+                            FRONTEND_READY.store(false, Ordering::SeqCst);
+                            let _ = window_manager::create_main_window(app);
+                        } else {
+                            let _ = window_manager::create_document_window(app, None, None);
+                        }
                     }
                 }
                 // Handle files opened from Finder (double-click, "Open With", etc.)
                 // Groups files by workspace root to open them as tabs in a single window
                 #[cfg(target_os = "macos")]
                 tauri::RunEvent::Opened { urls } => {
-                    // Group files by workspace root (None = no workspace / root-level files)
-                    // Key: workspace root path (or empty string for no workspace)
-                    // Value: list of file paths in that workspace
-                    let mut files_by_workspace: HashMap<String, Vec<String>> = HashMap::new();
-
+                    // Convert URLs to file paths, handling directories immediately
+                    let mut file_paths = Vec::new();
                     for url in urls {
                         if let Ok(path) = url.to_file_path() {
-                            if let Some(path_str) = path.to_str() {
-                                // Handle directories: open as workspace (separate window)
-                                if path.is_dir() {
-                                    let _ = window_manager::create_document_window(
-                                        app,
-                                        None,
-                                        Some(path_str),
-                                    );
-                                    continue;
-                                }
-
-                                // Group files by workspace root
-                                let workspace_root =
-                                    window_manager::get_workspace_root_for_file(path_str);
-                                let key = workspace_root.clone().unwrap_or_default();
-                                files_by_workspace
-                                    .entry(key)
-                                    .or_default()
-                                    .push(path_str.to_string());
+                            let Some(path_str) = path.to_str() else { continue };
+                            if path.is_dir() {
+                                let _ = window_manager::create_document_window(
+                                    app, None, Some(path_str),
+                                );
+                                continue;
                             }
+                            file_paths.push(path_str.to_string());
                         }
                     }
 
-                    // Process each workspace group
-                    for (workspace_key, file_paths) in files_by_workspace {
-                        let workspace_root = if workspace_key.is_empty() {
+                    let groups = window_manager::group_paths_by_workspace(&file_paths);
+
+                    for (workspace_key, paths) in groups {
+                        let ws = if workspace_key.is_empty() {
                             None
                         } else {
                             Some(workspace_key.as_str())
                         };
 
-                        if FRONTEND_READY.load(Ordering::SeqCst) {
-                            // Frontend is ready - check if we have a window to emit to
-                            if let Some(main_window) = app.get_webview_window("main") {
-                                // Emit events to main window (one per file)
+                        let action = window_manager::determine_file_open_action(
+                            FRONTEND_READY.load(Ordering::SeqCst),
+                            app.get_webview_window("main").is_some(),
+                        );
+
+                        match action {
+                            window_manager::FileOpenAction::EmitToMainWindow => {
                                 use tauri::Emitter;
-                                for path in file_paths {
-                                    let payload = PendingFileOpen {
-                                        path,
-                                        workspace_root: workspace_root.map(String::from),
-                                    };
-                                    let _ = main_window.emit("app:open-file", payload);
-                                }
-                            } else {
-                                // No main window (reopen scenario) - create ONE window with all files
-                                if let Some(root) = workspace_root {
-                                    let _ = window_manager::open_workspace_with_files_in_new_window(
-                                        app.clone(),
-                                        root.to_string(),
-                                        file_paths,
-                                    );
-                                } else {
-                                    // No workspace root - open first file, rest will be lost
-                                    // (rare edge case: root-level files)
-                                    if let Some(first) = file_paths.first() {
-                                        let _ = window_manager::create_document_window(
-                                            app,
-                                            Some(first),
-                                            None,
-                                        );
+                                if let Some(main_window) = app.get_webview_window("main") {
+                                    for path in paths {
+                                        let payload = PendingFileOpen {
+                                            path,
+                                            workspace_root: ws.map(String::from),
+                                        };
+                                        let _ = main_window.emit("app:open-file", payload);
                                     }
                                 }
                             }
-                        } else {
-                            // Cold start - queue all files for the main window
-                            if let Ok(mut pending) = PENDING_FILE_OPENS.lock() {
-                                for path in file_paths {
-                                    pending.push(PendingFileOpen {
-                                        path,
-                                        workspace_root: workspace_root.map(String::from),
-                                    });
+                            window_manager::FileOpenAction::QueueAndCreateWindow => {
+                                FRONTEND_READY.store(false, Ordering::SeqCst);
+                                if let Ok(mut pending) = PENDING_FILE_OPENS.lock() {
+                                    window_manager::queue_pending_file_opens(
+                                        &mut pending, paths, ws,
+                                    );
+                                }
+                                let _ = window_manager::create_main_window(app);
+                            }
+                            window_manager::FileOpenAction::QueueOnly => {
+                                if let Ok(mut pending) = PENDING_FILE_OPENS.lock() {
+                                    window_manager::queue_pending_file_opens(
+                                        &mut pending, paths, ws,
+                                    );
                                 }
                             }
                         }

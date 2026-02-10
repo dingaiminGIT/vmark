@@ -1,6 +1,9 @@
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+
+use crate::PendingFileOpen;
 
 static WINDOW_COUNTER: AtomicU32 = AtomicU32::new(0);
 
@@ -16,6 +19,53 @@ pub fn get_workspace_root_for_file(file_path: &str) -> Option<String> {
         // Exclude root paths (/, C:\, etc.) - they have no parent
         .filter(|p| p.parent().is_some())
         .map(|p| p.to_string_lossy().to_string())
+}
+
+/// What to do when files are opened from the system (Finder, CLI, etc.)
+#[derive(Debug, PartialEq)]
+pub enum FileOpenAction {
+    /// Frontend is ready and main window exists — emit events directly
+    EmitToMainWindow,
+    /// Frontend is ready but no main window — queue files and create one
+    QueueAndCreateWindow,
+    /// Frontend not ready (cold start) — just queue files
+    QueueOnly,
+}
+
+/// Decide how to handle file opens based on app state.
+pub fn determine_file_open_action(frontend_ready: bool, has_main_window: bool) -> FileOpenAction {
+    match (frontend_ready, has_main_window) {
+        (true, true) => FileOpenAction::EmitToMainWindow,
+        (true, false) => FileOpenAction::QueueAndCreateWindow,
+        (false, _) => FileOpenAction::QueueOnly,
+    }
+}
+
+/// Group file paths by their workspace root.
+///
+/// Returns a map from workspace root (or empty string for root-level files)
+/// to the list of file paths in that workspace.
+pub fn group_paths_by_workspace(paths: &[String]) -> HashMap<String, Vec<String>> {
+    let mut groups: HashMap<String, Vec<String>> = HashMap::new();
+    for path in paths {
+        let key = get_workspace_root_for_file(path).unwrap_or_default();
+        groups.entry(key).or_default().push(path.clone());
+    }
+    groups
+}
+
+/// Append files to the pending queue with a shared workspace root.
+pub fn queue_pending_file_opens(
+    pending: &mut Vec<PendingFileOpen>,
+    file_paths: Vec<String>,
+    workspace_root: Option<&str>,
+) {
+    for path in file_paths {
+        pending.push(PendingFileOpen {
+            path,
+            workspace_root: workspace_root.map(String::from),
+        });
+    }
 }
 
 /// Cascade offset for new windows (logical pixels)
@@ -157,6 +207,33 @@ pub fn create_document_window(
     builder.build()?;
 
     Ok(label)
+}
+
+/// Create a new "main" window (used when the original main window was destroyed
+/// and a file is opened from Finder, requiring useFinderFileOpen to handle it).
+/// The main window label is special: useFinderFileOpen only runs for "main".
+pub fn create_main_window(app: &AppHandle) -> Result<String, tauri::Error> {
+    let label = "main";
+
+    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("/".into()))
+        .title("")
+        .inner_size(MIN_WIDTH, MIN_HEIGHT)
+        .min_inner_size(800.0, 600.0)
+        .resizable(true)
+        .fullscreen(false)
+        .focused(true);
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder
+            .title_bar_style(tauri::TitleBarStyle::Overlay)
+            .hidden_title(true)
+            .accept_first_mouse(true);
+    }
+
+    builder.build()?;
+
+    Ok(label.to_string())
 }
 
 /// Create a new empty window (Tauri command)
@@ -312,4 +389,172 @@ pub fn force_quit(app: AppHandle) {
 pub fn request_quit(app: AppHandle) {
     use tauri::Emitter;
     let _ = app.emit("app:quit-requested", ());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- get_workspace_root_for_file -------------------------------------------
+
+    #[test]
+    fn workspace_root_nested_file() {
+        assert_eq!(
+            get_workspace_root_for_file("/Users/alice/project/file.md"),
+            Some("/Users/alice/project".to_string())
+        );
+    }
+
+    #[test]
+    fn workspace_root_home_level_file() {
+        assert_eq!(
+            get_workspace_root_for_file("/Users/alice/file.md"),
+            Some("/Users/alice".to_string())
+        );
+    }
+
+    #[test]
+    fn workspace_root_root_level_file() {
+        assert_eq!(get_workspace_root_for_file("/file.md"), None);
+    }
+
+    #[test]
+    fn workspace_root_empty_string() {
+        assert_eq!(get_workspace_root_for_file(""), None);
+    }
+
+    // -- determine_file_open_action --------------------------------------------
+
+    #[test]
+    fn action_ready_with_window() {
+        assert_eq!(
+            determine_file_open_action(true, true),
+            FileOpenAction::EmitToMainWindow,
+        );
+    }
+
+    #[test]
+    fn action_ready_without_window() {
+        assert_eq!(
+            determine_file_open_action(true, false),
+            FileOpenAction::QueueAndCreateWindow,
+        );
+    }
+
+    #[test]
+    fn action_not_ready_with_window() {
+        assert_eq!(
+            determine_file_open_action(false, true),
+            FileOpenAction::QueueOnly,
+        );
+    }
+
+    #[test]
+    fn action_not_ready_without_window() {
+        assert_eq!(
+            determine_file_open_action(false, false),
+            FileOpenAction::QueueOnly,
+        );
+    }
+
+    // -- group_paths_by_workspace ----------------------------------------------
+
+    #[test]
+    fn group_single_file() {
+        let paths = vec!["/Users/alice/project/file.md".to_string()];
+        let groups = group_paths_by_workspace(&paths);
+        assert_eq!(groups.len(), 1);
+        assert_eq!(
+            groups["/Users/alice/project"],
+            vec!["/Users/alice/project/file.md"]
+        );
+    }
+
+    #[test]
+    fn group_same_directory() {
+        let paths = vec![
+            "/Users/alice/project/a.md".to_string(),
+            "/Users/alice/project/b.md".to_string(),
+        ];
+        let groups = group_paths_by_workspace(&paths);
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups["/Users/alice/project"].len(), 2);
+    }
+
+    #[test]
+    fn group_different_directories() {
+        let paths = vec![
+            "/Users/alice/proj1/a.md".to_string(),
+            "/Users/alice/proj2/b.md".to_string(),
+        ];
+        let groups = group_paths_by_workspace(&paths);
+        assert_eq!(groups.len(), 2);
+        assert!(groups.contains_key("/Users/alice/proj1"));
+        assert!(groups.contains_key("/Users/alice/proj2"));
+    }
+
+    #[test]
+    fn group_root_level_file() {
+        let paths = vec!["/file.md".to_string()];
+        let groups = group_paths_by_workspace(&paths);
+        assert_eq!(groups.len(), 1);
+        assert!(groups.contains_key(""));
+    }
+
+    #[test]
+    fn group_empty_input() {
+        let groups = group_paths_by_workspace(&[]);
+        assert!(groups.is_empty());
+    }
+
+    // -- queue_pending_file_opens ----------------------------------------------
+
+    #[test]
+    fn queue_single_file_with_workspace() {
+        let mut pending = Vec::new();
+        queue_pending_file_opens(&mut pending, vec!["/a/b.md".to_string()], Some("/a"));
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].path, "/a/b.md");
+        assert_eq!(pending[0].workspace_root, Some("/a".to_string()));
+    }
+
+    #[test]
+    fn queue_multiple_files_same_workspace() {
+        let mut pending = Vec::new();
+        queue_pending_file_opens(
+            &mut pending,
+            vec!["/a/x.md".to_string(), "/a/y.md".to_string()],
+            Some("/a"),
+        );
+        assert_eq!(pending.len(), 2);
+        assert_eq!(pending[0].workspace_root, Some("/a".to_string()));
+        assert_eq!(pending[1].workspace_root, Some("/a".to_string()));
+    }
+
+    #[test]
+    fn queue_without_workspace() {
+        let mut pending = Vec::new();
+        queue_pending_file_opens(&mut pending, vec!["/file.md".to_string()], None);
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].workspace_root, None);
+    }
+
+    #[test]
+    fn queue_appends_to_existing() {
+        let mut pending = vec![PendingFileOpen {
+            path: "/existing.md".to_string(),
+            workspace_root: None,
+        }];
+        queue_pending_file_opens(&mut pending, vec!["/new.md".to_string()], Some("/dir"));
+        assert_eq!(pending.len(), 2);
+        assert_eq!(pending[0].path, "/existing.md");
+        assert_eq!(pending[1].path, "/new.md");
+    }
+
+    #[test]
+    fn queue_empty_file_paths_is_noop() {
+        let mut pending = Vec::new();
+        queue_pending_file_opens(&mut pending, vec![], Some("/a"));
+        assert!(pending.is_empty());
+    }
 }
