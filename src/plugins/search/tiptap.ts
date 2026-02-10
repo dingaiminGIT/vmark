@@ -142,25 +142,31 @@ export const searchExtension = Extension.create({
           },
         },
         view(editorView) {
-          let lastScrolledIndex = -1;
+          let lastScrollKey = "";
 
           const scrollToMatch = () => {
             const state = useSearchStore.getState();
             if (!state.isOpen || state.currentIndex < 0) return;
-            if (state.currentIndex === lastScrolledIndex) return;
+
+            const scrollKey = `${state.query}|${state.caseSensitive}|${state.wholeWord}|${state.useRegex}|${state.currentIndex}`;
+            if (scrollKey === lastScrollKey) return;
 
             const pluginState = searchPluginKey.getState(editorView.state);
             if (!pluginState || !pluginState.matches[state.currentIndex]) return;
 
             const match = pluginState.matches[state.currentIndex];
-            lastScrolledIndex = state.currentIndex;
+            lastScrollKey = scrollKey;
+
+            // Scroll container is .editor-content, not editorView.dom (.ProseMirror)
+            const scrollContainer = editorView.dom.closest(".editor-content") as HTMLElement | null;
+            if (!scrollContainer) return;
 
             const coords = editorView.coordsAtPos(match.from);
-            const editorRect = editorView.dom.getBoundingClientRect();
+            const containerRect = scrollContainer.getBoundingClientRect();
 
-            if (coords.top < editorRect.top || coords.bottom > editorRect.bottom) {
-              editorView.dom.scrollTo({
-                top: editorView.dom.scrollTop + coords.top - editorRect.top - editorRect.height / 3,
+            if (coords.top < containerRect.top || coords.bottom > containerRect.bottom) {
+              scrollContainer.scrollTo({
+                top: scrollContainer.scrollTop + coords.top - containerRect.top - containerRect.height / 3,
                 behavior: "smooth",
               });
             }
