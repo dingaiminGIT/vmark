@@ -22,7 +22,7 @@ import { useDocumentStore } from "@/stores/documentStore";
 import { useTabStore } from "@/stores/tabStore";
 import { useSourceCursorContextStore } from "@/stores/sourceCursorContextStore";
 import { getSourceMultiSelectionContext } from "@/plugins/toolbarActions/multiSelectionContext";
-import { performSourceToolbarAction, setSourceHeadingLevel } from "@/plugins/toolbarActions/sourceAdapter";
+import { performSourceToolbarAction, setSourceHeadingLevel, formatCJKCurrentBlock } from "@/plugins/toolbarActions/sourceAdapter";
 import { guardCodeMirrorKeyBinding } from "@/utils/imeGuard";
 // copyAsHtml is dynamically imported to avoid loading exportStyles.css at startup
 import { formatMarkdown, formatSelection } from "@/lib/cjkFormatter";
@@ -177,13 +177,14 @@ function shouldPreserveTwoSpaceBreaks(): boolean {
 
 function formatCJKSelection(view: EditorView): boolean {
   const { from, to } = view.state.selection.main;
-  if (from === to) {
-    // No selection - format entire file
-    return formatCJKFile(view);
-  }
-
   const config = useSettingsStore.getState().cjkFormatting;
   const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
+
+  if (from === to) {
+    // No selection - format current block (paragraph, list, or table)
+    return formatCJKCurrentBlock(view, config, { preserveTwoSpaceHardBreaks });
+  }
+
   const selectedText = view.state.doc.sliceString(from, to);
   const formatted = formatSelection(selectedText, config, { preserveTwoSpaceHardBreaks });
 

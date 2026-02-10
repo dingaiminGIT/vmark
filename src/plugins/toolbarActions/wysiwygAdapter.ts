@@ -941,8 +941,50 @@ function handleFormatCJK(context: WysiwygToolbarContext): boolean {
     return true;
   }
 
-  // No selection - format entire file
-  return handleFormatCJKFile(context);
+  // No selection - format current block (paragraph, list, or table)
+  return handleFormatCJKBlock(context);
+}
+
+function handleFormatCJKBlock(context: WysiwygToolbarContext): boolean {
+  const { editor, view } = context;
+  if (!editor || !view) return false;
+
+  const { $from } = editor.state.selection;
+  if ($from.depth < 1) return false;
+
+  const config = useSettingsStore.getState().cjkFormatting;
+  const preserveTwoSpaceHardBreaks = shouldPreserveTwoSpaceBreaks();
+  const serializeOpts = getSerializeOptions();
+
+  // Find top-level block (direct child of doc)
+  const blockNode = $from.node(1);
+  const blockStart = $from.before(1);
+  const blockEnd = $from.after(1);
+
+  try {
+    // Wrap in a temporary doc for serialization
+    const tempDoc = editor.schema.nodes.doc.create(null, blockNode);
+    const blockMarkdown = serializeMarkdown(editor.schema, tempDoc, serializeOpts);
+
+    const formatted = formatMarkdown(blockMarkdown, config, { preserveTwoSpaceHardBreaks });
+    if (formatted === blockMarkdown) return true;
+
+    // Parse back and replace the block
+    const newDoc = parseMarkdown(editor.schema, formatted, {
+      preserveLineBreaks: serializeOpts.preserveLineBreaks,
+    });
+
+    const { state, dispatch } = view;
+    const tr = state.tr
+      .replaceWith(blockStart, blockEnd, newDoc.content)
+      .setMeta("addToHistory", true);
+    dispatch(tr);
+    view.focus();
+    return true;
+  } catch (error) {
+    console.error("[wysiwygAdapter] Failed to format CJK block:", error);
+    return false;
+  }
 }
 
 function handleFormatCJKFile(context: WysiwygToolbarContext): boolean {

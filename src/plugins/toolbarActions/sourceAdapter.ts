@@ -28,11 +28,12 @@ import { copyImageToAssets } from "@/hooks/useImageOperations";
 import { encodeMarkdownUrl } from "@/utils/markdownUrl";
 import { useDocumentStore } from "@/stores/documentStore";
 import { useImagePopupStore } from "@/stores/imagePopupStore";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { useSettingsStore, type CJKFormattingSettings } from "@/stores/settingsStore";
 import { useTabStore } from "@/stores/tabStore";
 import { getWindowLabel } from "@/hooks/useWindowFocus";
 import { collapseNewlines, formatMarkdown, formatSelection, removeTrailingSpaces } from "@/lib/cjkFormatter";
 import { normalizeLineEndings, resolveHardBreakStyle } from "@/utils/linebreaks";
+import { getSourceBlockRange } from "@/utils/sourceSelection";
 import {
   toUpperCase,
   toLowerCase,
@@ -787,8 +788,26 @@ function handleFormatCJK(view: EditorView): boolean {
     return true;
   }
 
-  // No selection - format entire file
-  return handleFormatCJKFile(view);
+  // No selection - format current block (paragraph, list, or table)
+  return formatCJKCurrentBlock(view, config, { preserveTwoSpaceHardBreaks });
+}
+
+export function formatCJKCurrentBlock(
+  view: EditorView,
+  config: CJKFormattingSettings,
+  options: { preserveTwoSpaceHardBreaks?: boolean } = {}
+): boolean {
+  const { head } = view.state.selection.main;
+  const { from, to } = getSourceBlockRange(view.state, head, head);
+  const blockText = view.state.doc.sliceString(from, to);
+  const formatted = formatMarkdown(blockText, config, options);
+  if (formatted !== blockText) {
+    view.dispatch({
+      changes: { from, to, insert: formatted },
+    });
+    view.focus();
+  }
+  return true;
 }
 
 function handleFormatCJKFile(view: EditorView): boolean {
