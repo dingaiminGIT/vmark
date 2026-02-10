@@ -56,13 +56,14 @@ export async function saveToPath(
     .getState()
     .setLineMetadata(tabId, { lineEnding: targetLineEnding, hardBreakStyle: targetHardBreakStyle });
   if (saveType === "auto") {
-    useDocumentStore.getState().markAutoSaved(tabId);
+    useDocumentStore.getState().markAutoSaved(tabId, output);
   } else {
-    useDocumentStore.getState().markSaved(tabId);
+    useDocumentStore.getState().markSaved(tabId, output);
   }
 
-  // Clear pending save after state is updated
-  clearPendingSave(path);
+  // Delay clearing pending save to allow late-arriving watcher events
+  // to still match against our save (macOS FSEvents can batch/delay events)
+  setTimeout(() => clearPendingSave(path), 500);
 
   // Update tab path for title sync
   useTabStore.getState().updateTabPath(tabId, path);

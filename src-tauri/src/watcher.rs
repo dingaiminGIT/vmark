@@ -3,7 +3,11 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
+
+/// Minimum interval between emitting events for the same path (debounce).
+const DEBOUNCE_INTERVAL: Duration = Duration::from_millis(200);
 
 /// Watchers keyed by watch_id (typically window label or unique identifier)
 static WATCHERS: Mutex<Option<HashMap<String, WatcherEntry>>> = Mutex::new(None);
@@ -81,19 +85,42 @@ fn should_ignore_path(path: &Path) -> bool {
     false
 }
 
+/// Per-path debounce state to suppress duplicate events from macOS FSEvents.
+/// Key: (watch_id, path), Value: last emitted time.
+static LAST_EMITTED: Mutex<Option<HashMap<(String, String), Instant>>> = Mutex::new(None);
+
 /// Handle a notify event and emit it to the frontend.
+/// Deduplicates events for the same path within DEBOUNCE_INTERVAL.
 fn handle_event(app: &AppHandle, watch_id: &str, root_path: &str, event: Event) {
     let Some(kind_str) = event_kind_to_string(&event.kind) else {
         return;
     };
 
-    // Filter out paths from ignored directories before emitting
+    let now = Instant::now();
+
+    // Collect paths, filtering ignored dirs and those within the debounce window
+    let mut guard = LAST_EMITTED.lock().unwrap();
+    let map = guard.get_or_insert_with(HashMap::new);
+
     let paths: Vec<String> = event
         .paths
         .iter()
         .filter(|p| !should_ignore_path(p))
-        .map(|p| p.to_string_lossy().to_string())
+        .filter_map(|p| {
+            let path_str = p.to_string_lossy().to_string();
+            let key = (watch_id.to_string(), path_str.clone());
+
+            if let Some(last) = map.get(&key) {
+                if now.duration_since(*last) < DEBOUNCE_INTERVAL {
+                    return None; // Skip: within debounce window
+                }
+            }
+            map.insert(key, now);
+            Some(path_str)
+        })
         .collect();
+
+    drop(guard); // Release lock before emitting
 
     if paths.is_empty() {
         return;
@@ -156,6 +183,12 @@ pub fn stop_watching(watch_id: String) -> Result<(), String> {
     let mut guard = WATCHERS.lock().map_err(|e| format!("Lock error: {e}"))?;
     if let Some(watchers) = guard.as_mut() {
         watchers.remove(&watch_id);
+    }
+    // Clean up debounce entries for this watch_id
+    if let Ok(mut debounce_guard) = LAST_EMITTED.lock() {
+        if let Some(map) = debounce_guard.as_mut() {
+            map.retain(|(wid, _), _| wid != &watch_id);
+        }
     }
     Ok(())
 }

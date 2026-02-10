@@ -169,7 +169,7 @@ export async function handleWorkspaceSaveDocument(id: string): Promise<void> {
 
     const content = serializeMarkdown(editor.state.schema, editor.state.doc);
     await writeTextFile(doc.filePath, content);
-    docStore.markSaved(activeTabId);
+    docStore.markSaved(activeTabId, content);
 
     await respond({ id, success: true, data: null });
   } catch (error) {
@@ -239,7 +239,7 @@ export async function handleWorkspaceSaveDocumentAs(
     tabStore.updateTabPath(activeTabId, path);
     tabStore.updateTabTitle(activeTabId, getFileName(path) || "Untitled");
     docStore.setFilePath(activeTabId, path);
-    docStore.markSaved(activeTabId);
+    docStore.markSaved(activeTabId, content);
 
     await respond({ id, success: true, data: null });
   } catch (error) {

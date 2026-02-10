@@ -9,6 +9,8 @@ export type { NodeType, CursorInfo } from "@/types/cursorSync";
 export interface DocumentState {
   content: string;
   savedContent: string;
+  /** Content as written to disk (post-normalization). Used for external-change detection. */
+  lastDiskContent: string;
   filePath: string | null;
   isDirty: boolean;
   documentId: number;
@@ -40,8 +42,8 @@ interface DocumentStore {
   clearMissing: (tabId: string) => void;
   markDivergent: (tabId: string) => void;
   clearDivergent: (tabId: string) => void;
-  markSaved: (tabId: string) => void;
-  markAutoSaved: (tabId: string) => void;
+  markSaved: (tabId: string, lastDiskContent?: string) => void;
+  markAutoSaved: (tabId: string, lastDiskContent?: string) => void;
   setCursorInfo: (tabId: string, info: CursorInfo | null) => void;
   setLineMetadata: (
     tabId: string,
@@ -57,6 +59,7 @@ interface DocumentStore {
 const createInitialDocument = (content = "", filePath: string | null = null): DocumentState => ({
   content,
   savedContent: content,
+  lastDiskContent: content,
   filePath,
   isDirty: false,
   documentId: 0,
@@ -114,6 +117,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       updateDoc(state, tabId, (doc) => ({
         content,
         savedContent: content,
+        lastDiskContent: content,
         filePath: filePath ?? null,
         isDirty: false,
         isDivergent: false, // Reload from disk clears divergent state
@@ -138,19 +142,21 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   clearDivergent: (tabId) =>
     set((state) => updateDoc(state, tabId, () => ({ isDivergent: false }))),
 
-  markSaved: (tabId) =>
+  markSaved: (tabId, lastDiskContent) =>
     set((state) =>
       updateDoc(state, tabId, (doc) => ({
         savedContent: doc.content,
+        lastDiskContent: lastDiskContent ?? doc.content,
         isDirty: false,
         isDivergent: false, // Manual save syncs local with disk
       }))
     ),
 
-  markAutoSaved: (tabId) =>
+  markAutoSaved: (tabId, lastDiskContent) =>
     set((state) =>
       updateDoc(state, tabId, (doc) => ({
         savedContent: doc.content,
+        lastDiskContent: lastDiskContent ?? doc.content,
         isDirty: false,
         isDivergent: false, // Auto-save syncs local with disk
         lastAutoSave: Date.now(),

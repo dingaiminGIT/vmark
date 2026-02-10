@@ -3,7 +3,7 @@
  *
  * @module utils/saveToPath.test
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { saveToPath } from "./saveToPath";
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
@@ -61,6 +61,7 @@ describe("saveToPath", () => {
   const mockGetDocument = vi.fn();
 
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.clearAllMocks();
     vi.mocked(useDocumentStore.getState).mockReturnValue({
       setFilePath: mockSetFilePath,
@@ -89,6 +90,10 @@ describe("saveToPath", () => {
     mockGetDocument.mockReturnValue({ lineEnding: "unknown" });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("writes content and updates stores on success", async () => {
     vi.mocked(writeTextFile).mockResolvedValue(undefined);
 
@@ -97,7 +102,7 @@ describe("saveToPath", () => {
     expect(result).toBe(true);
     expect(writeTextFile).toHaveBeenCalledWith("/tmp/doc.md", "Hello");
     expect(mockSetFilePath).toHaveBeenCalledWith("tab-1", "/tmp/doc.md");
-    expect(mockMarkSaved).toHaveBeenCalledWith("tab-1");
+    expect(mockMarkSaved).toHaveBeenCalledWith("tab-1", "Hello");
     expect(mockUpdateTabPath).toHaveBeenCalledWith("tab-1", "/tmp/doc.md");
     expect(mockAddFile).toHaveBeenCalledWith("/tmp/doc.md");
     expect(createSnapshot).toHaveBeenCalledWith("/tmp/doc.md", "Hello", "manual", {
@@ -186,7 +191,7 @@ describe("saveToPath", () => {
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
 
-      expect(mockMarkSaved).toHaveBeenCalledWith("tab-1");
+      expect(mockMarkSaved).toHaveBeenCalledWith("tab-1", "content");
       expect(mockMarkAutoSaved).not.toHaveBeenCalled();
     });
 
@@ -195,7 +200,7 @@ describe("saveToPath", () => {
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "auto");
 
-      expect(mockMarkAutoSaved).toHaveBeenCalledWith("tab-1");
+      expect(mockMarkAutoSaved).toHaveBeenCalledWith("tab-1", "content");
       expect(mockMarkSaved).not.toHaveBeenCalled();
     });
 
@@ -229,11 +234,14 @@ describe("saveToPath", () => {
       expect(registerCall).toBeLessThan(writeCall);
     });
 
-    it("clears pending save after successful write", async () => {
+    it("clears pending save after successful write (delayed)", async () => {
       vi.mocked(writeTextFile).mockResolvedValue(undefined);
 
       await saveToPath("tab-1", "/tmp/doc.md", "content", "manual");
 
+      // clearPendingSave is delayed via setTimeout to handle late watcher events
+      expect(clearPendingSave).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(500);
       expect(clearPendingSave).toHaveBeenCalledWith("/tmp/doc.md");
     });
 

@@ -307,13 +307,13 @@ export function useExternalFileChanges(): void {
               continue;
             }
 
-            // Check 2: Does disk match our last saved content?
+            // Check 2: Does disk match what we last wrote?
             // If so, no actual external change occurred (file was touched but not modified)
-            if (diskContent === doc.savedContent) {
+            if (diskContent === doc.lastDiskContent) {
               continue;
             }
 
-            // Real external change detected - disk content differs from savedContent
+            // Real external change detected - disk content differs from lastDiskContent
             const action = resolveExternalChangeAction({
               isDirty: doc.isDirty,
               hasFilePath: Boolean(doc.filePath),
