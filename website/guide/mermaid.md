@@ -233,8 +233,8 @@ In WYSIWYG mode, rendered diagrams support interactive navigation:
 
 | Action | How |
 |--------|-----|
+| **Pan** | Scroll or click and drag the diagram |
 | **Zoom** | Hold `Cmd` (macOS) or `Ctrl` (Windows/Linux) and scroll |
-| **Pan** | Click and drag the diagram |
 | **Reset** | Click the reset button that appears on hover (top-right corner) |
 
 ### Copy Mermaid Source

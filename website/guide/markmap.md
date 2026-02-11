@@ -38,10 +38,10 @@ Call `insert_markmap` from your AI coding assistant with the `code` parameter co
 
 In WYSIWYG mode, Markmap mindmaps are rendered as interactive SVG trees. You can:
 
-- **Pan** by clicking and dragging
-- **Zoom** using scroll or pinch gestures
+- **Pan** by scrolling or clicking and dragging
+- **Zoom** by holding `Cmd`/`Ctrl` and scrolling
 - **Collapse/expand** nodes by clicking the circle at each branch
-- **Fit** the view using the fit button (bottom-right corner on hover)
+- **Fit** the view using the fit button (top-right corner on hover)
 - **Double-click** the mindmap to edit the source
 
 ### Source Mode with Live Preview
@@ -89,11 +89,11 @@ List items under a heading become child nodes of that heading.
 
 | Action | How |
 |--------|-----|
-| **Pan** | Click and drag |
-| **Zoom** | Scroll or pinch |
+| **Pan** | Scroll or click and drag |
+| **Zoom** | `Cmd`/`Ctrl` + scroll |
 | **Collapse node** | Click the circle at a branch point |
 | **Expand node** | Click the circle again |
-| **Fit to view** | Click the fit button (bottom-right on hover) |
+| **Fit to view** | Click the fit button (top-right on hover) |
 
 ## Theme Integration
 
