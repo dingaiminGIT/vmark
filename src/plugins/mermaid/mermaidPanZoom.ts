@@ -1,9 +1,12 @@
 /**
  * Mermaid Pan+Zoom
  *
- * Adds Cmd/Ctrl+scroll zoom and drag-to-pan to mermaid diagram containers
- * in WYSIWYG mode. Uses @panzoom/panzoom on the SVG element directly
- * (CSS transforms), with noBind to coexist with double-click-to-edit.
+ * Adds scroll-to-pan, Cmd/Ctrl+scroll zoom, and drag-to-pan to mermaid
+ * diagram containers in WYSIWYG mode. Uses @panzoom/panzoom on the SVG
+ * element directly (CSS transforms), with noBind to coexist with
+ * double-click-to-edit.
+ *
+ * Scroll behavior matches markmap: plain scroll = pan, Cmd/Ctrl+scroll = zoom.
  */
 
 import Panzoom, { type PanzoomObject } from "@panzoom/panzoom";
@@ -43,11 +46,19 @@ export function setupMermaidPanZoom(
     noBind: true,
   });
 
-  // --- Wheel zoom (Cmd/Ctrl+scroll only) ---
+  // --- Wheel: plain scroll = pan, Cmd/Ctrl+scroll = zoom ---
+  // Matches markmap's scrollForPan behavior.
   const onWheel = (e: WheelEvent) => {
     if (e.metaKey || e.ctrlKey) {
       e.preventDefault();
       pz.zoomWithWheel(e, { animate: false });
+    } else {
+      e.preventDefault();
+      const scale = pz.getScale();
+      pz.pan(-e.deltaX / scale, -e.deltaY / scale, {
+        relative: true,
+        animate: false,
+      });
     }
   };
   container.addEventListener("wheel", onWheel, { passive: false });

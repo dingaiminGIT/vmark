@@ -1,48 +1,70 @@
 /**
- * Diagram Cleanup Registry
+ * Unified Diagram Cleanup Registry
  *
- * Tracks destroy callbacks for diagram containers (panzoom, export buttons,
- * live D3 instances). When ProseMirror removes a widget, the DOM node is
- * detached but document-level listeners from panzoom and export survive.
+ * Single system for tracking destroy callbacks on diagram containers
+ * (panzoom, export buttons, live D3/markmap instances). When ProseMirror
+ * removes a widget, the DOM node is detached but document-level listeners
+ * survive. This registry enables cleanup via two paths:
+ *
+ *   1. cleanupDescendants(parent) — explicit, before clearing innerHTML
+ *   2. sweepDetached()           — periodic, in decoration rebuild
+ *
+ * All diagram types (mermaid, markmap, SVG) self-register here.
  *
  * Usage:
  *   registerCleanup(wrapper, panzoomInstance.destroy);
- *   registerCleanup(wrapper, exportInstance.destroy);
+ *   registerCleanup(svgEl, () => mm.destroy());
  *
  * Then periodically (e.g. in the decoration rebuild):
- *   sweepDetachedContainers();
+ *   sweepDetached();
  */
 
-const registry = new Map<Element, Array<() => void>>();
+const registry = new Map<Element, Set<() => void>>();
 
-/** Register a cleanup callback for a container element. */
+/** Register a cleanup callback for a container element. Deduplicates by reference. */
 export function registerCleanup(container: Element, cleanup: () => void): void {
-  const arr = registry.get(container);
-  if (arr) {
-    arr.push(cleanup);
+  const set = registry.get(container);
+  if (set) {
+    set.add(cleanup);
   } else {
-    registry.set(container, [cleanup]);
+    registry.set(container, new Set([cleanup]));
   }
 }
 
-/** Run all cleanup callbacks for a specific container and remove it from the registry. */
-export function cleanupContainer(container: Element): void {
-  const arr = registry.get(container);
-  if (!arr) return;
-  for (const fn of arr) {
-    try { fn(); } catch { /* already destroyed or DOM detached — safe to ignore */ }
+/**
+ * Run all cleanup callbacks for `parent` itself and any registered
+ * descendants of `parent`, then remove them from the registry.
+ * Call before clearing a container's innerHTML.
+ */
+export function cleanupDescendants(parent: Element): void {
+  for (const [el, set] of registry) {
+    if (el === parent || parent.contains(el)) {
+      for (const fn of set) {
+        try { fn(); } catch { /* already destroyed or DOM detached — safe to ignore */ }
+      }
+      registry.delete(el);
+    }
   }
-  registry.delete(container);
 }
 
-/** Dispose all containers whose DOM element has been detached. */
-export function sweepDetachedContainers(): void {
-  for (const [el, arr] of registry) {
+/** Dispose all elements whose DOM node has been detached from the document. */
+export function sweepDetached(): void {
+  for (const [el, set] of registry) {
     if (!el.isConnected) {
-      for (const fn of arr) {
+      for (const fn of set) {
         try { fn(); } catch { /* safe to ignore */ }
       }
       registry.delete(el);
     }
   }
+}
+
+/** Test helper: number of tracked elements. */
+export function _registrySize(): number {
+  return registry.size;
+}
+
+/** Test helper: clear registry without calling callbacks. */
+export function _clearRegistry(): void {
+  registry.clear();
 }

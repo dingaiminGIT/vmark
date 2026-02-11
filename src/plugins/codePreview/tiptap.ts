@@ -8,9 +8,9 @@ import { setupMermaidPanZoom } from "@/plugins/mermaid/mermaidPanZoom";
 import { setupMermaidExport } from "@/plugins/mermaid/mermaidExport";
 import { renderSvgBlock } from "@/plugins/svg/svgRender";
 import { setupSvgExport } from "@/plugins/svg/svgExport";
-import { renderMarkmapToElement, updateMarkmapTheme, disposeMarkmapInContainer, disposeDetachedInstances } from "@/plugins/markmap";
+import { renderMarkmapToElement, updateMarkmapTheme } from "@/plugins/markmap";
 import { setupMarkmapExport } from "@/plugins/markmap/markmapExport";
-import { sweepDetachedContainers } from "@/plugins/shared/diagramCleanup";
+import { sweepDetached, cleanupDescendants } from "@/plugins/shared/diagramCleanup";
 import { sanitizeKatex, sanitizeSvg } from "@/utils/sanitize";
 import { useBlockMathEditingStore } from "@/stores/blockMathEditingStore";
 import { parseLatexError } from "@/plugins/latex/latexErrorParser";
@@ -27,8 +27,11 @@ function isLatexLanguage(lang: string): boolean {
   return lang === "latex" || lang === "$$math$$";
 }
 
-const renderCache = new Map<string, string>();
-const renderPromises = new Map<string, Promise<string>>();
+interface PreviewCacheEntry {
+  rendered?: string;
+  promise?: Promise<string>;
+}
+const previewCache = new Map<string, PreviewCacheEntry>();
 
 let themeObserverSetup = false;
 
@@ -42,8 +45,7 @@ function setupThemeObserver() {
         const isDark = document.documentElement.classList.contains("dark");
         updateMermaidTheme(isDark).then((themeChanged) => {
           if (themeChanged) {
-            renderCache.clear();
-            renderPromises.clear();
+            previewCache.clear();
           }
         });
         updateMarkmapTheme(isDark);
@@ -123,7 +125,7 @@ function createMarkmapPreview(
       const fitBtn = document.createElement("button");
       fitBtn.className = "markmap-fit-btn";
       fitBtn.title = "Fit to view";
-      fitBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>`;
+      fitBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
       fitBtn.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -298,14 +300,14 @@ function updateLivePreview(
         element.innerHTML = '<div class="code-block-live-preview-error">Invalid syntax</div>';
       }
     } else if (language === "markmap") {
-      // Dispose previous markmap instance before clearing
-      disposeMarkmapInContainer(element);
+      // Clean up previous markmap instance before clearing
+      cleanupDescendants(element);
       element.innerHTML = "";
       const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       element.appendChild(svgEl);
       const instance = await renderMarkmapToElement(svgEl, trimmed);
       if (currentToken !== livePreviewToken) {
-        instance?.dispose();
+        // Stale render — next render's cleanupDescendants will handle it
         return;
       }
       if (!instance) {
@@ -379,7 +381,7 @@ function exitEditMode(view: EditorView | null, revert: boolean): void {
   const content = revert ? originalContent : node.textContent;
   if (content) {
     const cacheKey = `${language}:${content}`;
-    renderCache.delete(cacheKey);
+    previewCache.delete(cacheKey);
   }
 
   // Move cursor after the code block
@@ -436,8 +438,7 @@ export const codePreviewExtension = Extension.create({
             }
 
             // Sweep diagram instances whose DOM was removed by ProseMirror
-            disposeDetachedInstances();
-            sweepDetachedContainers();
+            sweepDetached();
 
             const newDecorations: Decoration[] = [];
             const currentEditingPos = storeEditingPos;
@@ -544,7 +545,7 @@ export const codePreviewExtension = Extension.create({
                 return;
               }
 
-              // Markmap renders to live DOM — skip renderCache, always create fresh
+              // Markmap renders to live DOM — skip cache, always create fresh
               if (language === "markmap") {
                 const widget = Decoration.widget(
                   nodeEnd,
@@ -555,8 +556,9 @@ export const codePreviewExtension = Extension.create({
                 return;
               }
 
-              if (renderCache.has(cacheKey)) {
-                const rendered = renderCache.get(cacheKey)!;
+              const cached = previewCache.get(cacheKey);
+              if (cached?.rendered) {
+                const rendered = cached.rendered;
                 const widget = Decoration.widget(
                   nodeEnd,
                   (view) => createPreviewElement(language, rendered, () => handleEnterEdit(view), content),
@@ -576,22 +578,21 @@ export const codePreviewExtension = Extension.create({
                   (view) => {
                     installDoubleClickHandler(placeholder, () => handleEnterEdit(view));
 
-                    let promise = renderPromises.get(cacheKey);
+                    const entry = previewCache.get(cacheKey);
+                    let promise = entry?.promise;
                     if (!promise) {
-                      const renderPromise = Promise.resolve(renderLatex(content));
-                      renderPromises.set(cacheKey, renderPromise);
-                      promise = renderPromise;
+                      promise = Promise.resolve(renderLatex(content));
+                      previewCache.set(cacheKey, { promise });
                     }
 
                     promise
                       .then((rendered) => {
-                        renderCache.set(cacheKey, rendered);
-                        renderPromises.delete(cacheKey);
+                        previewCache.set(cacheKey, { rendered });
                         placeholder.className = "code-block-preview latex-preview";
                         placeholder.innerHTML = sanitizeKatex(rendered);
                       })
                       .catch(() => {
-                        renderPromises.delete(cacheKey);
+                        previewCache.delete(cacheKey);
                         placeholder.className = "code-block-preview latex-preview mermaid-error";
                         placeholder.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Failed to render math`;
                       });
@@ -608,7 +609,7 @@ export const codePreviewExtension = Extension.create({
               if (language === "svg") {
                 const rendered = renderSvgBlock(content);
                 if (rendered) {
-                  renderCache.set(cacheKey, rendered);
+                  previewCache.set(cacheKey, { rendered });
                   const widget = Decoration.widget(
                     nodeEnd,
                     (view) => createPreviewElement(language, rendered, () => handleEnterEdit(view), content),
@@ -640,7 +641,7 @@ export const codePreviewExtension = Extension.create({
                     installDoubleClickHandler(placeholder, () => handleEnterEdit(view));
                     renderMermaid(content).then((svg) => {
                       if (svg) {
-                        renderCache.set(cacheKey, svg);
+                        previewCache.set(cacheKey, { rendered: svg });
                         placeholder.className = "code-block-preview mermaid-preview";
                         placeholder.innerHTML = sanitizeSvg(svg);
                         setupMermaidPanZoom(placeholder);
@@ -690,8 +691,7 @@ export const codePreviewExtension = Extension.create({
 export { codePreviewPluginKey, EDITING_STATE_CHANGED, SETTINGS_CHANGED };
 
 export function clearPreviewCache() {
-  renderCache.clear();
-  renderPromises.clear();
+  previewCache.clear();
 }
 
 /**
@@ -699,8 +699,7 @@ export function clearPreviewCache() {
  * Call this when settings like font size change.
  */
 export function refreshPreviews() {
-  renderCache.clear();
-  renderPromises.clear();
+  previewCache.clear();
   if (currentEditorView) {
     const tr = currentEditorView.state.tr;
     tr.setMeta(SETTINGS_CHANGED, true);
