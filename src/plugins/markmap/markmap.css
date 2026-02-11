@@ -2,6 +2,23 @@
  * Markmap Plugin Styles
  */
 
+/*
+ * Override markmap's embedded CSS variables with VMark theme tokens.
+ * Markmap ships its own palette (light: #333 text, dark via .markmap-dark).
+ * VMark has 5 themes (white, paper, mint, sepia, night) — all handled
+ * through CSS custom properties that adapt automatically.
+ */
+.markmap-preview .markmap,
+.markmap-live-preview .markmap {
+  --markmap-text-color: var(--text-color);
+  --markmap-circle-open-bg: var(--bg-secondary);
+  --markmap-code-bg: var(--code-bg-color);
+  --markmap-code-color: var(--code-text-color);
+  --markmap-a-color: var(--primary-color);
+  --markmap-a-hover-color: var(--primary-color);
+  --markmap-highlight-bg: var(--highlight-bg);
+}
+
 /* Markmap mindmap container */
 .code-block-preview.markmap-preview {
   padding: 1rem;
