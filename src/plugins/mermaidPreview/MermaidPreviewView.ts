@@ -7,7 +7,8 @@
  */
 
 import { renderMermaid } from "@/plugins/mermaid";
-import { renderMarkmapToElement, disposeMarkmapInContainer } from "@/plugins/markmap";
+import { renderMarkmapToElement } from "@/plugins/markmap";
+import { cleanupDescendants } from "@/plugins/shared/diagramCleanup";
 import { renderSvgBlock } from "@/plugins/svg/svgRender";
 import { sanitizeSvg } from "@/utils/sanitize";
 import {
@@ -385,7 +386,7 @@ export class MermaidPreviewView {
   }
 
   hide() {
-    disposeMarkmapInContainer(this.preview);
+    cleanupDescendants(this.preview);
     this.container.style.display = "none";
     this.visible = false;
     this.editorDom = null;
@@ -430,7 +431,7 @@ export class MermaidPreviewView {
 
     // Markmap blocks: live SVG render
     if (this.currentLanguage === "markmap") {
-      disposeMarkmapInContainer(this.preview);
+      cleanupDescendants(this.preview);
       this.preview.innerHTML = "";
       const svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svgEl.style.width = "100%";
@@ -441,7 +442,7 @@ export class MermaidPreviewView {
       renderMarkmapToElement(svgEl, trimmed)
         .then((instance) => {
           if (currentToken !== this.renderToken) {
-            instance?.dispose();
+            // Stale render — next render's cleanupDescendants will handle it
             return;
           }
           if (!instance) {
@@ -510,7 +511,7 @@ export class MermaidPreviewView {
       this.boundResizeUp = null;
     }
 
-    disposeMarkmapInContainer(this.preview);
+    cleanupDescendants(this.preview);
     this.container.remove();
   }
 }
