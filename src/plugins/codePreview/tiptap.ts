@@ -10,7 +10,7 @@ import { renderSvgBlock } from "@/plugins/svg/svgRender";
 import { setupSvgExport } from "@/plugins/svg/svgExport";
 import { renderMarkmapToElement, updateMarkmapTheme, disposeMarkmapInContainer, disposeDetachedInstances } from "@/plugins/markmap";
 import { setupMarkmapExport } from "@/plugins/markmap/markmapExport";
-import { registerCleanup, sweepDetachedContainers } from "@/plugins/shared/diagramCleanup";
+import { sweepDetachedContainers } from "@/plugins/shared/diagramCleanup";
 import { sanitizeKatex, sanitizeSvg } from "@/utils/sanitize";
 import { useBlockMathEditingStore } from "@/stores/blockMathEditingStore";
 import { parseLatexError } from "@/plugins/latex/latexErrorParser";
@@ -43,6 +43,7 @@ function setupThemeObserver() {
         updateMermaidTheme(isDark).then((themeChanged) => {
           if (themeChanged) {
             renderCache.clear();
+            renderPromises.clear();
           }
         });
         updateMarkmapTheme(isDark);
@@ -85,16 +86,14 @@ function createPreviewElement(
   if (language === "mermaid" || language === "svg") {
     // Defer panzoom/export setup — Panzoom requires DOM-attached elements,
     // but ProseMirror attaches the widget after the factory returns.
+    // Panzoom and export auto-register cleanup via diagramCleanup
     requestAnimationFrame(() => {
-      const pz = setupMermaidPanZoom(wrapper);
-      if (pz) registerCleanup(wrapper, pz.destroy);
+      setupMermaidPanZoom(wrapper);
       if (sourceContent) {
         if (language === "mermaid") {
-          const ex = setupMermaidExport(wrapper, sourceContent);
-          registerCleanup(wrapper, ex.destroy);
+          setupMermaidExport(wrapper, sourceContent);
         } else {
-          const ex = setupSvgExport(wrapper, sourceContent);
-          registerCleanup(wrapper, ex.destroy);
+          setupSvgExport(wrapper, sourceContent);
         }
       }
     });
@@ -136,9 +135,8 @@ function createMarkmapPreview(
       });
       wrapper.appendChild(fitBtn);
 
-      // Add export button
-      const ex = setupMarkmapExport(wrapper, content);
-      registerCleanup(wrapper, ex.destroy);
+      // Export auto-registers cleanup via diagramCleanup
+      setupMarkmapExport(wrapper, content);
     });
   });
 
@@ -645,10 +643,8 @@ export const codePreviewExtension = Extension.create({
                         renderCache.set(cacheKey, svg);
                         placeholder.className = "code-block-preview mermaid-preview";
                         placeholder.innerHTML = sanitizeSvg(svg);
-                        const pz = setupMermaidPanZoom(placeholder);
-                        if (pz) registerCleanup(placeholder, pz.destroy);
-                        const ex = setupMermaidExport(placeholder, content);
-                        registerCleanup(placeholder, ex.destroy);
+                        setupMermaidPanZoom(placeholder);
+                        setupMermaidExport(placeholder, content);
                       } else {
                         placeholder.className = "code-block-preview mermaid-error";
                         placeholder.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Failed to render diagram`;
@@ -695,6 +691,7 @@ export { codePreviewPluginKey, EDITING_STATE_CHANGED, SETTINGS_CHANGED };
 
 export function clearPreviewCache() {
   renderCache.clear();
+  renderPromises.clear();
 }
 
 /**
@@ -703,6 +700,7 @@ export function clearPreviewCache() {
  */
 export function refreshPreviews() {
   renderCache.clear();
+  renderPromises.clear();
   if (currentEditorView) {
     const tr = currentEditorView.state.tr;
     tr.setMeta(SETTINGS_CHANGED, true);

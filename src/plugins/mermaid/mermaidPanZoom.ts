@@ -7,6 +7,7 @@
  */
 
 import Panzoom, { type PanzoomObject } from "@panzoom/panzoom";
+import { registerCleanup } from "@/plugins/shared/diagramCleanup";
 
 export interface MermaidPanZoomInstance {
   reset(): void;
@@ -106,6 +107,9 @@ export function setupMermaidPanZoom(
     container.style.overflow = prevOverflow;
     container.style.position = prevPosition;
   };
+
+  // Auto-register cleanup so callers don't need to track destroy manually
+  registerCleanup(container, destroy);
 
   return { reset, destroy };
 }
