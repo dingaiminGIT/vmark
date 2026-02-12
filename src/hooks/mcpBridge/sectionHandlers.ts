@@ -8,6 +8,8 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { respond, getEditor, isAutoApproveEnabled, getActiveTabId } from "./utils";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
+import { parseBlockMarkdown } from "./markdownHelpers";
+import { serializeMarkdown } from "@/utils/markdownPipeline";
 
 // Types
 type OperationMode = "apply" | "suggest" | "dryRun";
@@ -209,10 +211,14 @@ export async function handleSectionUpdate(
     }
 
     // Apply the update
+    // Parse markdown content to ProseMirror nodes to handle escape sequences correctly
+    // Use block-level parsing since we're replacing entire section content
+    const contentNodes = parseBlockMarkdown(editor.schema, newContent);
+
     editor.chain()
       .focus()
       .setTextSelection({ from: contentStart, to: section.to })
-      .insertContent(newContent)
+      .insertContent(contentNodes)
       .run();
 
     const newRevision = getCurrentRevision();
@@ -335,10 +341,14 @@ export async function handleSectionInsert(
     }
 
     // Apply the insert
+    // Parse markdown content to ProseMirror nodes to handle escape sequences correctly
+    // Use block-level parsing since we're inserting a new section
+    const contentNodes = parseBlockMarkdown(editor.schema, fullContent);
+
     editor.chain()
       .focus()
       .setTextSelection(insertPos)
-      .insertContent(fullContent)
+      .insertContent(contentNodes)
       .run();
 
     const newRevision = getCurrentRevision();
@@ -427,8 +437,15 @@ export async function handleSectionMove(
       targetPos = 0;
     }
 
-    // Get section content
-    const sectionContent = editor.state.doc.textBetween(sectionRange.from, sectionRange.to);
+    // Get section content using doc.slice() to preserve structure
+    // CRITICAL: Do NOT use textBetween() here, as it loses formatting and structure
+    // (e.g., literal * becomes emphasis, headings are lost, etc.)
+    const slice = editor.state.doc.slice(sectionRange.from, sectionRange.to);
+    const contentNodes = slice.content.toJSON();
+
+    // For suggest mode, serialize the slice back to proper markdown
+    // This preserves all formatting and structure when the suggestion is accepted
+    const sectionContent = serializeMarkdown(editor.schema, slice.content);
 
     // For dryRun, return preview
     if (mode === "dryRun") {
@@ -482,6 +499,8 @@ export async function handleSectionMove(
     }
 
     // Apply the move (delete then insert)
+    // Use doc.slice() to preserve structure (no parsing needed)
+
     // We need to be careful about position adjustments
     if (targetPos > sectionRange.to) {
       // Moving forward - insert first (positions will shift)
@@ -489,7 +508,7 @@ export async function handleSectionMove(
       editor.chain()
         .focus()
         .setTextSelection(adjustedTarget)
-        .insertContent(sectionContent)
+        .insertContent(contentNodes)
         .setTextSelection({ from: sectionRange.from, to: sectionRange.to })
         .deleteSelection()
         .run();
@@ -500,7 +519,7 @@ export async function handleSectionMove(
         .setTextSelection({ from: sectionRange.from, to: sectionRange.to })
         .deleteSelection()
         .setTextSelection(targetPos)
-        .insertContent(sectionContent)
+        .insertContent(contentNodes)
         .run();
     }
 

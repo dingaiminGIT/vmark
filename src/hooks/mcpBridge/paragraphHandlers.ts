@@ -8,6 +8,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { respond, getEditor, isAutoApproveEnabled, getActiveTabId } from "./utils";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
+import { parseInlineMarkdown, parseBlockMarkdown } from "./markdownHelpers";
 
 // Types
 type OperationMode = "apply" | "suggest";
@@ -309,10 +310,14 @@ export async function handleParagraphWrite(
         .deleteSelection()
         .run();
     } else {
+      // For replace/append/prepend, we're operating at INLINE positions (inside the paragraph)
+      // Use inline parsing to extract only inline nodes, preventing paragraph splits
+      const contentNodes = parseInlineMarkdown(editor.schema, newContent);
+
       editor.chain()
         .focus()
         .setTextSelection({ from, to })
-        .insertContent(newContent)
+        .insertContent(contentNodes)
         .run();
     }
 

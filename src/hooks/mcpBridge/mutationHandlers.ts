@@ -17,6 +17,7 @@ import {
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { idempotencyCache } from "./idempotencyCache";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
+import { parseInlineMarkdown, parseBlockMarkdown } from "./markdownHelpers";
 
 // Types
 type OperationMode = "apply" | "suggest" | "dryRun";
@@ -281,10 +282,14 @@ export async function handleBatchEdit(
       switch (op.type) {
         case "insert":
           if (typeof op.content === "string" && resolved) {
+            // Parse markdown content to ProseMirror nodes to handle escape sequences correctly
+            // Use block-level parsing since inserts are at block positions
+            const contentNodes = parseBlockMarkdown(editor.schema, op.content);
+
             editor.chain()
               .focus()
               .setTextSelection(resolved.from)
-              .insertContent(op.content)
+              .insertContent(contentNodes)
               .run();
             addedNodeIds.push(`inserted-${addedNodeIds.length}`);
           }
@@ -292,12 +297,17 @@ export async function handleBatchEdit(
 
         case "update":
           if (op.text && resolved) {
-            // Get the text content range
+            // Get the text content range (inline position within a block)
             const textRange = getTextRange(editor, resolved.from, resolved.to);
+
+            // Parse markdown content to ProseMirror nodes to handle escape sequences correctly
+            // Use INLINE parsing since we're updating text within a block (inline context)
+            const contentNodes = parseInlineMarkdown(editor.schema, op.text);
+
             editor.chain()
               .focus()
               .setTextSelection({ from: textRange.from, to: textRange.to })
-              .insertContent(op.text)
+              .insertContent(contentNodes)
               .run();
             changedNodeIds.push(op.nodeId || `updated-${changedNodeIds.length}`);
           }
@@ -550,6 +560,10 @@ export async function handleApplyDiff(
     }
 
     // Apply replacements
+    // Parse markdown content to ProseMirror nodes to handle escape sequences correctly
+    // Use INLINE parsing since apply_diff does inline text replacements
+    const contentNodes = parseInlineMarkdown(editor.schema, replacement);
+
     let appliedCount = 0;
 
     if (matchPolicy === "first") {
@@ -557,7 +571,7 @@ export async function handleApplyDiff(
       editor.chain()
         .focus()
         .setTextSelection({ from: match.from, to: match.to })
-        .insertContent(replacement)
+        .insertContent(contentNodes)
         .run();
       appliedCount = 1;
     } else if (matchPolicy === "all") {
@@ -567,7 +581,7 @@ export async function handleApplyDiff(
         editor.chain()
           .focus()
           .setTextSelection({ from: match.from, to: match.to })
-          .insertContent(replacement)
+          .insertContent(contentNodes)
           .run();
         appliedCount++;
       }
@@ -576,7 +590,7 @@ export async function handleApplyDiff(
       editor.chain()
         .focus()
         .setTextSelection({ from: match.from, to: match.to })
-        .insertContent(replacement)
+        .insertContent(contentNodes)
         .run();
       appliedCount = 1;
     }
@@ -752,10 +766,14 @@ export async function handleReplaceAnchored(
     }
 
     // Apply replacement
+    // Parse markdown content to ProseMirror nodes to handle escape sequences correctly
+    // Use INLINE parsing since replace_anchored does inline text replacements
+    const contentNodes = parseInlineMarkdown(editor.schema, replacement);
+
     editor.chain()
       .focus()
       .setTextSelection({ from: match.from, to: match.to })
-      .insertContent(replacement)
+      .insertContent(contentNodes)
       .run();
 
     const newRevision = getCurrentRevision();

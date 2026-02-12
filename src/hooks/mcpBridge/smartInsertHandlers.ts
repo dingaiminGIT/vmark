@@ -12,6 +12,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { respond, getEditor, isAutoApproveEnabled, getActiveTabId } from "./utils";
 import { useAiSuggestionStore } from "@/stores/aiSuggestionStore";
 import { validateBaseRevision, getCurrentRevision } from "./revisionTracker";
+import { parseBlockMarkdown } from "./markdownHelpers";
 
 // Types
 type OperationMode = "apply" | "suggest";
@@ -201,8 +202,9 @@ export async function handleSmartInsert(
 
     const insertPos = insertPosResult;
 
-    // Create content with proper paragraph wrapping
-    const contentToInsert = `\n\n${content}\n\n`;
+    // Parse markdown content to ProseMirror nodes
+    // Use block-level parsing since smart insert is always at block positions
+    const contentNodes = parseBlockMarkdown(editor.schema, content);
 
     // For suggest mode or non-auto-approve, create suggestion
     if (mode === "suggest" || !isAutoApproveEnabled()) {
@@ -211,7 +213,7 @@ export async function handleSmartInsert(
         type: "insert",
         from: insertPos,
         to: insertPos,
-        newContent: contentToInsert,
+        newContent: content,
         originalContent: undefined,
       });
 
@@ -232,10 +234,11 @@ export async function handleSmartInsert(
     }
 
     // Apply the insert directly
+    // Use parsed ProseMirror nodes to handle escape sequences correctly
     editor.chain()
       .focus()
       .setTextSelection(insertPos)
-      .insertContent(contentToInsert)
+      .insertContent(contentNodes)
       .run();
 
     const newRevision = getCurrentRevision();
